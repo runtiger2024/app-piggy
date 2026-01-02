@@ -2936,3 +2936,31 @@
   height: 44px;
   background-color: #ffffff;
 }
+/* --- [V40.0] 結算條點擊與層級終極修正 --- */
+
+#checkout-bar.checkout-bar {
+  position: fixed !important;
+  bottom: 30px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 9999 !important; /* 強制置頂，超過所有導航列與 Modal */
+  pointer-events: auto !important; /* 確保可以點擊 */
+  display: flex;
+  visibility: visible;
+}
+
+/* 手機版適配：確保在底部導航列上方，且不會被遮擋 */
+@media (max-width: 800px) {
+  #checkout-bar.checkout-bar {
+    bottom: 85px !important; /* 避開下方導航列 */
+    width: 92% !important;
+    padding: 12px 20px !important;
+  }
+}
+
+/* 確保按鈕本身沒有被禁用或點擊區域縮小 */
+.btn-checkout-active {
+  cursor: pointer !important;
+  position: relative;
+  z-index: 10000;
+}
