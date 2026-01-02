@@ -1650,3 +1650,123 @@
   display: flex;
   gap: 15px;
 }
+/* --- [修正] Dashboard 分頁選單優化 (V35.0) --- */
+
+.dashboard-tabs {
+  display: flex;
+  background: #f1f5f9; /* 使用微深灰色背景，與主體白色區隔 */
+  padding: 6px;
+  border-radius: 12px;
+  margin: 0 20px 20px; /* 增加邊距使其更像一個浮動組件 */
+  gap: 6px;
+  border-bottom: none; /* 移除原本的底線式設計 */
+  position: sticky;
+  top: 70px; /* 釘在 Header 下方 */
+  z-index: 100;
+}
+
+.tab-btn {
+  flex: 1; /* 關鍵：平均分配大小 */
+  padding: 10px 5px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  background: transparent; /* 預設透明，顯示父層底色 */
+  color: #64748b; /* 未選中時使用深灰藍，對比度更高 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 懸浮效果：輕微變亮 */
+.tab-btn:hover {
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* 啟用狀態：純白底色 + 主色文字 + 陰影 */
+.tab-btn.active {
+  background: #ffffff;
+  color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+/* --- [適配] 手機端微調 --- */
+@media (max-width: 800px) {
+  .dashboard-tabs {
+    margin: 0 10px 15px; /* 手機版縮小外邊距 */
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .tab-btn {
+    font-size: 13px; /* 手機版字體稍微縮小 */
+    padding: 8px 2px;
+  }
+}
+/* --- Dashboard 分頁選單：商業旗艦版樣式 --- */
+.dashboard-tabs {
+  display: flex;
+  background: #e2e8f0; /* 稍微加深的底色，產生凹陷感 */
+  padding: 5px;
+  border-radius: 16px;
+  margin: 0;
+  gap: 5px;
+  border: none !important;
+}
+
+.tab-btn {
+  flex: 1; /* 關鍵：5個項目各佔 20%，完美平均分配 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 2px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #475569; /* 未選中：深灰藍，對比清晰 */
+  background: transparent;
+  border: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-btn i {
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+/* 選中狀態：從平面變為懸浮卡片 */
+.tab-btn.active {
+  background: #ffffff; /* 純白背景，與父層灰色拉開極大對比 */
+  color: #1a73e8; /* 品牌藍色 */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* 增加陰影使其跳出來 */
+  transform: scale(1.02);
+}
+
+/* 會員標識標籤 */
+.user-id-badge {
+  background: #ffc107; /* 使用黃色作為視覺焦點 */
+  color: #000;
+  padding: 5px 15px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* 適配手機端 */
+@media (max-width: 800px) {
+  .tab-btn {
+    font-size: 12px;
+    padding: 10px 0;
+  }
+  .tab-btn i {
+    font-size: 1rem;
+  }
+}

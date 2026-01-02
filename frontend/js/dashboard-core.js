@@ -1,6 +1,6 @@
 // frontend/js/dashboard-core.js
 // 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件
-// V2026.1.10 - 旗艦穩定版：移除 PIGGY- 前綴、同步 RP 會員編號與發票資訊
+// V2026.1.11 - 旗艦穩定版：會員編號一體化(去前綴)、整合發票資訊與 DOM 安全檢查
 
 // --- [1. 全域變數與狀態管理] ---
 window.currentUser = null;
@@ -86,11 +86,11 @@ window.loadUserProfile = async function () {
 };
 
 /**
- * 將使用者資料渲染至畫面上所有相關的 ID (包含最新的 RP 編號)
- * [V2026.1.10 修正：徹底移除 PIGGY- 前綴]
+ * [核心優化] 將使用者資料渲染至畫面上所有相關的 ID
+ * 包含：會員編號(去前綴一體化)、基本個資、發票預設設定
  */
 function syncProfileToUI(user) {
-  // 1. 迎賓文字 (Dashboard & Header)
+  // 1. 迎賓文字 (Dashboard Hero & Header)
   const welcomeEl = document.getElementById("welcome-message");
   if (welcomeEl) {
     welcomeEl.textContent = `${user.name || "親愛的會員"}，您好`;
@@ -101,6 +101,7 @@ function syncProfileToUI(user) {
     "user-email": user.email,
     "user-phone": user.phone || "(未填寫)",
     "user-address": user.defaultAddress || user.address || "(未填寫)",
+
     // 同步到「帳號設定」彈窗表單
     "edit-name": user.name || "",
     "edit-phone": user.phone || "",
@@ -111,7 +112,7 @@ function syncProfileToUI(user) {
     "modal-user-name": user.name || "未設定姓名",
   };
 
-  // 遍歷映射並更新內容
+  // 遍歷映射並更新內容，支援 Input 與純文字標籤
   for (const [id, value] of Object.entries(mapping)) {
     const el = document.getElementById(id);
     if (el) {
@@ -123,18 +124,18 @@ function syncProfileToUI(user) {
     }
   }
 
-  // 3. [核心更新] 顯示專屬會員標識碼：移除 PIGGY- 前綴
-  const userIdEl = document.getElementById("modal-user-id");
-  if (userIdEl) {
-    // 優先使用資料庫中的 RP0000XXX 格式，若無則回退至純 ID 截取邏輯 (不再加上 PIGGY-)
-    if (user.piggyId) {
-      userIdEl.textContent = user.piggyId;
-    } else if (user.id) {
-      userIdEl.textContent = user.id.slice(-6).toUpperCase();
-    } else {
-      userIdEl.textContent = "...";
-    }
-  }
+  // 3. [會員編號一體化] 顯示專屬會員標識碼：徹底移除 PIGGY- 前綴
+  // 同步更新 Hero 區塊與彈窗標頭中的編號
+  const userIdElements = document.querySelectorAll(
+    "#modal-user-id, #hero-user-id"
+  );
+  const finalMemberId =
+    user.piggyId || (user.id ? user.id.slice(-6).toUpperCase() : "...");
+
+  userIdElements.forEach((el) => {
+    // 移除 PIGGY- 前綴，直接顯示資料庫的 RP 號碼或原始 ID 後六碼
+    el.textContent = finalMemberId;
+  });
 }
 
 // --- [4. 系統配置與銀行資訊] ---
@@ -181,12 +182,13 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
   const container = document.getElementById(containerId);
   if (!mainInput || !container) return;
 
+  // 使用 DataTransfer 對象模擬檔案清單操作，保留原始功能
   const dataTransfer = new DataTransfer();
 
   function render() {
     container.innerHTML = "";
 
-    // 1. 渲染已選擇的圖片
+    // 1. 渲染已選擇的圖片預覽
     Array.from(dataTransfer.files).forEach((file, index) => {
       const item = document.createElement("div");
       item.className = "upload-item animate-pop-in";
@@ -201,7 +203,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
       removeBtn.onclick = (e) => {
         e.stopPropagation();
         dataTransfer.items.remove(index);
-        mainInput.files = dataTransfer.files;
+        mainInput.files = dataTransfer.files; // 同步回原始 Input
         render();
       };
 
@@ -210,7 +212,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
       container.appendChild(item);
     });
 
-    // 2. 顯示添加按鈕
+    // 2. 若未達張數上限，則顯示帶有「相機圖示」的添加按鈕
     if (dataTransfer.files.length < maxFiles) {
       const addLabel = document.createElement("label");
       addLabel.className = "upload-add-btn";
@@ -241,8 +243,9 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
     }
   }
 
-  render();
+  render(); // 初始渲染
 
+  // 提供外部重置方法 (用於表單 reset)
   mainInput.resetUploader = () => {
     dataTransfer.items.clear();
     mainInput.value = "";
@@ -251,10 +254,17 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
 };
 
 /**
- * 全域導向詳情輔助 (用於通知系統跳轉)
+ * 全域導向詳情輔助 (用於通知系統跳轉至指定集運單)
+ * 整合不同版本之命名慣例
  */
 window.openShipmentDetails = function (id) {
   if (window.viewShipmentDetail) {
     window.viewShipmentDetail(id);
+  } else if (
+    typeof window.openShipmentDetails === "function" &&
+    window.openShipmentDetails !== window.openShipmentDetails
+  ) {
+    // 避免無限遞迴，僅在 dashboard-main.js 中的函式存在時呼叫
+    window.openShipmentDetails(id);
   }
 };

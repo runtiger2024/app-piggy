@@ -1,5 +1,5 @@
 // backend/controllers/authController.js
-// V13 - 整合 RP 系列會員編號遞增邏輯與完整資料同步
+// V14 - 旗艦穩定版：會員編號(Member ID)與專屬識別碼一體化整合邏輯
 
 const prisma = require("../config/db.js");
 const bcrypt = require("bcryptjs");
@@ -8,7 +8,7 @@ const generateToken = require("../utils/generateToken.js");
 const sgMail = require("@sendgrid/mail");
 
 /**
- * 註冊使用者：包含 RP0000889 遞增編號邏輯
+ * 註冊使用者：包含 RP0000889 遞增編號邏輯 (唯一會員編號)
  */
 const registerUser = async (req, res) => {
   try {
@@ -30,21 +30,21 @@ const registerUser = async (req, res) => {
         .json({ success: false, message: "這個 Email 已經被註冊了" });
     }
 
-    // --- [關鍵邏輯：生成遞增的 RP 會員編號] ---
-    // 查找資料庫中最後一位以 RP 開頭的會員
+    // --- [核心優化：生成唯一的遞增 RP 會員編號] ---
+    // 查找資料庫中最後一位以 RP 開頭的會員，確保編號連續性
     const lastUser = await prisma.user.findFirst({
       where: { piggyId: { startsWith: "RP" } },
       orderBy: { piggyId: "desc" },
     });
 
-    let nextPiggyId = "RP0000889"; // 預設起始值
+    let nextPiggyId = "RP0000889"; // 定義起始號碼
 
     if (lastUser && lastUser.piggyId) {
       // 提取數字部分並遞增：例如 RP0000889 -> 889 -> 890
       const currentNum = parseInt(lastUser.piggyId.replace("RP", ""), 10);
       nextPiggyId = "RP" + String(currentNum + 1).padStart(7, "0");
     }
-    // ----------------------------------------
+    // ------------------------------------------
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
@@ -54,7 +54,7 @@ const registerUser = async (req, res) => {
         email: lowerEmail,
         passwordHash: passwordHash,
         name: name,
-        piggyId: nextPiggyId, // 存入自定義編號
+        piggyId: nextPiggyId, // 這是全系統唯一的會員編號/識別碼
         permissions: [],
       },
     });
@@ -65,7 +65,7 @@ const registerUser = async (req, res) => {
         message: "註冊成功！",
         user: {
           id: newUser.id,
-          piggyId: newUser.piggyId,
+          piggyId: newUser.piggyId, // 會員編號
           email: newUser.email,
           name: newUser.name,
           permissions: [],
@@ -105,7 +105,7 @@ const loginUser = async (req, res) => {
         message: "登入成功！",
         user: {
           id: user.id,
-          piggyId: user.piggyId, // 回傳編號
+          piggyId: user.piggyId, // 確保回傳會員編號
           email: user.email,
           name: user.name,
           permissions: permissions,
@@ -126,7 +126,7 @@ const loginUser = async (req, res) => {
 };
 
 /**
- * 取得目前登入者資料
+ * 取得目前登入者資料 (同步所有關鍵欄位)
  */
 const getMe = async (req, res) => {
   try {
@@ -136,7 +136,7 @@ const getMe = async (req, res) => {
         where: { id: user.id },
         select: {
           id: true,
-          piggyId: true, // 確保拿到編號
+          piggyId: true, // 會員編號 (識別碼)
           email: true,
           name: true,
           permissions: true,
@@ -162,7 +162,7 @@ const getMe = async (req, res) => {
 };
 
 /**
- * 更新個人資料
+ * 更新個人資料 (包含發票資訊)
  */
 const updateMe = async (req, res) => {
   try {
@@ -181,7 +181,7 @@ const updateMe = async (req, res) => {
       },
       select: {
         id: true,
-        piggyId: true,
+        piggyId: true, // 確保更新後仍回傳識別碼
         email: true,
         name: true,
         phone: true,
@@ -204,7 +204,7 @@ const updateMe = async (req, res) => {
 };
 
 /**
- * 忘記密碼發送 Email
+ * 忘記密碼：發送重設郵件
  */
 const forgotPassword = async (req, res) => {
   try {
@@ -224,7 +224,7 @@ const forgotPassword = async (req, res) => {
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
-    const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 分鐘有效
+    const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
 
     await prisma.user.update({
       where: { id: user.id },
@@ -252,7 +252,7 @@ const forgotPassword = async (req, res) => {
 };
 
 /**
- * 重設密碼
+ * 重設密碼邏輯
  */
 const resetPassword = async (req, res) => {
   try {
@@ -295,7 +295,7 @@ const resetPassword = async (req, res) => {
 };
 
 /**
- * 修改密碼 (已登入狀態)
+ * 修改密碼 (登入後)
  */
 const changePassword = async (req, res) => {
   try {

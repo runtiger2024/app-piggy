@@ -16,16 +16,15 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <style>
-      /* --- Dashboard 專業版佈局優化 --- */
+      /* --- Dashboard 旗艦版整合樣式 --- */
 
-      /* 1. 全域背景與佈局 */
       .dashboard-theme {
         background-color: #f4f7fa;
       }
 
-      /* 2. 高級 Hero 迎賓卡片 */
+      /* 1. 高級 Hero 迎賓卡片 */
       .hero-dashboard {
-        background: linear-gradient(135deg, var(--p-primary) 0%, #003a8c 100%);
+        background: linear-gradient(135deg, #1a73e8 0%, #003a8c 100%);
         border-radius: 24px;
         padding: 30px;
         color: white;
@@ -39,7 +38,7 @@
       }
 
       .hero-dashboard::after {
-        content: "\f48b"; /* FontAwesome Box icon */
+        content: "\f48b";
         font-family: "Font Awesome 6 Free";
         font-weight: 900;
         position: absolute;
@@ -55,12 +54,17 @@
         margin-bottom: 8px;
       }
 
-      .user-welcome p {
-        opacity: 0.85;
-        font-size: 0.95rem;
+      /* [新增] 會員編號標籤樣式 */
+      .user-id-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
       }
 
-      /* 3. 錢包整合樣式 */
+      /* 2. 錢包整合樣式 */
       .wallet-summary-box {
         background: rgba(255, 255, 255, 0.12);
         backdrop-filter: blur(10px);
@@ -78,16 +82,48 @@
         background: rgba(255, 255, 255, 0.18);
       }
 
-      .ws-label {
-        font-size: 0.85rem;
-        opacity: 0.9;
-        margin-bottom: 5px;
-      }
-
       .ws-amount {
         font-size: 2rem;
         font-weight: 900;
         font-family: "Monaco", monospace;
+      }
+
+      /* 3. 分頁選單 (Tabs) 重大優化：高對比 + 平均分配 */
+      .dashboard-tabs {
+        display: flex;
+        background: #f1f5f9; /* 淺灰藍背景，與白色底座拉開對比 */
+        padding: 6px;
+        border-radius: 15px;
+        margin: 0;
+        gap: 6px;
+        border-bottom: none !important;
+      }
+
+      .tab-btn {
+        flex: 1; /* 關鍵：電腦手機皆平均分配寬度 */
+        padding: 12px 5px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: #64748b; /* 未選中時加深顏色 */
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .tab-btn i {
+        font-size: 1.1rem;
+      }
+
+      .tab-btn.active {
+        background: #ffffff;
+        color: #1a73e8;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       }
 
       /* 4. 快速行動磁貼 (Quick Actions) */
@@ -107,23 +143,22 @@
         flex-direction: column;
         align-items: center;
         gap: 12px;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: all 0.3s ease;
         cursor: pointer;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
       }
 
       .action-tile:hover {
         transform: translateY(-8px);
         box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
-        border-color: var(--p-primary);
+        border-color: #1a73e8;
       }
 
       .tile-icon {
         width: 54px;
         height: 54px;
-        background: var(--p-primary-bg);
-        color: var(--p-primary);
+        background: #e8f0fe;
+        color: #1a73e8;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -131,13 +166,7 @@
         border-radius: 15px;
       }
 
-      .action-tile span {
-        font-weight: 700;
-        color: var(--text-main);
-        font-size: 0.95rem;
-      }
-
-      /* 5. 即時動態進度條 (Status Bar) */
+      /* 5. 即時動態進度條 */
       .live-status-bar {
         background: white;
         border-radius: 20px;
@@ -146,8 +175,7 @@
         justify-content: space-around;
         align-items: center;
         margin-bottom: 25px;
-        box-shadow: var(--shadow-1);
-        border: 1px solid var(--border-light);
+        border: 1px solid #eee;
       }
 
       .status-node {
@@ -155,29 +183,15 @@
         flex: 1;
         position: relative;
       }
-
-      .status-node:not(:last-child)::after {
-        content: "\f054";
-        font-family: "Font Awesome 6 Free";
-        font-weight: 900;
-        position: absolute;
-        right: -5%;
-        top: 30%;
-        color: #ddd;
-        font-size: 0.8rem;
-      }
-
       .sn-count {
         display: block;
         font-size: 1.4rem;
         font-weight: 800;
-        color: var(--p-primary);
-        margin-bottom: 4px;
+        color: #1a73e8;
       }
-
       .sn-label {
         font-size: 0.8rem;
-        color: var(--text-sub);
+        color: #666;
         font-weight: 600;
       }
 
@@ -196,24 +210,13 @@
         .quick-actions-grid {
           grid-template-columns: repeat(2, 1fr);
         }
-        .status-node:not(:last-child)::after {
-          display: none;
+        .tab-btn {
+          font-size: 13px;
+          padding: 10px 2px;
         }
-      }
-
-      /* 保留原本預覽圖樣式 */
-      .preview-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      .preview-container img {
-        width: 60px;
-        height: 60px;
-        object-fit: cover;
-        border-radius: 4px;
-        border: 1px solid #ddd;
+        .tab-btn i {
+          font-size: 1rem;
+        }
       }
     </style>
   </head>
@@ -236,10 +239,7 @@
               alt="小跑豬集運"
               class="header-logo-img"
             />
-            <span class="logo-text">
-              小跑豬
-              <small>會 員 控 制 台</small>
-            </span>
+            <span class="logo-text">小跑豬 <small>會 員 控 制 台</small></span>
           </a>
 
           <div class="header-right-actions">
@@ -274,10 +274,20 @@
         <section class="hero-dashboard animate-slide-up">
           <div class="user-welcome">
             <h2 id="welcome-message">您好，載入中...</h2>
-            <p>
-              <i class="fas fa-id-badge"></i>
-              <span id="user-email">...</span>
-            </p>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 12px;
+              "
+            >
+              <span class="user-id-badge" id="modal-user-id">ID: 載入中</span>
+              <span style="font-size: 0.85rem; opacity: 0.8"
+                ><i class="fas fa-envelope"></i>
+                <span id="user-email">...</span></span
+              >
+            </div>
             <div style="margin-top: 15px; display: flex; gap: 12px">
               <button
                 id="btn-edit-profile"
@@ -289,7 +299,7 @@
                   padding: 6px 15px;
                 "
               >
-                <i class="fas fa-user-edit"></i> 帳號設定
+                <i class="fas fa-user-cog"></i> 帳號設定
               </button>
             </div>
           </div>
@@ -372,26 +382,29 @@
 
         <div
           class="section-card"
-          style="padding: 0; overflow: hidden; border-radius: 20px"
+          style="
+            padding: 0;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #fff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+          "
         >
-          <div
-            class="dashboard-tabs"
-            style="margin: 0; background: #fff; border-bottom: 1px solid #eee"
-          >
+          <div class="dashboard-tabs">
             <button id="tab-packages" class="tab-btn active">
-              <i class="fas fa-boxes"></i> 包裹
+              <i class="fas fa-boxes"></i> <span>包裹</span>
             </button>
             <button id="tab-shipments" class="tab-btn">
-              <i class="fas fa-file-invoice-dollar"></i> 單據
+              <i class="fas fa-file-invoice-dollar"></i> <span>單據</span>
             </button>
             <button id="tab-wallet" class="tab-btn">
-              <i class="fas fa-history"></i> 帳務
+              <i class="fas fa-history"></i> <span>帳務</span>
             </button>
             <button id="tab-recipients" class="tab-btn">
-              <i class="fas fa-users"></i> 收件人
+              <i class="fas fa-users"></i> <span>收件人</span>
             </button>
             <button id="tab-unclaimed" class="tab-btn">
-              <i class="fas fa-question-circle"></i> 無主
+              <i class="fas fa-question-circle"></i> <span>無主</span>
             </button>
           </div>
 
@@ -540,7 +553,7 @@
           "components/modals/claim-package.html"
         ),
       ]).then(() => {
-        // 攔截邏輯
+        // 事件處理與腳本載入
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
           if (type === "DOMContentLoaded") listener();
@@ -574,7 +587,7 @@
           for (const src of scripts) {
             await loadScript(src);
           }
-          // 額外綁定：認領無主件磁貼點擊
+          // 認領無主件捷徑
           const unclaimedTile = document.getElementById(
             "btn-claim-package-tile"
           );
