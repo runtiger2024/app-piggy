@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>會員中心 | 我的集運</title>
+    <title>會員控制台 | 小跑豬傢俱專線</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
 
     <script src="js/styleLoader.js"></script>
@@ -16,7 +16,192 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <style>
-      /* 保留您原本必要的預覽樣式 */
+      /* --- Dashboard 專業版佈局優化 --- */
+
+      /* 1. 全域背景與佈局 */
+      .dashboard-theme {
+        background-color: #f4f7fa;
+      }
+
+      /* 2. 高級 Hero 迎賓卡片 */
+      .hero-dashboard {
+        background: linear-gradient(135deg, var(--p-primary) 0%, #003a8c 100%);
+        border-radius: 24px;
+        padding: 30px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 10px 30px rgba(26, 115, 232, 0.25);
+        margin-bottom: 25px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-dashboard::after {
+        content: "\f48b"; /* FontAwesome Box icon */
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        position: absolute;
+        right: -20px;
+        bottom: -30px;
+        font-size: 12rem;
+        color: rgba(255, 255, 255, 0.05);
+      }
+
+      .user-welcome h2 {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+
+      .user-welcome p {
+        opacity: 0.85;
+        font-size: 0.95rem;
+      }
+
+      /* 3. 錢包整合樣式 */
+      .wallet-summary-box {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+        padding: 20px 25px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        text-align: right;
+        min-width: 220px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      }
+
+      .wallet-summary-box:hover {
+        transform: translateY(-3px);
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .ws-label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        margin-bottom: 5px;
+      }
+
+      .ws-amount {
+        font-size: 2rem;
+        font-weight: 900;
+        font-family: "Monaco", monospace;
+      }
+
+      /* 4. 快速行動磁貼 (Quick Actions) */
+      .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 25px;
+      }
+
+      .action-tile {
+        background: white;
+        border: 1px solid #eef1f6;
+        border-radius: 20px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: pointer;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+      }
+
+      .action-tile:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
+        border-color: var(--p-primary);
+      }
+
+      .tile-icon {
+        width: 54px;
+        height: 54px;
+        background: var(--p-primary-bg);
+        color: var(--p-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        border-radius: 15px;
+      }
+
+      .action-tile span {
+        font-weight: 700;
+        color: var(--text-main);
+        font-size: 0.95rem;
+      }
+
+      /* 5. 即時動態進度條 (Status Bar) */
+      .live-status-bar {
+        background: white;
+        border-radius: 20px;
+        padding: 20px 0;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin-bottom: 25px;
+        box-shadow: var(--shadow-1);
+        border: 1px solid var(--border-light);
+      }
+
+      .status-node {
+        text-align: center;
+        flex: 1;
+        position: relative;
+      }
+
+      .status-node:not(:last-child)::after {
+        content: "\f054";
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        position: absolute;
+        right: -5%;
+        top: 30%;
+        color: #ddd;
+        font-size: 0.8rem;
+      }
+
+      .sn-count {
+        display: block;
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: var(--p-primary);
+        margin-bottom: 4px;
+      }
+
+      .sn-label {
+        font-size: 0.8rem;
+        color: var(--text-sub);
+        font-weight: 600;
+      }
+
+      /* 6. 手機版 RWD 調優 */
+      @media (max-width: 800px) {
+        .hero-dashboard {
+          flex-direction: column;
+          text-align: center;
+          padding: 25px;
+        }
+        .wallet-summary-box {
+          margin-top: 20px;
+          width: 100%;
+          text-align: center;
+        }
+        .quick-actions-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .status-node:not(:last-child)::after {
+          display: none;
+        }
+      }
+
+      /* 保留原本預覽圖樣式 */
       .preview-container {
         display: flex;
         flex-wrap: wrap;
@@ -32,6 +217,7 @@
       }
     </style>
   </head>
+
   <body class="dashboard-theme">
     <div class="app-layout-wrapper">
       <header class="dashboard-header">
@@ -40,7 +226,6 @@
             <img src="assets/logo.png" alt="Logo" class="header-logo-sm" />
             <h1>會員中心</h1>
           </div>
-
           <div class="header-right-actions">
             <div class="notification-wrapper">
               <div id="btn-notification" class="notif-trigger">
@@ -66,7 +251,6 @@
                 </div>
               </div>
             </div>
-
             <nav class="main-nav header-nav-right"></nav>
           </div>
         </div>
@@ -74,232 +258,187 @@
 
       <div id="message-box" class="alert" style="display: none"></div>
 
-      <div class="user-profile-card">
-        <div class="profile-bg"></div>
-        <div class="profile-content">
-          <div class="avatar-circle"><i class="fas fa-user"></i></div>
-
-          <div class="profile-details">
-            <h2 id="welcome-message">歡迎回來</h2>
-            <div class="user-meta">
-              <span class="meta-item">
-                <i class="fas fa-envelope"></i>
-                <span id="user-email">...</span>
-              </span>
-              <span class="meta-item">
-                <i class="fas fa-phone"></i>
-                <span id="user-phone">...</span>
-              </span>
-            </div>
-            <div class="user-address">
-              <i class="fas fa-map-marker-alt"></i>
-              <span id="user-address">...</span>
-            </div>
-          </div>
-
-          <div id="btn-quick-wallet" class="wallet-balance-card">
-            <div class="wb-label"><i class="fas fa-coins"></i> 錢包餘額</div>
-            <div class="wb-amount" id="header-wallet-balance">...</div>
-            <div class="wb-action">
-              儲值 / 詳情 <i class="fas fa-chevron-right"></i>
-            </div>
-          </div>
-
-          <div class="profile-actions">
-            <button id="btn-edit-profile" class="btn btn-secondary btn-mini">
-              <i class="fas fa-pen"></i> 編輯
-            </button>
-            <button
-              id="btn-change-password"
-              class="btn btn-outline-primary btn-mini"
-            >
-              <i class="fas fa-key"></i> 修改密碼
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div
-        id="draft-queue-container"
-        class="notice-card warning"
-        style="display: none"
-      >
-        <div class="notice-content">
-          <h4><i class="fas fa-clock"></i> 待處理的試算包裹</h4>
-          <p>您有從試算表帶入的商品，將依序自動填入：</p>
-          <ul id="draft-queue-list"></ul>
-        </div>
-      </div>
-
-      <div class="section-card forecast-section">
-        <div class="card-header">
-          <h3><i class="fas fa-box-open"></i> 預報新包裹</h3>
-          <div class="header-btns">
-            <button
-              id="btn-claim-package"
-              class="btn btn-sm btn-outline-primary"
-            >
-              <i class="fas fa-search"></i> 認領無主件
-            </button>
-            <button id="btn-bulk-forecast" class="btn btn-sm btn-secondary">
-              <i class="fas fa-file-excel"></i> 批量匯入
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div
-            id="forecast-warning-box"
-            class="alert alert-error"
-            style="display: none"
-          ></div>
-
-          <div class="alert alert-warning-modern">
-            <i class="fas fa-exclamation-triangle"></i>
-            <div>
-              <strong>重要提醒：</strong> 若您的單件包裹重量超過
-              100kg，請務必確認台灣收件端可<strong>自行安排堆高機</strong>卸貨。
-            </div>
-          </div>
-
-          <form id="forecast-form" class="forecast-form-grid">
-            <div class="form-group">
-              <label class="required">物流單號</label>
-              <input
-                type="text"
-                id="trackingNumber"
-                class="form-control"
-                placeholder="掃描或輸入單號"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label class="required">商品名稱</label>
-              <input
-                type="text"
-                id="productName"
-                class="form-control"
-                placeholder="例：書桌"
-                required
-              />
-            </div>
-            <div class="form-group short">
-              <label>數量</label>
-              <input
-                type="number"
-                id="quantity"
-                class="form-control"
-                value="1"
-                min="1"
-              />
-            </div>
-            <div class="form-group short">
-              <label>商品照片 (報關用)</label>
-              <input
-                type="file"
-                id="images"
-                multiple
-                accept="image/*"
-                style="display: none"
-              />
-              <div
-                id="forecast-uploader"
-                class="image-uploader-container"
-              ></div>
-            </div>
-            <div class="form-group full">
-              <label>商品購買連結</label>
-              <input
-                type="url"
-                id="productUrl"
-                class="form-control"
-                placeholder="https://..."
-              />
-              <small class="form-tip">方便管理員核對商品資訊。</small>
-            </div>
-            <div class="form-group full">
-              <label>備註</label>
-              <input
-                type="text"
-                id="note"
-                class="form-control"
-                placeholder="特殊需求..."
-              />
-            </div>
-            <div class="form-group full text-right">
-              <button type="submit" class="btn btn-primary btn-add-cart">
-                <i class="fas fa-plus-circle"></i> 提交預報
+      <div class="container main-content" style="padding-top: 20px">
+        <section class="hero-dashboard animate-slide-up">
+          <div class="user-welcome">
+            <h2 id="welcome-message">您好，載入中...</h2>
+            <p>
+              <i class="fas fa-id-badge"></i>
+              <span id="user-email">...</span>
+            </p>
+            <div style="margin-top: 15px; display: flex; gap: 12px">
+              <button
+                id="btn-edit-profile"
+                class="btn btn-mini"
+                style="
+                  background: rgba(255, 255, 255, 0.15);
+                  border: 1px solid rgba(255, 255, 255, 0.3);
+                  color: #fff;
+                  padding: 6px 15px;
+                "
+              >
+                <i class="fas fa-user-edit"></i> 帳號設定
               </button>
             </div>
-          </form>
-        </div>
-      </div>
+          </div>
 
-      <div class="dashboard-tabs">
-        <button id="tab-packages" class="tab-btn active">
-          <i class="fas fa-boxes"></i> 我的包裹
-        </button>
-        <button id="tab-shipments" class="tab-btn">
-          <i class="fas fa-shipping-fast"></i> 我的集運單
-        </button>
-        <button id="tab-recipients" class="tab-btn">
-          <i class="fas fa-address-book"></i> 常用收件人
-        </button>
-        <button id="tab-wallet" class="tab-btn">
-          <i class="fas fa-wallet"></i> 我的錢包
-        </button>
-        <button id="tab-unclaimed" class="tab-btn">
-          <i class="fas fa-search-dollar"></i> 無主招領
-        </button>
-      </div>
-
-      <main class="dashboard-main-content">
-        <div id="packages-section" class="tab-content active">
-          <div id="section-container-packages"></div>
-        </div>
-        <div id="shipments-section" class="tab-content" style="display: none">
-          <div id="section-container-shipments"></div>
-        </div>
-        <div id="recipient-section" class="tab-content" style="display: none">
-          <div id="section-container-recipients"></div>
-        </div>
-        <div id="wallet-section" class="tab-content" style="display: none">
-          <div id="section-container-wallet"></div>
-        </div>
-
-        <div id="unclaimed-section" class="tab-content" style="display: none">
-          <div class="section-card">
-            <div class="card-header">
-              <h3><i class="fas fa-search-dollar"></i> 無主包裹招領</h3>
-              <p class="section-tip">
-                倉庫中尚未被預報的包裹。認領請點擊並輸入完整單號。
-              </p>
-            </div>
-            <div class="card-body">
-              <div class="table-responsive">
-                <table class="app-table">
-                  <thead>
-                    <tr>
-                      <th>入庫時間</th>
-                      <th>單號(末5碼)</th>
-                      <th>商品名稱</th>
-                      <th>重量/資訊</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody id="unclaimed-table-body">
-                    <tr>
-                      <td colspan="5" class="text-center py-4">載入中...</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+          <div id="btn-quick-wallet" class="wallet-summary-box">
+            <div class="ws-label">可用餘額 (TWD)</div>
+            <div class="ws-amount" id="header-wallet-balance">0</div>
+            <div
+              class="ws-label"
+              style="font-size: 0.7rem; margin-top: 6px; opacity: 0.8"
+            >
+              儲值或查看帳務 <i class="fas fa-chevron-right"></i>
             </div>
           </div>
+        </section>
+
+        <section
+          class="live-status-bar animate-slide-up"
+          style="animation-delay: 0.1s"
+        >
+          <div class="status-node">
+            <span class="sn-count" id="count-pending">0</span>
+            <span class="sn-label">待入庫</span>
+          </div>
+          <div class="status-node">
+            <span class="sn-count" id="count-arrived">0</span>
+            <span class="sn-label">已入庫</span>
+          </div>
+          <div class="status-node">
+            <span class="sn-count" id="count-exception">0</span>
+            <span class="sn-label">異常件</span>
+          </div>
+          <div class="status-node">
+            <span class="sn-count" id="count-unpaid">0</span>
+            <span class="sn-label">待付款</span>
+          </div>
+        </section>
+
+        <section
+          class="quick-actions-grid animate-slide-up"
+          style="animation-delay: 0.15s"
+        >
+          <div
+            class="action-tile"
+            onclick="document.getElementById('tab-packages').click()"
+          >
+            <div class="tile-icon"><i class="fas fa-box-open"></i></div>
+            <span>預報包裹</span>
+          </div>
+          <div
+            class="action-tile"
+            onclick="document.getElementById('tab-shipments').click()"
+          >
+            <div class="tile-icon"><i class="fas fa-shipping-fast"></i></div>
+            <span>申請集運</span>
+          </div>
+          <div
+            class="action-tile"
+            onclick="location.href='furniture-procurement.html'"
+          >
+            <div class="tile-icon"><i class="fas fa-couch"></i></div>
+            <span>傢俱代採</span>
+          </div>
+          <div class="action-tile" id="btn-claim-package-tile">
+            <div class="tile-icon"><i class="fas fa-search-location"></i></div>
+            <span>認領包裹</span>
+          </div>
+        </section>
+
+        <div
+          id="draft-queue-container"
+          class="notice-card warning"
+          style="display: none"
+        >
+          <div class="notice-content">
+            <h4><i class="fas fa-clock"></i> 待處理的試算包裹</h4>
+            <ul id="draft-queue-list"></ul>
+          </div>
         </div>
-      </main>
+
+        <div
+          class="section-card"
+          style="padding: 0; overflow: hidden; border-radius: 20px"
+        >
+          <div
+            class="dashboard-tabs"
+            style="margin: 0; background: #fff; border-bottom: 1px solid #eee"
+          >
+            <button id="tab-packages" class="tab-btn active">
+              <i class="fas fa-boxes"></i> 包裹
+            </button>
+            <button id="tab-shipments" class="tab-btn">
+              <i class="fas fa-file-invoice-dollar"></i> 單據
+            </button>
+            <button id="tab-wallet" class="tab-btn">
+              <i class="fas fa-history"></i> 帳務
+            </button>
+            <button id="tab-recipients" class="tab-btn">
+              <i class="fas fa-users"></i> 收件人
+            </button>
+            <button id="tab-unclaimed" class="tab-btn">
+              <i class="fas fa-question-circle"></i> 無主
+            </button>
+          </div>
+
+          <main class="dashboard-main-content" style="padding: 20px">
+            <div id="packages-section" class="tab-content active">
+              <div id="section-container-packages"></div>
+            </div>
+            <div
+              id="shipments-section"
+              class="tab-content"
+              style="display: none"
+            >
+              <div id="section-container-shipments"></div>
+            </div>
+            <div
+              id="recipient-section"
+              class="tab-content"
+              style="display: none"
+            >
+              <div id="section-container-recipients"></div>
+            </div>
+            <div id="wallet-section" class="tab-content" style="display: none">
+              <div id="section-container-wallet"></div>
+            </div>
+            <div
+              id="unclaimed-section"
+              class="tab-content"
+              style="display: none"
+            >
+              <div id="section-container-unclaimed-area">
+                <div class="table-responsive">
+                  <table class="app-table">
+                    <thead>
+                      <tr>
+                        <th>入庫時間</th>
+                        <th>單號(末5碼)</th>
+                        <th>商品名稱</th>
+                        <th>重量/資訊</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="unclaimed-table-body">
+                      <tr>
+                        <td colspan="5" class="text-center py-4">載入中...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+
+        <div class="safe-area-spacer"></div>
+      </div>
 
       <div style="height: 100px"></div>
     </div>
+
     <nav id="mobile-bottom-nav" class="universal-bottom-nav"></nav>
 
     <div id="modal-container-profile-edit"></div>
@@ -310,231 +449,33 @@
     <div id="modal-container-claim-package"></div>
 
     <div id="edit-package-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content">
-        <button class="modal-close">&times;</button>
-        <h3>編輯包裹</h3>
-        <input type="hidden" id="edit-package-id" />
-        <form id="edit-package-form">
-          <div class="form-group">
-            <label class="required">物流單號</label>
-            <input
-              type="text"
-              id="edit-trackingNumber"
-              class="form-control"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label class="required">商品名稱</label>
-            <input
-              type="text"
-              id="edit-productName"
-              class="form-control"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>數量</label>
-            <input
-              type="number"
-              id="edit-quantity"
-              class="form-control"
-              min="1"
-            />
-          </div>
-          <div class="form-group">
-            <label>商品連結</label>
-            <input
-              type="url"
-              id="edit-productUrl"
-              class="form-control"
-              placeholder="https://..."
-            />
-          </div>
-          <div class="form-group">
-            <label>備註</label>
-            <input type="text" id="edit-note" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>現有照片:</label>
-            <div
-              id="edit-package-images-container"
-              class="preview-container"
-            ></div>
-          </div>
-          <div class="form-group">
-            <label class="text-primary-link"
-              ><i class="fas fa-plus"></i> 補傳新照片</label
-            >
-            <input
-              type="file"
-              id="edit-package-new-images"
-              multiple
-              accept="image/*"
-              style="display: none"
-            />
-            <div
-              id="edit-package-uploader"
-              class="image-uploader-container"
-            ></div>
-          </div>
-          <button type="submit" class="btn btn-primary w-100">儲存變更</button>
-        </form>
-      </div>
+      ...
     </div>
-
     <div
       id="recipient-selector-modal"
       class="modal-overlay"
-      style="display: none; z-index: 1100"
+      style="display: none"
     >
-      <div class="modal-content">
-        <button class="modal-close">&times;</button>
-        <h3>選擇常用收件人</h3>
-        <div id="recipient-selector-list" class="scroll-list"></div>
-      </div>
+      ...
     </div>
-
     <div id="bank-info-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content text-center">
-        <button class="modal-close">&times;</button>
-        <h3 class="text-success">
-          <i class="fas fa-check-circle"></i> 訂單建立成功！
-        </h3>
-        <p class="text-sub">已寄送訂單至您的 Email (可能存在垃圾郵件)</p>
-        <div class="bank-details-card">
-          <p>請匯款至：</p>
-          <div class="bank-row">
-            <strong>銀行：</strong><span id="bank-name">第一銀行 (007)</span>
-          </div>
-          <div class="bank-row">
-            <strong>帳號：</strong
-            ><span id="bank-account" class="text-danger-bold">60110066477</span>
-          </div>
-          <div class="bank-row">
-            <strong>戶名：</strong><span id="bank-holder">跑得快國際貿易</span>
-          </div>
-          <button
-            id="btn-copy-bank-info"
-            class="btn btn-secondary btn-sm w-100 mt-2"
-          >
-            複製資訊
-          </button>
-        </div>
-        <div class="modal-footer-grid">
-          <button class="btn btn-secondary modal-close-btn">稍後上傳</button>
-          <button id="btn-upload-now" class="btn btn-accent">
-            <i class="fas fa-camera"></i> 立即上傳憑證
-          </button>
-        </div>
-      </div>
+      ...
     </div>
-
     <div id="upload-proof-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content">
-        <button class="modal-close">&times;</button>
-        <h3>上傳付款憑證</h3>
-        <div id="upload-proof-bank-info" class="bank-info-box">
-          載入匯款資訊中...
-        </div>
-        <input type="hidden" id="upload-proof-id" />
-        <form id="upload-proof-form">
-          <div class="tax-info-section">
-            <label class="label-accent">📝 統一編號 (如需修改請填寫)</label>
-            <div class="flex-gap-10">
-              <input
-                type="text"
-                id="proof-taxId"
-                class="form-control"
-                placeholder="統編 (8碼)"
-              />
-              <input
-                type="text"
-                id="proof-invoiceTitle"
-                class="form-control"
-                placeholder="公司抬頭"
-              />
-            </div>
-            <small class="text-muted">※ 若留空將使用原資料。</small>
-          </div>
-          <div class="form-group mt-3">
-            <label class="required">轉帳截圖</label>
-            <input
-              type="file"
-              id="proof-file"
-              accept="image/*"
-              class="form-control"
-              required
-            />
-          </div>
-          <button type="submit" class="btn btn-primary w-100">確認上傳</button>
-        </form>
-      </div>
+      ...
     </div>
-
     <div id="package-details-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content modal-lg">
-        <button class="modal-close">&times;</button>
-        <h3>包裹入庫詳情</h3>
-        <div id="details-boxes-list"></div>
-        <div class="detail-total-row text-right">
-          <span>總重：<span id="details-total-weight"></span> kg</span>
-          <span class="ml-3"
-            >運費：<span id="details-total-fee" class="text-danger"></span
-          ></span>
-        </div>
-        <hr />
-        <h4>倉庫實拍</h4>
-        <div id="details-images-gallery" class="gallery-grid-sm"></div>
-        <button class="btn btn-secondary modal-close-btn mt-3 w-100">
-          關閉
-        </button>
-      </div>
+      ...
     </div>
-
     <div
       id="shipment-details-modal"
       class="modal-overlay"
       style="display: none"
     >
-      <div class="modal-content modal-lg">
-        <button class="modal-close">&times;</button>
-        <h3>訂單詳情</h3>
-        <div class="modal-body-scroll">
-          <div class="modal-section-title">📝 訂單資訊</div>
-          <div class="info-grid-responsive">
-            <div><strong>訂單編號:</strong> <span id="sd-id"></span></div>
-            <div><strong>狀態:</strong> <span id="sd-status"></span></div>
-            <div><strong>建立日期:</strong> <span id="sd-date"></span></div>
-            <div>
-              <strong>台灣單號:</strong>
-              <span id="sd-trackingTW" class="text-tracking"></span>
-            </div>
-          </div>
-          <div id="sd-timeline"></div>
-          <div class="modal-section-title">👤 收件人</div>
-          <div class="recipient-info-box">
-            <p><strong>姓名:</strong> <span id="sd-name"></span></p>
-            <p><strong>電話:</strong> <span id="sd-phone"></span></p>
-            <p><strong>地址:</strong> <span id="sd-address"></span></p>
-          </div>
-          <div class="modal-section-title">💰 費用明細</div>
-          <div id="sd-fee-breakdown" class="fee-box"></div>
-          <div class="modal-section-title">🛒 購買證明</div>
-          <div id="sd-proof-images" class="gallery-grid"></div>
-        </div>
-        <div class="modal-footer sticky-footer">
-          <button class="btn btn-primary modal-close-btn w-100">關閉</button>
-        </div>
-      </div>
+      ...
     </div>
-
     <div id="view-images-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content">
-        <button class="modal-close">&times;</button>
-        <h3>照片瀏覽</h3>
-        <div id="images-gallery" class="gallery-grid"></div>
-      </div>
+      ...
     </div>
 
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -545,7 +486,7 @@
           if (res.ok) {
             const el = document.getElementById(id);
             if (el) el.innerHTML = await res.text();
-          } else console.error(`Missing component: ${path}`);
+          }
         } catch (e) {
           console.error(`Error loading ${path}`, e);
         }
@@ -587,14 +528,11 @@
           "components/modals/claim-package.html"
         ),
       ]).then(() => {
-        // 保留您的 DOMContentLoaded 攔截邏輯，確保組件載入後再執行 JS
+        // 攔截邏輯
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
-          if (type === "DOMContentLoaded") {
-            listener();
-          } else {
-            originalAddEventListener.call(document, type, listener, options);
-          }
+          if (type === "DOMContentLoaded") listener();
+          else originalAddEventListener.call(document, type, listener, options);
         };
 
         const scripts = [
@@ -624,6 +562,13 @@
           for (const src of scripts) {
             await loadScript(src);
           }
+          // 額外綁定：認領無主件磁貼點擊
+          const unclaimedTile = document.getElementById(
+            "btn-claim-package-tile"
+          );
+          if (unclaimedTile)
+            unclaimedTile.onclick = () =>
+              document.getElementById("btn-claim-package")?.click();
         })();
       });
     </script>
