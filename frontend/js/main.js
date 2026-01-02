@@ -107,7 +107,9 @@ function updateUIWithSettings(data) {
   }
 
   if (data.announcement) renderAnnouncement(data.announcement);
-
+  if (data.usageCount) {
+    setText("usageCount", `${data.usageCount}+`);
+  }
   renderRateTable();
   renderRemoteAreaOptions();
   updateItemTypeSelects();
