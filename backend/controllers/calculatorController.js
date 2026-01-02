@@ -1,4 +1,4 @@
-// backend/controllers/calculatorController.js (V12.8 - 終極旗艦無省略版：隨機人氣倍增 + 22,999 底標)
+// backend/controllers/calculatorController.js (V12.9 - 終極旗艦無省略版：隨機人氣倍增 + 22,999 底標)
 
 const prisma = require("../config/db.js");
 const ratesManager = require("../utils/ratesManager.js");
@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
     text: "歡迎使用小跑豬集運！新會員註冊即享優惠。",
     color: "info",
   },
+  // 預設偏遠地區
   remoteAreas: {
     1800: ["東勢區", "新社區", "石岡區", "和平區"],
     2000: ["三芝", "石門", "烏來", "坪林"],
@@ -29,6 +30,7 @@ const DEFAULT_CONFIG = {
     account: "60110066477",
     holder: "跑得快國際貿易",
   },
+  // 代採購預設設定
   furnitureConfig: {
     exchangeRate: 4.65,
     serviceFeeRate: 0.05,
@@ -45,18 +47,19 @@ const DEFAULT_CONFIG = {
 const getCalculatorConfig = async (req, res) => {
   try {
     // --- [核心新增：進網頁即隨機人氣累加邏輯] ---
-    // 1. 先從資料庫讀取目前累計的使用人數
+    // 1. 先從資料庫讀取目前累計的使用次數
     const usageRecord = await prisma.systemSetting.findUnique({
       where: { key: "total_usage" },
     });
 
     let currentDbValue = usageRecord ? parseInt(usageRecord.value) : 0;
+    if (isNaN(currentDbValue)) currentDbValue = 0;
 
     // 2. 隨機產生 1 到 5 的增加量
     const randomIncrement = Math.floor(Math.random() * 5) + 1;
     let nextValue = currentDbValue + randomIncrement;
 
-    // 3. 異步更新回資料庫 (不阻塞後續費率讀取速度)
+    // 3. 異步更新回資料庫 (不阻塞後續費率讀取，提升效能)
     prisma.systemSetting
       .upsert({
         where: { key: "total_usage" },
@@ -82,14 +85,14 @@ const getCalculatorConfig = async (req, res) => {
       "announcement",
       "warehouse_info",
       "furniture_config",
-      "total_usage", // 同步抓取包含最新累加的統計 Key
+      "total_usage", // 同步抓取統計 Key
     ];
 
     const settingsList = await prisma.systemSetting.findMany({
       where: { key: { in: keysToFetch } },
     });
 
-    // 3. 轉換為 Key-Value 物件並解析 JSON 內容 (嚴格保留您的 forEach 邏輯)
+    // 3. 轉換為 Key-Value 物件並解析 JSON 內容 (嚴格保留您原有的 try-catch 與 forEach 邏輯)
     const settingsMap = {};
     settingsList.forEach((item) => {
       try {
@@ -110,10 +113,10 @@ const getCalculatorConfig = async (req, res) => {
       rates.procurement = DEFAULT_CONFIG.furnitureConfig;
     }
 
-    // 5. [核心顯示] 計算最終顯示人數：底標 22999 + 最新DB累計值
+    // 5. [核心顯示修正] 計算最終顯示人數：底標 22999 + 最新累計值
     const displayUsageCount = DEFAULT_CONFIG.baselineUsage + nextValue;
 
-    // 6. 組合最終回傳物件 (完全對應 index.html 需求)
+    // 6. 組合最終回傳物件 (完全對應前端 index.html 需求)
     const responseData = {
       success: true,
       usageCount: displayUsageCount,
@@ -134,7 +137,7 @@ const getCalculatorConfig = async (req, res) => {
     res.status(200).json({
       success: false,
       message: "系統載入預設設定",
-      usageCount: DEFAULT_CONFIG.baselineUsage, // 發生錯誤時至少顯示起跳值
+      usageCount: DEFAULT_CONFIG.baselineUsage, // 錯誤時顯示底標
       rates: fallbackRates,
       remoteAreas: DEFAULT_CONFIG.remoteAreas,
       bankInfo: DEFAULT_CONFIG.bankInfo,
@@ -145,7 +148,7 @@ const getCalculatorConfig = async (req, res) => {
 };
 
 /**
- * @description 計算海運運費 (保留所有原始精確邏輯與詳細映射，絕無縮減)
+ * @description 計算海運運費 (保留所有原始精確邏輯與詳細映射，絕無省略)
  * @route       POST /api/calculator/sea
  * @access      Public
  */

@@ -1,4 +1,4 @@
-// frontend/js/main.js (V21 - Fix Save Logic & Alerts)
+// frontend/js/main.js (V22 - 整合動態人氣顯示與保留所有原始功能)
 
 // --- 前端備案設定 (僅含公開費率結構，不含個資) ---
 // 當後端 API (/api/calculator/config) 無法連線時，前端會使用此設定顯示介面
@@ -79,10 +79,8 @@ async function loadPublicSettings() {
       }
       if (data.remoteAreas) window.REMOTE_AREAS = data.remoteAreas;
 
-      updateUIWithSettings({
-        warehouseInfo: data.warehouseInfo,
-        announcement: data.announcement,
-      });
+      // [核心修正] 直接傳遞完整的 data 物件，確保 usageCount 能被 updateUIWithSettings 讀取
+      updateUIWithSettings(data);
     }
   } catch (e) {
     console.warn("API連線失敗，使用備案設定:", e);
@@ -92,6 +90,16 @@ async function loadPublicSettings() {
 }
 
 function updateUIWithSettings(data) {
+  // --- [新增功能：動態更新使用人數與千分位格式] ---
+  if (data.usageCount) {
+    const usageEl = document.getElementById("usageCount");
+    if (usageEl) {
+      // 使用 Intl.NumberFormat 讓數字加上千分位 (例如 23,005) 並補上 "+"
+      usageEl.textContent =
+        new Intl.NumberFormat().format(data.usageCount) + "+";
+    }
+  }
+
   if (data.warehouseInfo) {
     const info = data.warehouseInfo;
     setText(
@@ -107,9 +115,7 @@ function updateUIWithSettings(data) {
   }
 
   if (data.announcement) renderAnnouncement(data.announcement);
-  if (data.usageCount) {
-    setText("usageCount", `${data.usageCount}+`);
-  }
+
   renderRateTable();
   renderRemoteAreaOptions();
   updateItemTypeSelects();
@@ -133,7 +139,7 @@ function renderAnnouncement(ann) {
   }
 }
 
-// [核心修復] 渲染費率表
+// [核心功能保留] 渲染費率表
 function renderRateTable() {
   const tbody = document.getElementById("rate-table-body");
   const noteList = document.getElementById("rate-notes-list");
@@ -319,7 +325,7 @@ async function handleCalculate() {
     });
     const data = await res.json();
     if (data.success) {
-      // [關鍵修改] 將後端回傳的 rulesApplied 合併進去，確保保存時有規則
+      // [核心功能保留] 確保保存時包含後端回傳的所有規則常數
       currentCalculationResult = {
         ...data.calculationResult,
         rulesApplied: data.rulesApplied,
@@ -437,7 +443,7 @@ window.selectRemoteArea = function (name, fee) {
   }
 };
 
-// [核心修改] 渲染明細，並將 undefined 修復為具體數值
+// [核心功能保留] 渲染明細，並將 undefined 修復為具體數值
 function renderDetailedResults(result, rules) {
   const container = document.getElementById("results-container");
   const stickyTotal = document.getElementById("sticky-total-price");
@@ -452,7 +458,7 @@ function renderDetailedResults(result, rules) {
         ? `<span class="formula-box">(${item.length}x${item.width}x${item.height})÷${rules.VOLUME_DIVISOR}</span>`
         : `<span class="formula-box">${item.cbm} x ${rules.CBM_TO_CAI_FACTOR}</span>`;
 
-    // [New] 構建動態警示訊息 (不再顯示 static text，而是顯示 >= 數值)
+    // 構建動態警示訊息 (從 rules 常數讀取)
     const oversizedLimit = rules.OVERSIZED_LIMIT || 300;
     const overweightLimit = rules.OVERWEIGHT_LIMIT || 100;
 
@@ -551,6 +557,7 @@ function renderDetailedResults(result, rules) {
   window.currentCalculationResult = result;
 }
 
+// [核心功能保留] 分享與儲存邏輯
 window.saveToForecast = function () {
   if (!window.currentCalculationResult) return;
   localStorage.setItem(
