@@ -1,11 +1,12 @@
 // frontend/js/dashboard-packages.js
 // V2025.Final.UltimateFix - 包含智慧文字比對、強制前端重算、Excel與預報功能完整保留
 // [Patch] Cloudinary URL Fix: Added checks for absolute URLs to prevent broken images
+// [Update] 實裝分頁功能：單件/批量預報連動、即時搜尋與狀態篩選
 
 let currentEditPackageImages = [];
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 綁定「認領包裹」按鈕 (手動開啟)
+  // 1. 綁定「認領包裹」按鈕 (手動開啟)
   const btnClaim = document.getElementById("btn-claim-package");
   if (btnClaim) {
     btnClaim.addEventListener("click", () => {
@@ -13,13 +14,46 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 綁定「批量預報」按鈕
-  const btnBulk = document.getElementById("btn-bulk-forecast");
-  if (btnBulk) {
-    btnBulk.addEventListener("click", () => {
+  // 2. [優化實裝] 綁定「批量預報」按鈕 (解決 ID 衝突，確保多處按鈕有效)
+  const bulkBtns = document.querySelectorAll("#btn-bulk-forecast");
+  bulkBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
       const modal = document.getElementById("bulk-forecast-modal");
       if (modal) modal.style.display = "flex";
     });
+  });
+
+  // 3. [優化實裝] 綁定「單件預報」按鈕 (連動滾動與聚焦)
+  const btnSingle = document.getElementById("btn-single-forecast");
+  if (btnSingle) {
+    btnSingle.addEventListener("click", () => {
+      const forecastSection = document.querySelector(".forecast-section");
+      if (forecastSection) {
+        forecastSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => {
+          const input = document.getElementById("trackingNumber");
+          if (input) {
+            input.focus();
+            input.style.boxShadow = "0 0 0 4px rgba(26, 115, 232, 0.3)";
+            setTimeout(() => (input.style.boxShadow = ""), 1500);
+          }
+        }, 600);
+      }
+    });
+  }
+
+  // 4. [優化實裝] 搜尋與篩選監聽
+  const pkgSearchInput = document.getElementById("pkg-search-input");
+  if (pkgSearchInput) {
+    pkgSearchInput.addEventListener("input", () =>
+      window.filterAndRenderPackages()
+    );
+  }
+  const pkgStatusFilter = document.getElementById("pkg-status-filter");
+  if (pkgStatusFilter) {
+    pkgStatusFilter.addEventListener("change", () =>
+      window.filterAndRenderPackages()
+    );
   }
 
   // 綁定認領表單提交
@@ -181,21 +215,50 @@ window.loadMyPackages = async function () {
     });
     const data = await res.json();
     window.allPackagesData = data.packages || [];
-    renderPackagesTable();
+    // 使用篩選渲染函式以維持當前的過濾狀態
+    window.filterAndRenderPackages();
   } catch (e) {
     tableBody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:red;">載入失敗: ${e.message}</td></tr>`;
   }
 };
 
-function renderPackagesTable() {
+/**
+ * [New實裝] 綜合搜尋與篩選邏輯
+ */
+window.filterAndRenderPackages = function () {
+  if (!window.allPackagesData) return;
+
+  const searchTerm =
+    document.getElementById("pkg-search-input")?.value.toLowerCase().trim() ||
+    "";
+  const statusFilter =
+    document.getElementById("pkg-status-filter")?.value || "all";
+
+  const filtered = window.allPackagesData.filter((pkg) => {
+    const matchesSearch =
+      pkg.productName.toLowerCase().includes(searchTerm) ||
+      pkg.trackingNumber.toLowerCase().includes(searchTerm);
+    const matchesStatus = statusFilter === "all" || pkg.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  renderPackagesTable(filtered);
+};
+
+/**
+ * [優化] 渲染函式：支援帶入過濾後的資料
+ */
+function renderPackagesTable(dataToRender = null) {
   const tableBody = document.getElementById("packages-table-body");
   if (!tableBody) return;
 
+  const displayData =
+    dataToRender !== null ? dataToRender : window.allPackagesData;
   tableBody.innerHTML = "";
 
-  if (window.allPackagesData.length === 0) {
+  if (!displayData || displayData.length === 0) {
     tableBody.innerHTML =
-      '<tr><td colspan="5" class="text-center" style="padding:30px; color:#999;">目前沒有包裹，請點擊上方「預報新包裹」</td></tr>';
+      '<tr><td colspan="5" class="text-center" style="padding:30px; color:#999;">目前沒有符合條件的包裹</td></tr>';
     if (typeof window.updateCheckoutBar === "function")
       window.updateCheckoutBar();
     return;
@@ -204,17 +267,15 @@ function renderPackagesTable() {
   const statusMap = window.PACKAGE_STATUS_MAP || {};
   const statusClasses = window.STATUS_CLASSES || {};
 
-  window.allPackagesData.forEach((pkg) => {
+  displayData.forEach((pkg) => {
     const statusText = statusMap[pkg.status] || pkg.status;
     const statusClass = statusClasses[pkg.status] || "";
 
-    // [New] 檢查是否擁有「購買連結」或「商品圖片」
     const hasProductUrl = pkg.productUrl && pkg.productUrl.trim() !== "";
     const hasProductImages =
       Array.isArray(pkg.productImages) && pkg.productImages.length > 0;
     const isInfoComplete = hasProductUrl || hasProductImages;
 
-    // 只有已入庫 (ARRIVED)、無異常 且 資料完整(isInfoComplete) 的包裹才能打包
     const isReady =
       pkg.status === "ARRIVED" && !pkg.exceptionStatus && isInfoComplete;
 
@@ -223,13 +284,11 @@ function renderPackagesTable() {
 
     const boxes = Array.isArray(pkg.arrivedBoxes) ? pkg.arrivedBoxes : [];
 
-    // --- 異常與待完善狀態處理 ---
     if (pkg.exceptionStatus) {
       const exText = pkg.exceptionStatus === "DAMAGED" ? "破損" : "違禁品/異常";
       badgesHtml += `<span class="badge-alert" style="background:#ffebee; color:#d32f2f; border:1px solid red; cursor:pointer;" onclick="resolveException('${pkg.id}')">⚠️ ${exText} (點擊處理)</span> `;
     }
 
-    // [New] 資料待完善提示
     if (!isInfoComplete) {
       badgesHtml += `<span class="badge-alert" style="background:#fff3e0; color:#d32f2f; border:1px solid #ff9800; cursor:pointer;" onclick='openEditPackageModal(${JSON.stringify(
         pkg
@@ -260,18 +319,14 @@ function renderPackagesTable() {
         <div class="pkg-badges" style="margin-top:4px;">${badgesHtml}</div>
       `;
     } else {
-      // 如果有異常/待完善但沒箱子數據
       if (badgesHtml) infoHtml = `<div class="pkg-badges">${badgesHtml}</div>`;
     }
 
-    // [Fix] 讀取後端回傳的類別名稱，若無則顯示一般
     const categoryLabel = pkg.displayType || "一般家具";
-
-    // 設定標籤顏色：如果是特殊家具(包含"特殊"字眼)，給它一個明顯的顏色
     const isSpecial = categoryLabel.includes("特殊");
     const categoryBadgeStyle = isSpecial
-      ? "background:#e8f0fe; color:#1a73e8; border:1px solid #c2dbfe;" // 藍色系
-      : "background:#f8f9fa; color:#6c757d; border:1px solid #e9ecef;"; // 灰色系
+      ? "background:#e8f0fe; color:#1a73e8; border:1px solid #c2dbfe;"
+      : "background:#f8f9fa; color:#6c757d; border:1px solid #e9ecef;";
 
     const pkgStr = encodeURIComponent(JSON.stringify(pkg));
     const tr = document.createElement("tr");
@@ -296,7 +351,6 @@ function renderPackagesTable() {
       <td>
         <button class="btn btn-sm btn-primary" onclick='window.openPackageDetails("${pkgStr}")'>詳情</button>
         ${
-          // 允許 PENDING 或 ARRIVED 狀態下修改資料 (為了補全連結/照片)
           pkg.status === "PENDING" || pkg.status === "ARRIVED"
             ? `<button class="btn btn-sm btn-secondary btn-edit" style="margin-left:5px;">修改</button>`
             : ""
@@ -313,9 +367,7 @@ function renderPackagesTable() {
       if (typeof window.updateCheckoutBar === "function")
         window.updateCheckoutBar();
     });
-    // [Fix] 傳遞正確的 pkg 物件給 openEditPackageModal
     tr.querySelector(".btn-edit")?.addEventListener("click", () => {
-      // 因為 closure 的關係，這裡直接用 pkg 變數是安全的
       openEditPackageModal(pkg);
     });
     tr.querySelector(".btn-delete")?.addEventListener("click", () =>
@@ -354,9 +406,7 @@ async function handleClaimSubmit(e) {
     if (res.ok) {
       alert("認領成功！包裹已歸戶。");
       document.getElementById("claim-package-modal").style.display = "none";
-      // 重新載入我的包裹
       window.loadMyPackages();
-      // 如果目前在無主頁面，也刷新無主列表
       if (
         document.getElementById("unclaimed-section").style.display !== "none"
       ) {
@@ -511,10 +561,8 @@ window.openPackageDetails = function (pkgDataStr) {
     let boxesHtml = "";
     let isPkgOversized = false;
     let isPkgOverweight = false;
-    let calculatedTotalBaseFee = 0; // 前端重算總額
+    let calculatedTotalBaseFee = 0;
 
-    // --- 費率匹配邏輯 (含智慧模糊比對) ---
-    // 預設為一般家具 (125)
     let pkgRateConfig =
       window.RATES && window.RATES.general
         ? window.RATES.general
@@ -522,16 +570,13 @@ window.openPackageDetails = function (pkgDataStr) {
     const pType = pkg.displayType || "一般家具";
 
     if (window.RATES) {
-      // [關鍵] 正規化函式：去除空格，統一將「傢」轉為「家」
       const normalize = (str) => (str || "").replace(/傢/g, "家").trim();
       const targetType = normalize(pType);
 
-      // 1. 嘗試尋找 name 匹配 (e.g. "特殊傢俱A" -> 正規化 "特殊家具A" -> 匹配 "特殊家具A")
       let foundRate = Object.values(window.RATES).find(
         (r) => normalize(r.name) === targetType
       );
 
-      // 2. 如果沒找到，嘗試 key 匹配
       if (!foundRate && window.RATES[pType]) {
         foundRate = window.RATES[pType];
       }
@@ -567,7 +612,6 @@ window.openPackageDetails = function (pkgDataStr) {
         const DIVISOR = CONSTANTS.VOLUME_DIVISOR;
         const cai = box.cai || Math.ceil((l * w * h) / DIVISOR);
 
-        // [強制重算] 使用當前找到的費率，忽略資料庫可能過時的數據
         const currentWRate = pkgRateConfig.weightRate;
         const currentVRate = pkgRateConfig.volumeRate;
 
@@ -576,7 +620,6 @@ window.openPackageDetails = function (pkgDataStr) {
         const recalcFinalFee = Math.max(recalcWtFee, recalcVolFee);
         const isVolWin = recalcVolFee >= recalcWtFee;
 
-        // 累加總額
         calculatedTotalBaseFee += recalcFinalFee;
 
         boxesHtml += `
@@ -622,7 +665,6 @@ window.openPackageDetails = function (pkgDataStr) {
       });
       boxesHtml += `</div>`;
 
-      // 底部總結 (使用前端重算的 calculatedTotalBaseFee)
       boxesHtml += `
         <div style="background:#f0f8ff; padding:15px; border-radius:8px; margin-top:15px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
@@ -659,7 +701,6 @@ window.openPackageDetails = function (pkgDataStr) {
     document.getElementById("details-total-weight").textContent =
       totalWeight.toFixed(1);
 
-    // [Fix] 更新標題總金額為重算後的數值
     document.getElementById(
       "details-total-fee"
     ).textContent = `NT$ ${calculatedTotalBaseFee.toLocaleString()}`;
@@ -671,7 +712,6 @@ window.openPackageDetails = function (pkgDataStr) {
     if (warehouseImages.length > 0) {
       warehouseImages.forEach((imgUrl) => {
         const img = document.createElement("img");
-        // [Fixed] 如果是完整 URL (http 開頭) 則不加 API_BASE_URL
         img.src = imgUrl.startsWith("http")
           ? imgUrl
           : `${API_BASE_URL}${imgUrl}`;
@@ -687,7 +727,6 @@ window.openPackageDetails = function (pkgDataStr) {
     }
 
     if (pkg.claimProof) {
-      // [Fixed] Cloudinary URL 處理
       const proofSrc = pkg.claimProof.startsWith("http")
         ? pkg.claimProof
         : `${API_BASE_URL}${pkg.claimProof}`;
@@ -718,7 +757,6 @@ async function handleDeletePackage(pkg) {
   }
 }
 
-// [Updated] 確保修改視窗能正常填入舊資料，包括 productUrl
 window.openEditPackageModal = function (pkg) {
   document.getElementById("edit-package-id").value = pkg.id;
   document.getElementById("edit-trackingNumber").value = pkg.trackingNumber;
@@ -737,7 +775,6 @@ function renderEditImages() {
   if (!container) return;
   container.innerHTML = "";
   currentEditPackageImages.forEach((url, idx) => {
-    // [Fixed] 如果是完整 URL (http 開頭) 則不加 API_BASE_URL
     const src = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
     container.innerHTML += `<div style="position:relative; display:inline-block; margin:5px;"><img src="${src}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;"><span onclick="removeEditImg(${idx})" style="position:absolute;top:-5px;right:-5px;background:red;color:white;border-radius:50%;width:20px;height:20px;text-align:center;cursor:pointer;">&times;</span></div>`;
   });

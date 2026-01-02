@@ -2343,3 +2343,596 @@
     max-width: none;
   }
 }
+/* 強化標籤的識別度 */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 具體狀態顏色加強 */
+.status-pending {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+} /* 橙色 - 待處理 */
+
+.status-arrived {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #dcfce7;
+} /* 綠色 - 已入庫 */
+
+.status-shipped {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #dbeafe;
+} /* 藍色 - 已發貨 */
+
+.status-unpaid {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+  animation: pulse-red 2s infinite; /* 待支付增加微動效提醒 */
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.2);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+.wallet-card {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
+  padding: 24px;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-card .balance-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 8px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.wallet-card .currency-symbol {
+  font-size: 1rem;
+  opacity: 0.8;
+  margin-right: 4px;
+}
+
+/* 裝飾性背景圓圈，增加設計感 */
+.wallet-card::after {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+}
+.action-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn-edit:hover {
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.action-btn-delete:hover {
+  color: #dc2626;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.nav-item {
+  position: relative;
+  border-radius: 12px;
+  margin: 4px 12px;
+  padding: 12px 16px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.nav-item.active {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* 左側活性條 */
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 4px;
+  background-color: #2563eb;
+  border-radius: 0 4px 4px 0;
+}
+.form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+/* Placeholder 優化，讓它更淡一點以區分輸入內容 */
+.form-control::placeholder {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  display: block;
+  opacity: 0.5;
+}
+@media (max-width: 768px) {
+  /* 將表格轉為卡片式佈局 */
+  .responsive-table thead {
+    display: none; /* 隱藏表頭 */
+  }
+
+  .responsive-table tr {
+    display: block;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 12px;
+  }
+
+  .responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label); /* 需要在 HTML td 加上 data-label */
+    font-weight: 600;
+    color: #64748b;
+  }
+}
+:root {
+  /* 品牌主色調 - 強化對比 */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg-main: #f8fafc;
+
+  /* 狀態語義色 - 確保色弱友好且明顯 */
+  --status-pending-bg: #fff7ed;
+  --status-pending-text: #c2410c; /* 橙色 - 待處理 */
+  --status-arrived-bg: #f0fdf4;
+  --status-arrived-text: #15803d; /* 綠色 - 已入庫 */
+  --status-shipped-bg: #eff6ff;
+  --status-shipped-text: #1d4ed8; /* 藍色 - 已發貨 */
+  --status-danger-bg: #fef2f2;
+  --status-danger-text: #dc2626; /* 紅色 - 異常/未支付 */
+  --status-unclaimed-bg: #f5f3ff;
+  --status-unclaimed-text: #7c3aed; /* 紫色 - 無主包裹 */
+
+  /* 陰影與圓角 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --radius-md: 12px;
+}
+/* 通用數據表格容器 */
+.data-table-container {
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table th {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.875rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.data-table td {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.data-table tr:hover {
+  background-color: #f8fafc;
+}
+
+/* 快遞單號特別標注 */
+.tracking-number {
+  font-family: "JetBrains Mono", monospace; /* 使用等寬字體 */
+  color: var(--primary);
+  font-weight: 600;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* 狀態標籤 */
+.badge {
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-pending {
+  background: var(--status-pending-bg);
+  color: var(--status-pending-text);
+}
+.badge-arrived {
+  background: var(--status-arrived-bg);
+  color: var(--status-arrived-text);
+}
+.badge-danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+.badge-unclaimed {
+  background: var(--status-unclaimed-bg);
+  color: var(--status-unclaimed-text);
+}
+.shipment-card {
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+
+.shipment-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.shipment-header {
+  background: #f8fafc;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.shipment-body {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.shipment-info-item label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.shipment-info-item span {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.price-tag {
+  color: #dc2626;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.forecast-form {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  padding: 32px;
+  border-radius: var(--radius-md);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-group label.required::after {
+  content: " *";
+  color: #ef4444;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  outline: none;
+}
+
+.form-helper {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+.wallet-widget {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: white;
+  padding: 28px;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.wallet-widget::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+}
+
+.wallet-label {
+  font-size: 0.875rem;
+  opacity: 0.8;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.wallet-balance {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  font-family: "Inter", sans-serif;
+}
+
+.wallet-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-deposit {
+  background: #fbbf24;
+  color: #78350f;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-deposit:hover {
+  transform: translateY(-2px);
+  background: #f59e0b;
+}
+.recipient-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.recipient-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+}
+
+.recipient-card.is-default {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+
+.recipient-card.is-default::after {
+  content: "默認";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.recipient-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1e293b;
+}
+
+.recipient-detail {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.recipient-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 12px;
+}
+.empty-placeholder {
+  padding: 60px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border: 2px dashed #e2e8f0;
+  border-radius: var(--radius-md);
+  color: #94a3b8;
+}
+
+.empty-placeholder i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.empty-placeholder p {
+  font-size: 1rem;
+}
+/* --- [V39.1] 預報包裹按鈕：高對比立體化重製 --- */
+
+.package-actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 25px;
+  padding: 15px;
+  background: #f1f5f9; /* 增加輕微底色區塊，將按鈕「托」起來 */
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+/* 基礎按鈕升級 */
+.btn-action {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 900; /* 加粗字體 */
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.5px;
+}
+
+/* 「單件預報」：改用強大的品牌漸層與光澤感 */
+.btn-action.primary {
+  background: linear-gradient(135deg, #1a73e8 0%, #004ccb 100%);
+  color: white !important;
+  box-shadow: 0 6px 15px rgba(26, 115, 232, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-action.primary:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(26, 115, 232, 0.45);
+  filter: brightness(1.1);
+}
+
+/* 「批次預報」：改用 Excel 代表色 (綠色) 增加區隔度 */
+.btn-action.secondary {
+  background: linear-gradient(
+    135deg,
+    #217346 0%,
+    #107c10 100%
+  ); /* Excel 專業綠 */
+  color: white !important;
+  box-shadow: 0 6px 15px rgba(33, 115, 70, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-action.secondary:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(33, 115, 70, 0.35);
+  filter: brightness(1.1);
+}
+
+/* 增加圖示背景圓圈，提升視覺重心 */
+.btn-action i {
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.15);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  margin-left: -5px;
+}
+
+/* 按鈕點擊漣漪效果 */
+.btn-action:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* --- 搜尋與過濾區塊同步優化 --- */
+.search-box input {
+  border: 2px solid #cbd5e1; /* 加深邊框 */
+  background: #ffffff;
+  height: 44px;
+}
+
+.search-box input:focus {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.15);
+}
+
+.filter-select {
+  border: 2px solid #cbd5e1;
+  height: 44px;
+  background-color: #ffffff;
+}
