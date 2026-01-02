@@ -1,4 +1,35 @@
-<div class="table-responsive cart-style">
+<div class="package-actions-header animate-slide-up">
+  <div class="action-buttons">
+    <button id="btn-single-forecast" class="btn-action primary">
+      <i class="fas fa-plus-circle"></i> 單件預報
+    </button>
+    <button id="btn-bulk-forecast" class="btn-action secondary">
+      <i class="fas fa-file-excel"></i> 批次預報
+    </button>
+  </div>
+
+  <div class="filter-search-group">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input
+        type="text"
+        id="pkg-search-input"
+        placeholder="搜尋單號或商品名稱..."
+      />
+    </div>
+    <select id="pkg-status-filter" class="filter-select">
+      <option value="all">全部狀態</option>
+      <option value="PENDING">待入庫</option>
+      <option value="ARRIVED">已入庫</option>
+      <option value="EXCEPTION">異常件</option>
+    </select>
+  </div>
+</div>
+
+<div
+  class="table-responsive cart-style animate-slide-up"
+  style="animation-delay: 0.1s"
+>
   <table class="app-table">
     <thead>
       <tr>
@@ -11,8 +42,8 @@
     </thead>
     <tbody id="packages-table-body">
       <tr>
-        <td colspan="5" class="text-center" style="padding: 30px">
-          <div class="loading-spinner" style="margin: 0 auto"></div>
+        <td colspan="5" class="text-center" style="padding: 40px">
+          <div class="loading-spinner"></div>
           <p class="mt-2 text-sub">正在獲取包裹列表...</p>
         </td>
       </tr>
@@ -20,28 +51,4 @@
   </table>
 </div>
 
-<div class="sticky-footer-bar">
-  <div class="footer-content">
-    <div class="footer-total">
-      <div class="checkout-info">
-        已選擇
-        <span
-          id="selected-pkg-count"
-          class="highlight"
-          style="color: var(--p-accent); font-weight: 800"
-          >0</span
-        >
-        件包裹
-      </div>
-    </div>
-    <button
-      id="btn-create-shipment"
-      class="btn btn-primary btn-checkout"
-      disabled
-    >
-      <i class="fas fa-box-check"></i> 合併打包
-    </button>
-  </div>
-</div>
-
-<div class="safe-area-spacer"></div>
+<div class="sticky-footer-bar animate-slide-up"></div>

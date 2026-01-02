@@ -128,7 +128,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
 
-      /* 4. [核心修正] 表格美編置中優化 (解決客戶提到的欄位置中問題) */
+      /* 4. [核心修正] 表格美編置中優化 */
       .app-table {
         width: 100%;
         border-collapse: collapse;
@@ -140,7 +140,7 @@
         color: #64748b;
         font-weight: 800;
         padding: 15px 10px;
-        text-align: center; /* 標題置中 */
+        text-align: center;
         border-bottom: 2px solid #edf2f7;
         font-size: 14px;
         white-space: nowrap;
@@ -148,14 +148,13 @@
 
       .app-table td {
         padding: 15px 10px;
-        text-align: center; /* 內容置中 */
+        text-align: center;
         vertical-align: middle;
         border-bottom: 1px solid #f1f5f9;
         color: #334155;
         font-size: 14px;
       }
 
-      /* 特別針對操作按鈕容器置中 */
       .table-actions {
         display: flex;
         justify-content: center;
@@ -225,8 +224,6 @@
         .quick-actions-grid {
           grid-template-columns: repeat(2, 1fr);
         }
-
-        /* 手機版表格轉卡片後的置中處理 */
         .table-responsive tr {
           text-align: center;
           display: flex;
@@ -377,10 +374,7 @@
           class="quick-actions-grid animate-slide-up"
           style="animation-delay: 0.15s"
         >
-          <div
-            class="action-tile"
-            onclick="document.getElementById('tab-packages').click()"
-          >
+          <div class="action-tile" id="btn-quick-forecast">
             <div class="tile-icon"><i class="fas fa-box-open"></i></div>
             <span>預報包裹</span>
           </div>
@@ -412,6 +406,144 @@
           <div class="notice-content">
             <h4><i class="fas fa-clock"></i> 待處理的試算包裹</h4>
             <ul id="draft-queue-list"></ul>
+          </div>
+        </div>
+
+        <div
+          class="section-card forecast-section animate-slide-up"
+          style="
+            animation-delay: 0.2s;
+            margin-bottom: 25px;
+            background: #fff;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <div
+            class="card-header"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 20px;
+            "
+          >
+            <h3 style="margin: 0; font-weight: 800; color: #1e293b">
+              <i
+                class="fas fa-box-open"
+                style="color: #1a73e8; margin-right: 10px"
+              ></i>
+              預報
+            </h3>
+            <div style="display: flex; gap: 8px">
+              <button
+                id="btn-claim-package"
+                class="btn btn-sm btn-outline-primary"
+                style="width: auto; font-size: 12px"
+              >
+                <i class="fas fa-search"></i> 認領無主件
+              </button>
+              <button
+                id="btn-bulk-forecast"
+                class="btn btn-sm btn-secondary"
+                style="width: auto; font-size: 12px"
+              >
+                <i class="fas fa-file-excel"></i> 批量匯入
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div
+              id="forecast-warning-box"
+              class="alert alert-error"
+              style="display: none; margin-bottom: 15px"
+            ></div>
+            <form id="forecast-form" class="forecast-form-grid">
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                  gap: 15px;
+                "
+              >
+                <div class="form-group">
+                  <label class="required">物流單號</label>
+                  <input
+                    type="text"
+                    id="trackingNumber"
+                    class="form-control"
+                    placeholder="掃描或輸入單號"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="required">商品名稱</label>
+                  <input
+                    type="text"
+                    id="productName"
+                    class="form-control"
+                    placeholder="例：書桌"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label>數量</label>
+                  <input
+                    type="number"
+                    id="quantity"
+                    class="form-control"
+                    value="1"
+                    min="1"
+                  />
+                </div>
+              </div>
+              <div class="form-group" style="margin-top: 15px">
+                <label>商品照片 (報關用)</label>
+                <input
+                  type="file"
+                  id="images"
+                  multiple
+                  accept="image/*"
+                  style="display: none"
+                />
+                <div
+                  id="forecast-uploader"
+                  class="image-uploader-container"
+                ></div>
+              </div>
+              <div class="form-group" style="margin-top: 15px">
+                <label>商品購買連結 (照片與連結擇一)</label>
+                <input
+                  type="url"
+                  id="productUrl"
+                  class="form-control"
+                  placeholder="https://..."
+                />
+              </div>
+              <div class="form-group" style="margin-top: 15px">
+                <label>備註</label>
+                <input
+                  type="text"
+                  id="note"
+                  class="form-control"
+                  placeholder="特殊需求..."
+                />
+              </div>
+              <div style="text-align: right; margin-top: 20px">
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  style="
+                    padding: 12px 30px;
+                    border-radius: 12px;
+                    font-weight: 800;
+                  "
+                >
+                  <i class="fas fa-plus-circle"></i> 提交預報
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -596,21 +728,27 @@
             await loadScript(src);
           }
 
+          // [優化] 快速預報跳轉邏輯
+          const btnQuickForecast =
+            document.getElementById("btn-quick-forecast");
+          if (btnQuickForecast) {
+            btnQuickForecast.onclick = () => {
+              document
+                .querySelector(".forecast-section")
+                .scrollIntoView({ behavior: "smooth", block: "center" });
+            };
+          }
+
           // [核心優化] 自動捲動功能補丁
           document.querySelectorAll(".tab-btn").forEach((btn) => {
             btn.addEventListener("click", () => {
               const wrapper = document.querySelector(".dashboard-tabs-wrapper");
               if (wrapper) {
-                // 標頭偏移量：70px (Header) + 10px (間距)
                 const headerOffset = 80;
                 const elementPosition =
                   wrapper.getBoundingClientRect().top + window.pageYOffset;
                 const offsetPosition = elementPosition - headerOffset;
-
-                window.scrollTo({
-                  top: offsetPosition,
-                  behavior: "smooth",
-                });
+                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
               }
             });
           });
