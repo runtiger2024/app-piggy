@@ -997,3 +997,61 @@ textarea {
 /* ============================================================
  * END OF FILE - THEME-CLIENT.CSS V10.0
  * ============================================================ */
+/* --- 頁尾佈局修復 --- */
+.site-footer {
+  background: #232f3e;
+  color: #ddd;
+  padding: 40px 0 100px; /* 留出底部導航列的空間 */
+  text-align: center;
+  margin-top: 50px;
+  width: 100%;
+}
+
+.site-footer__container {
+  max-width: 800px; /* 配合 App 框架寬度 */
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.footer-links {
+  display: flex !important; /* 強制恢復顯示 */
+  justify-content: center;
+  gap: 25px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-links .nav-link {
+  color: #fff;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.footer-links .nav-link:hover {
+  opacity: 0.8;
+}
+
+.footer-links i {
+  font-size: 18px;
+}
+
+/* LINE 圖示專屬顏色 */
+.fa-line {
+  color: #06c755;
+}
+
+.site-footer__copyright {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #999;
+}
+
+.site-footer__copyright a.text-sub {
+  color: #666;
+  text-decoration: none;
+  font-size: 11px;
+}

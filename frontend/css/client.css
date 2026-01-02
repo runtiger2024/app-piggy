@@ -1,6 +1,6 @@
-/* frontend/css/client.css - 核心共用樣式 */
+/* frontend/css/client.css - 核心共用樣式 (修復版) */
 
-/* 1. 核心變數系統 (保留原樣) */
+/* 1. 核心變數系統 */
 :root {
   --color-primary: #1a73e8;
   --color-primary-hover: #1557b0;
@@ -269,10 +269,6 @@ textarea {
   border-color: var(--color-primary);
   outline: none;
 }
-.file-upload-btn,
-.file-upload-box {
-  cursor: pointer;
-} /* 簡化 */
 
 /* 7. 按鈕元件 */
 .btn {
@@ -380,6 +376,7 @@ textarea {
   color: #389e0d;
   border: 1px solid #b7eb8f;
 }
+
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -451,7 +448,6 @@ textarea {
   background: var(--bg-body);
   text-align: right;
 }
-.modal-close,
 .modal-close-btn {
   background: none;
   border: none;
@@ -463,7 +459,7 @@ textarea {
   right: 15px;
 }
 
-/* 11. 頁尾 */
+/* 11. 頁尾 (修復重點) */
 .site-footer {
   background: #232f3e;
   color: #ddd;
@@ -472,10 +468,44 @@ textarea {
   margin-top: 50px;
 }
 
-/* [修改] 全域隱藏客服連結區塊 */
-/* 加上 !important 確保覆蓋之前的 RWD 設定，電腦與手機版皆會隱藏 */
+.site-footer__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
 .footer-links {
-  display: none !important;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-links .nav-link {
+  color: #ddd;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: var(--radius-md);
+}
+
+.footer-links .nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.site-footer__copyright {
+  font-size: 13px;
+  color: #999;
+  line-height: 1.6;
+}
+
+.site-footer__copyright a {
+  color: #666;
+  text-decoration: underline;
 }
 
 /* 12. RWD 通用 */
@@ -493,8 +523,7 @@ textarea {
   .btn {
     width: 100%;
   }
-
-  /* 若之前有在此處加入 .footer-links 的 Flex 設定，
-     上面的 !important 已經會將其覆蓋，無需特別刪除，
-     但為了代碼整潔，您也可以將之前的 footer-links 樣式區塊移除。 */
+  .footer-links {
+    gap: 15px;
+  }
 }

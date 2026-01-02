@@ -1,32 +1,47 @@
 <div class="table-responsive cart-style">
-  <table>
+  <table class="app-table">
     <thead>
       <tr>
         <th width="40">選</th>
         <th>狀態</th>
         <th>商品/單號</th>
         <th>規格/費用</th>
-        <th>操作</th>
+        <th width="100">操作</th>
       </tr>
     </thead>
     <tbody id="packages-table-body">
       <tr>
-        <td colspan="5" class="text-center" style="padding: 30px">載入中...</td>
+        <td colspan="5" class="text-center" style="padding: 30px">
+          <div class="loading-spinner" style="margin: 0 auto"></div>
+          <p class="mt-2 text-sub">正在獲取包裹列表...</p>
+        </td>
       </tr>
     </tbody>
   </table>
 </div>
 
-<div class="sticky-checkout-bar">
-  <div class="checkout-info">
-    已選 <span id="selected-pkg-count" class="highlight">0</span> 件
+<div class="sticky-footer-bar">
+  <div class="footer-content">
+    <div class="footer-total">
+      <div class="checkout-info">
+        已選擇
+        <span
+          id="selected-pkg-count"
+          class="highlight"
+          style="color: var(--p-accent); font-weight: 800"
+          >0</span
+        >
+        件包裹
+      </div>
+    </div>
+    <button
+      id="btn-create-shipment"
+      class="btn btn-primary btn-checkout"
+      disabled
+    >
+      <i class="fas fa-box-check"></i> 合併打包
+    </button>
   </div>
-  <button
-    id="btn-create-shipment"
-    class="btn btn-primary btn-checkout"
-    disabled
-  >
-    合併打包
-  </button>
 </div>
-<div style="height: 80px"></div>
+
+<div class="safe-area-spacer"></div>
