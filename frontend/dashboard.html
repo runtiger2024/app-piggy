@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>會員控制台 | 小跑豬傢俱專線</title>
+    <title>會員中心 | 小跑豬傢俱專線</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
 
     <script src="js/styleLoader.js"></script>
@@ -221,11 +221,27 @@
   <body class="dashboard-theme">
     <div class="app-layout-wrapper">
       <header class="dashboard-header">
-        <div class="header-container">
-          <div class="header-left">
-            <img src="assets/logo.png" alt="Logo" class="header-logo-sm" />
-            <h1>會員中心</h1>
-          </div>
+        <div
+          class="header-container"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+          "
+        >
+          <a href="index.html" class="logo-link">
+            <img
+              src="assets/logo.png"
+              alt="小跑豬集運"
+              class="header-logo-img"
+            />
+            <span class="logo-text">
+              小跑豬
+              <small>會 員 控 制 台</small>
+            </span>
+          </a>
+
           <div class="header-right-actions">
             <div class="notification-wrapper">
               <div id="btn-notification" class="notif-trigger">
@@ -237,11 +253,7 @@
                   >0</span
                 >
               </div>
-              <div
-                id="notification-dropdown"
-                class="notification-dropdown"
-                style="display: none"
-              >
+              <div id="notification-dropdown" class="notification-dropdown">
                 <div class="dropdown-header">
                   <span>通知中心</span>
                   <button id="btn-read-all" class="btn-text">全部已讀</button>

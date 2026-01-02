@@ -1,30 +1,34 @@
 /* frontend/css/client-dashboard.css */
-/* 會員中心旗艦版樣式 - V28.0 任務導向重構與 Mobile Grid 完整保留 */
+/* 會員中心旗艦版終極修正 - V30.0 寬度對齊、導覽列保護與狀態中心美化 */
 
-/* --- [1. 全域 Dashboard 佈局補丁] --- */
+/* --- [1. 全域 Dashboard 佈局與寬度對齊] --- */
 .dashboard-theme {
-  background-color: #f4f7fa;
+  background-color: #f8fafc;
 }
 
+/* 修正：全站寬度鎖定為 800px，確保與首頁及其他分頁一致 */
 .app-layout-wrapper {
-  max-width: 1000px;
+  max-width: 800px;
   margin: 0 auto;
   min-height: 100vh;
+  background: #fff;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
 }
 
+/* 修正：標頭固定高度並增加置頂層級，防止裁切 */
 .dashboard-header {
+  height: 64px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
+  padding: 0 20px;
   background: #fff;
   border-bottom: 1px solid var(--border-light);
-}
-
-.dashboard-header h1 {
-  font-size: 18px;
-  margin: 0;
-  color: var(--text-main);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .header-logo-sm {
@@ -44,63 +48,56 @@
   gap: 15px;
 }
 
-/* --- Dashboard Hero 卡片背景優化 --- */
+/* 主內容區域：增加足夠的頂部內距，確保圖卡不被導覽列遮擋 */
+.main-content {
+  padding: 24px 20px !important;
+  flex: 1;
+}
 
+/* --- [2. 高級 Hero 迎賓圖卡：Logo 刷淡背景修復] --- */
 .hero-dashboard {
   background: linear-gradient(135deg, var(--color-primary) 0%, #003a8c 100%);
-  border-radius: 24px;
-  padding: 35px 30px; /* 稍微增加上下內距，讓卡片更有份量 */
+  border-radius: 20px;
+  padding: 35px 30px;
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 12px 35px rgba(26, 115, 232, 0.3);
+  box-shadow: 0 10px 25px rgba(26, 115, 232, 0.2);
   margin-bottom: 25px;
   position: relative;
-  overflow: hidden; /* 確保背景 Logo 不會超出圓角範圍 */
+  overflow: hidden; /* 確保內容不溢出 */
 }
 
-/* [關鍵優化] 使用實際 Logo 圖片作為刷淡背景 */
+/* 修正：Logo 背景刷淡且不被裁切 */
 .hero-dashboard::after {
   content: "";
   position: absolute;
-  /* 定位在右下角，但稍微往中心移動一點點避免被裁切感過重 */
-  right: -5%;
-  bottom: -15%;
-  width: 200px; /* 根據您的卡片高度調整，200px 通常是黃金比例 */
-  height: 200px;
-  background-image: url("../assets/logo.png"); /* 指向您的實體 Logo */
+  /* 鎖定在右下角，從正值定位確保完整性 */
+  right: 5%;
+  bottom: -10%;
+  width: 180px;
+  height: 180px;
+  background-image: url("../assets/logo.png");
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  opacity: 0.08; /* 刷淡處理：8% 的透明度最為專業 */
-  transform: rotate(-15deg); /* 稍微旋轉，營造設計感 */
-  pointer-events: none; /* 確保不會擋住按鈕點擊 */
+  opacity: 0.08;
+  transform: rotate(-15deg);
+  pointer-events: none;
   z-index: 0;
 }
 
-/* 確保內容在 Logo 之上 */
 .user-welcome,
 .wallet-summary-box {
   position: relative;
-  z-index: 2;
-}
-
-/* 手機版適配：縮小背景 Logo 以免遮擋文字 */
-@media (max-width: 800px) {
-  .hero-dashboard::after {
-    width: 140px;
-    height: 140px;
-    right: -10px;
-    bottom: -20px;
-    opacity: 0.06; /* 手機版背景更淡一點，保持資訊清晰 */
-  }
+  z-index: 2; /* 確保文字在 Logo 之上 */
 }
 
 .user-welcome h2 {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 800;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   color: #fff;
 }
 
@@ -112,106 +109,214 @@
   gap: 8px;
 }
 
-/* 錢包整合摘要卡片 */
+/* 錢包摘要卡片 (Glassmorphism 效果) */
 .wallet-summary-box {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 20px 25px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 18px 25px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   text-align: right;
-  min-width: 220px;
+  min-width: 200px;
   cursor: pointer;
-  transition: transform 0.3s ease, background 0.3s ease;
-  z-index: 1;
+  transition: transform 0.3s ease;
 }
 
 .wallet-summary-box:hover {
   transform: translateY(-3px);
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.ws-label {
-  font-size: 0.85rem;
-  opacity: 0.9;
-  margin-bottom: 5px;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .ws-amount {
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 900;
   font-family: var(--font-mono);
-  line-height: 1;
+  line-height: 1.2;
 }
 
-/* --- [3. 快速行動磁貼 (Quick Action Tiles)] --- */
+/* --- [3. 通知中心觸發器：防止消失與紅藍狀態切換] --- */
+.notification-wrapper {
+  position: relative;
+  z-index: 2002; /* 確保鈴鐺在下拉選單之上 */
+}
+
+.notif-trigger {
+  width: 40px;
+  height: 40px;
+  background: #f0f2f5;
+  color: #8c8c8c;
+  border-radius: 50%;
+  display: flex !important; /* 強制顯示，解決消失問題 */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* 狀態：有新通知 (紅色與晃動) */
+.notif-trigger.has-new {
+  color: #ff4d4f !important;
+  background: #fff1f0;
+  animation: bell-shake 0.5s ease-in-out infinite alternate;
+}
+
+/* 狀態：正在點擊/處理中 (藍色) */
+.notif-trigger.is-active {
+  color: #1a73e8 !important;
+  background: #eef6ff;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+}
+
+.notif-trigger i {
+  font-size: 18px;
+}
+
+/* 紅色通知數字 */
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ff4d4f;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  z-index: 2;
+}
+
+/* --- [4. 通知下拉選單旗艦版美化] --- */
+.notification-dropdown {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  width: 320px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 2000;
+  overflow: hidden;
+  transform-origin: top right;
+  animation: notifSlideDown 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  display: none; /* 預設隱藏 */
+}
+
+@keyframes notifSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notification-item {
+  padding: 15px 20px;
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid #f8f9fa;
+  cursor: pointer;
+  transition: 0.2s;
+  position: relative;
+}
+
+.notification-item.unread {
+  background: rgba(26, 115, 232, 0.02);
+}
+.notification-item.unread::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #1a73e8;
+  border-radius: 50%;
+}
+
+.notif-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.notif-type-wallet {
+  background: #e6f9ec;
+  color: #28a745;
+}
+.notif-type-package {
+  background: #eef6ff;
+  color: #1a73e8;
+}
+.notif-type-shipment {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+/* --- [5. 快速磁貼與動態進度條] --- */
 .quick-actions-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 25px;
 }
-
 .action-tile {
   background: white;
   border: 1px solid var(--border-light);
-  border-radius: 20px;
-  padding: 22px 15px;
+  border-radius: 18px;
+  padding: 20px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  gap: 10px;
+  transition: 0.3s;
   cursor: pointer;
-  text-align: center;
+}
+.action-tile:hover {
+  transform: translateY(-5px);
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-sm);
 }
-
-.action-tile:hover {
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--color-primary);
-}
-
 .tile-icon {
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   background: var(--p-primary-light);
   color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
-  border-radius: 16px;
+  font-size: 1.4rem;
+  border-radius: 14px;
 }
 
-.action-tile span {
-  font-weight: 700;
-  color: var(--text-main);
-  font-size: 0.95rem;
-}
-
-/* --- [4. 即時動態條 (Live Status Bar)] --- */
 .live-status-bar {
   background: white;
-  border-radius: 20px;
+  border-radius: 18px;
   padding: 20px 0;
   display: flex;
   justify-content: space-around;
   align-items: center;
   margin-bottom: 25px;
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-light);
 }
-
 .status-node {
   text-align: center;
   flex: 1;
   position: relative;
 }
-
-/* 箭頭連結 */
 .status-node:not(:last-child)::after {
   content: "\f054";
   font-family: "Font Awesome 6 Free";
@@ -220,166 +325,21 @@
   right: -5%;
   top: 30%;
   color: #eee;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
-
 .sn-count {
   display: block;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: var(--color-primary);
-  margin-bottom: 4px;
 }
 
-.sn-label {
-  font-size: 0.8rem;
-  color: var(--text-sub);
-  font-weight: 700;
-}
-
-/* --- [5. 保留：原本的 Profile 與 錢包舊卡片相容性] --- */
-.user-profile-card {
-  margin-bottom: 20px;
-}
-.profile-bg {
-  height: 80px;
-  background: linear-gradient(135deg, var(--color-primary), #004299);
-  border-radius: 12px 12px 0 0;
-}
-.profile-content {
-  padding: 0 20px 20px;
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  gap: 15px;
-  margin-top: -40px;
-}
-.avatar-circle {
-  width: 80px;
-  height: 80px;
-  background: #fff;
-  border-radius: 50%;
-  padding: 5px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-.profile-details {
-  flex: 1;
-  padding-top: 45px;
-}
-.profile-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-left: auto;
-}
-
-/* 錢包餘額功能卡片 (Wallet Balance Card) - 保留並優化 */
-.wallet-balance-card {
-  background: #f8fbff;
-  border: 1px solid #cce5ff;
-  border-radius: 10px;
-  padding: 8px 15px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 140px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-.wallet-balance-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 12px rgba(26, 115, 232, 0.15);
-  border-color: var(--color-primary);
-  background: #fff;
-}
-
-/* --- [6. 標籤頁與表單] --- */
-.dashboard-tabs {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  white-space: nowrap;
-  padding-bottom: 10px;
-  scrollbar-width: none;
-}
-.dashboard-tabs::-webkit-scrollbar {
-  display: none;
-}
-.tab-btn {
-  padding: 10px 20px;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 25px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.tab-btn.active {
-  background: var(--color-primary);
-  color: #fff;
-  border-color: var(--color-primary);
-  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
-}
-.tab-content {
-  display: none;
-}
-.tab-content.active {
-  display: block;
-  animation: fadeIn 0.3s;
-}
-
-.forecast-form-grid {
-  display: grid;
-  gap: 15px;
-}
-@media (min-width: 600px) {
-  .forecast-form-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-.forecast-form-grid .form-group.full {
-  grid-column: 1 / -1;
-}
-
-/* --- [7. 核心修正：電腦版表格 vs 手機版 Grid 卡片] --- */
-
-/* === 電腦版 (Desktop): 傳統表格 === */
-@media (min-width: 769px) {
-  .table-responsive {
-    background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .table-responsive table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .table-responsive th {
-    background: #f9fafb;
-    padding: 16px;
-    text-align: left;
-    font-weight: 700;
-    border-bottom: 2px solid #f3f4f6;
-  }
-  .table-responsive td {
-    padding: 16px;
-    border-bottom: 1px solid #f3f4f6;
-    vertical-align: middle;
-  }
-}
-
-/* === 手機版 (Mobile): Grid 卡片佈局 (修正歪斜) === */
+/* --- [6. 核心：手機版 Grid 卡片佈局穩定化] --- */
 @media (max-width: 768px) {
+  .app-layout-wrapper {
+    width: 100%;
+    border-radius: 0;
+  }
   .hero-dashboard {
     flex-direction: column;
     text-align: center;
@@ -387,7 +347,7 @@
   }
   .wallet-summary-box {
     width: 100%;
-    margin-top: 20px;
+    margin-top: 15px;
     text-align: center;
   }
   .quick-actions-grid {
@@ -397,6 +357,7 @@
     display: none;
   }
 
+  /* 包裹清單卡片化 */
   .table-responsive table,
   .table-responsive tbody {
     display: block;
@@ -412,173 +373,63 @@
     background: #fff;
     margin-bottom: 16px;
     border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     border: 1px solid #eee;
     padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
   }
   .table-responsive td {
     display: block;
     border: none;
     padding: 0;
   }
-
-  /* Grid 欄位分配 */
-  .table-responsive td:first-child {
-    grid-column: 1;
-    grid-row: 1;
-    align-self: center;
-  }
-  .table-responsive td:nth-child(2) {
-    grid-column: 3;
-    grid-row: 1;
-    justify-self: end;
-  }
   .table-responsive td:nth-child(3) {
     grid-column: 1 / -1;
-    grid-row: 2;
     padding: 10px 0;
     margin: 8px 0;
     border-top: 1px dashed #eee;
     border-bottom: 1px dashed #eee;
   }
-  .table-responsive td:nth-child(3) div {
-    font-size: 16px;
-    font-weight: 800;
-    color: #333;
-    margin-bottom: 5px;
-  }
-  .table-responsive td:nth-child(4) {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    font-weight: 700;
-  }
   .table-responsive td:last-child {
     grid-column: 1 / -1;
-    grid-row: 4;
-    margin-top: 12px;
+    margin-top: 10px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
-}
 
-/* --- [8. 懸浮結帳欄] --- */
-.sticky-checkout-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  border-top: 1px solid var(--border-light);
-  padding: 15px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.08);
-  z-index: 900;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding-bottom: calc(15px + env(safe-area-inset-bottom));
-}
-
-@media (max-width: 768px) {
-  .sticky-checkout-bar {
-    bottom: var(--mobile-nav-height);
+  /* 手機版通知中心置中優化 */
+  .notification-dropdown {
+    position: fixed !important;
+    top: 60px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 94% !important;
+    border-radius: 20px;
   }
 }
 
-/* --- [9. 運費透明化元件 (V2025 NEW)] --- */
-.detail-box-card {
-  border: 1px solid #e3e6f0;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-}
-.box-header {
-  background: #f8f9fc;
-  padding: 12px 15px;
-  border-bottom: 1px solid #e3e6f0;
-  display: flex;
-  justify-content: space-between;
-  border-radius: 12px 12px 0 0;
-}
-.calc-comparison-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 5px;
-  color: #858796;
-}
-.calc-comparison-row.is-winner {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeeba;
-  font-weight: 800;
-  position: relative;
-}
-.calc-comparison-row.is-winner::after {
-  content: "✔ 計費依據";
-  font-size: 10px;
-  background: var(--color-success);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 8px;
-}
-
-/* --- [10. 通知與通用小元件] --- */
-.notif-trigger {
-  width: 40px;
-  height: 40px;
-  background: var(--p-primary-light);
-  color: var(--color-primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.2s;
-  position: relative;
-}
-.notif-trigger:hover {
-  background: var(--color-primary);
-  color: #fff;
-}
-.notification-badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  background: var(--color-danger);
-  color: white;
-  font-size: 10px;
-  font-weight: 800;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #fff;
-}
-
-/* 其它功能性按鈕與標籤 */
-.btn-mini {
-  padding: 4px 12px !important;
-  font-size: 12px !important;
-  height: 32px !important;
-  border-radius: 8px !important;
-}
+/* --- [7. 通用小標籤與動畫] --- */
 .badge-alert {
   background: #ffebee;
   color: #c62828;
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 11px;
+}
+.btn-mini {
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+}
+
+@keyframes bell-shake {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(10deg);
+  }
 }
 
 @keyframes fadeIn {
@@ -591,214 +442,453 @@
     transform: translateY(0);
   }
 }
-/* --- 通知中心 (Notification Center) 旗艦版美化 --- */
 
-.notification-dropdown {
-  position: absolute;
-  top: 48px; /* 增加間距 */
-  right: -10px;
-  width: 320px; /* 加寬一點 */
+.animate-slide-up {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* 算式勝出者樣式 */
+.calc-comparison-row.is-winner {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  font-weight: 800;
+  position: relative;
+}
+.calc-comparison-row.is-winner::after {
+  content: "✔ 計費依據";
+  font-size: 10px;
+  background: #28a745;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+/* frontend/css/client-dashboard.css */
+/* 會員中心旗艦版修正 - V31.0 Logo 尺寸同步與標頭佈局對齊 */
+
+/* --- [1. 標頭基礎佈局修正] --- */
+.dashboard-header {
+  height: 70px; /* 稍微增加高度以匹配 index.html 的大 Logo */
+  display: flex;
+  align-items: center;
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  z-index: 2000;
-  overflow: hidden;
-  transform-origin: top right;
-  animation: notifSlideDown 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0 20px;
 }
 
-@keyframes notifSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.dropdown-header {
-  padding: 15px 20px;
-  background: #fcfcfd;
-  border-bottom: 1px solid #f0f2f5;
+/* 確保容器內的元素左右撐開 */
+.dashboard-header .header-container {
+  max-width: 800px; /* 確保內容寬度與下方卡片一致 */
+  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.dropdown-header span {
-  font-weight: 800;
-  color: var(--text-main);
-  font-size: 15px;
-}
-
-.dropdown-header .btn-text {
-  font-size: 12px;
-  color: var(--color-primary);
-  font-weight: 700;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: 0.2s;
-}
-
-.dropdown-header .btn-text:hover {
-  background: var(--p-primary-light);
-}
-
-.dropdown-body {
-  max-height: 400px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-/* 通知項目的基礎樣式 */
-.notification-item {
-  padding: 15px 20px;
-  display: flex;
-  gap: 12px;
-  border-bottom: 1px solid #f8f9fa;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.notification-item:hover {
-  background: #f9fafb;
-}
-
-/* 未讀標記 */
-.notification-item.unread {
-  background: rgba(26, 115, 232, 0.03);
-}
-
-.notification-item.unread::before {
-  content: "";
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
-  background: var(--color-primary);
-  border-radius: 50%;
-}
-
-/* 通知圖示圓圈 */
-.notif-icon-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+/* --- [2. Logo 尺寸與文字同步優化] --- */
+.logo-link {
   display: flex;
   align-items: center;
+  text-decoration: none;
+  gap: 12px;
+}
+
+.header-logo-img {
+  height: 42px; /* 從原本的 32px 放大到 42px，與 index.html 同步 */
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-primary);
+  font-weight: 900;
+  font-size: 1.25rem;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.logo-text small {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* --- [3. 通知鈴鐺狀態 (保持原有旗艦美化)] --- */
+.notification-wrapper {
+  position: relative;
+  z-index: 2002;
+}
+
+.notif-trigger {
+  width: 40px;
+  height: 40px;
+  background: #f0f2f5;
+  color: #8c8c8c;
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-/* 根據類型定義顏色 */
-.notif-type-wallet {
-  background: #e6f9ec;
-  color: #28a745;
+.notif-trigger.has-new {
+  color: #ff4d4f !important;
+  background: #fff1f0;
+  animation: bell-shake 0.5s ease-in-out infinite alternate;
 }
-.notif-type-package {
+
+.notif-trigger.is-active {
+  color: #1a73e8 !important;
   background: #eef6ff;
-  color: #1a73e8;
-}
-.notif-type-shipment {
-  background: #fff7e6;
-  color: #fa8c16;
-}
-.notif-type-system {
-  background: #f0f0f0;
-  color: #666;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
 }
 
-.notif-content-wrapper {
+/* --- [4. 手機版 RWD 尺寸補丁] --- */
+@media (max-width: 800px) {
+  .dashboard-header {
+    height: 60px; /* 手機版標頭稍微縮小 */
+  }
+  .header-logo-img {
+    height: 36px;
+  }
+  .logo-text {
+    font-size: 1.1rem;
+  }
+}
+/* frontend/css/client-dashboard.css */
+/* 會員中心旗艦版修正 - V32.0 背景 Logo 清晰化與佈局同步 */
+
+/* --- [1. 全域 Dashboard 佈局鎖定 800px] --- */
+.dashboard-theme {
+  background-color: #f8fafc;
+}
+
+.app-layout-wrapper {
+  max-width: 800px; /* 寬度對齊 index.html */
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #fff;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- [2. 標頭結構同步：Logo 尺寸 42px] --- */
+.dashboard-header {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0 20px;
+}
+
+.dashboard-header .header-container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.header-logo-img {
+  height: 42px; /* 同步大尺寸 Logo */
+  width: auto;
+  object-fit: contain;
+}
+
+/* --- [3. Hero 圖卡：Logo 背景清晰化優化] --- */
+.hero-dashboard {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #003a8c 100%);
+  border-radius: 20px;
+  padding: 35px 30px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 10px 25px rgba(26, 115, 232, 0.2);
+  margin-bottom: 25px;
+  position: relative;
+  overflow: hidden; /* 防止背景圖溢出 */
+}
+
+/* [關鍵優化] Logo 刷淡水印：提升透明度並優化位置 */
+.hero-dashboard::after {
+  content: "";
+  position: absolute;
+  /* 鎖定位置，避免被容器裁切 */
+  right: 3%;
+  bottom: -8%;
+  width: 180px;
+  height: 180px;
+  background-image: url("../assets/logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  /* 從 0.08 提升至 0.15，讓標誌更清晰 */
+  opacity: 0.15;
+  transform: rotate(-15deg);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 確保內容層級在背景之上 */
+.user-welcome,
+.wallet-summary-box {
+  position: relative;
+  z-index: 2;
+}
+
+.user-welcome h2 {
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 錢包摘要 (Glassmorphism) */
+.wallet-summary-box {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 18px 25px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  text-align: right;
+  min-width: 210px;
+}
+
+.ws-amount {
+  font-size: 2.1rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+}
+
+/* --- [4. 通知鈴鐺：保持紅藍狀態切換] --- */
+.notif-trigger {
+  width: 40px;
+  height: 40px;
+  background: #f0f2f5;
+  color: #8c8c8c;
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 2005;
+}
+
+.notif-trigger.has-new {
+  color: #ff4d4f !important;
+  background: #fff1f0;
+  animation: bell-shake 0.5s ease-in-out infinite alternate;
+}
+
+.notif-trigger.is-active {
+  color: #1a73e8 !important;
+  background: #eef6ff;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+}
+
+/* --- [5. 手機版 RWD 補丁] --- */
+@media (max-width: 800px) {
+  .dashboard-header {
+    height: 60px;
+  }
+  .header-logo-img {
+    height: 36px;
+  }
+  .hero-dashboard {
+    flex-direction: column;
+    text-align: center;
+    padding: 25px;
+  }
+  .wallet-summary-box {
+    width: 100%;
+    margin-top: 20px;
+    text-align: center;
+  }
+
+  /* 手機版 Logo 水印適度縮小，避免影響文字閱讀 */
+  .hero-dashboard::after {
+    width: 130px;
+    height: 130px;
+    right: 0;
+    bottom: -5%;
+    opacity: 0.12;
+  }
+}
+
+/* 原有表格、按鈕、動畫邏輯完全保留... */
+@keyframes bell-shake {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(10deg);
+  }
+}
+/* frontend/css/client-dashboard.css */
+/* 會員中心旗艦版終極修正 - V33.0 通知鈴鐺修復、Logo 清晰化與全站對齊 */
+
+/* --- [1. 全域 Dashboard 佈局與寬度對齊] --- */
+.dashboard-theme {
+  background-color: #f8fafc;
+}
+
+/* 鎖定寬度 800px，確保與 index.html 完美一致 */
+.app-layout-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #fff;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 標頭固定高度 70px，解決 Hero 卡片被裁切問題 */
+.dashboard-header {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0 20px;
+}
+
+.dashboard-header .header-container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.header-logo-img {
+  height: 42px; /* 同步首頁大 Logo 尺寸 */
+  width: auto;
+  object-fit: contain;
+}
+
+/* 主內容區域安全間距 */
+.main-content {
+  padding: 24px 20px !important;
   flex: 1;
 }
 
-.notif-title {
-  font-weight: 700;
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 3px;
-  line-height: 1.4;
-}
-
-.notif-message {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.5;
-  margin-bottom: 5px;
-}
-
-.notif-time {
-  font-size: 11px;
-  color: #999;
+/* --- [2. 高級 Hero 迎賓圖卡：Logo 背景清晰化] --- */
+.hero-dashboard {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #003a8c 100%);
+  border-radius: 20px;
+  padding: 35px 30px;
+  color: white;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  box-shadow: 0 10px 25px rgba(26, 115, 232, 0.2);
+  margin-bottom: 25px;
+  position: relative;
+  overflow: hidden;
 }
 
-.empty-state {
-  padding: 40px 20px;
-  text-align: center;
-  color: #999;
-  font-size: 13px;
+/* Logo 刷淡水印：透明度 0.15 (清晰版) */
+.hero-dashboard::after {
+  content: "";
+  position: absolute;
+  right: 3%;
+  bottom: -8%;
+  width: 180px;
+  height: 180px;
+  background-image: url("../assets/logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.15;
+  transform: rotate(-15deg);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.empty-state i {
-  display: block;
-  font-size: 32px;
-  margin-bottom: 10px;
-  opacity: 0.3;
+.user-welcome,
+.wallet-summary-box {
+  position: relative;
+  z-index: 2;
 }
 
-/* 手機版優化：全寬顯示並固定於下方 */
-@media (max-width: 800px) {
-  .notification-dropdown {
-    position: fixed !important;
-    top: 60px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 94% !important;
-    max-width: 360px;
-    border-radius: 20px;
-  }
+.user-welcome h2 {
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-/* --- 通知鈴鐺顏色與狀態補丁 --- */
+
+.wallet-summary-box {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 18px 25px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  text-align: right;
+  min-width: 210px;
+}
+
+.ws-amount {
+  font-size: 2.1rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+}
+
+/* --- [3. 通知鈴鐺補回：紅藍狀態精確切換] --- */
+.notification-wrapper {
+  position: relative;
+  z-index: 2002; /* 確保鈴鐺始終在最上層 */
+}
 
 .notif-trigger {
-  position: relative;
   width: 40px;
   height: 40px;
   background: #f0f2f5; /* 預設灰底 */
   color: #8c8c8c; /* 預設灰圖示 */
   border-radius: 50%;
-  display: flex !important; /* 強制顯示，防止消失 */
+  display: flex !important;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 2001; /* 確保在選單之上 */
+  position: relative;
 }
 
-/* 狀態 1：有新通知 (紅色) */
+/* 狀態：有新通知 (變紅 + 晃動) */
 .notif-trigger.has-new {
   color: #ff4d4f !important;
   background: #fff1f0;
-  animation: pulse-red 2s infinite;
+  animation: bell-shake 0.5s ease-in-out infinite alternate;
 }
 
-/* 狀態 2：點開選單中 (藍色) */
+/* 狀態：選單開啟中 (變藍 + 放大) */
 .notif-trigger.is-active {
   color: #1a73e8 !important;
   background: #eef6ff;
+  transform: scale(1.05);
   box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
 }
 
@@ -806,24 +896,12 @@
   font-size: 18px;
 }
 
-@keyframes pulse-red {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-/* 紅色小紅點 */
+/* 紅色小紅點數字 */
 .notification-badge {
   position: absolute;
   top: -2px;
   right: -2px;
-  background: #ff4d4f; /* 強制紅色 */
+  background: #ff4d4f;
   color: white;
   font-size: 10px;
   font-weight: 800;
@@ -837,10 +915,566 @@
   z-index: 2;
 }
 
-/* 下拉選單定位修正，確保不擋住鈴鐺 */
+/* 下拉選單定位與美化 */
 .notification-dropdown {
   position: absolute;
-  top: 50px; /* 剛好在鈴鐺下方 */
+  top: 52px;
   right: 0;
-  display: none; /* 預設隱藏 */
+  width: 320px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 2001;
+  overflow: hidden;
+  transform-origin: top right;
+  animation: notifSlideDown 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  display: none;
+}
+
+/* --- [4. 其他組件同步] --- */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 25px;
+}
+.action-tile {
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 18px;
+  padding: 20px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: 0.3s;
+  cursor: pointer;
+}
+.action-tile:hover {
+  transform: translateY(-5px);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+.tile-icon {
+  width: 50px;
+  height: 50px;
+  background: var(--p-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  border-radius: 14px;
+}
+
+.live-status-bar {
+  background: white;
+  border-radius: 18px;
+  padding: 20px 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-bottom: 25px;
+  border: 1px solid #f0f0f0;
+}
+.sn-count {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+/* 標籤頁管理 */
+.dashboard-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+.tab-btn {
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid #eee;
+  background: #fff;
+  transition: 0.2s;
+}
+.tab-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+/* --- [5. 響應式手機版補丁] --- */
+@media (max-width: 800px) {
+  .dashboard-header {
+    height: 60px;
+  }
+  .header-logo-img {
+    height: 36px;
+  }
+  .hero-dashboard {
+    flex-direction: column;
+    text-align: center;
+    padding: 25px;
+  }
+  .wallet-summary-box {
+    width: 100%;
+    margin-top: 15px;
+    text-align: center;
+  }
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hero-dashboard::after {
+    width: 130px;
+    height: 130px;
+    right: 0;
+    bottom: -5%;
+    opacity: 0.12;
+  }
+
+  /* 手機版通知中心置中 */
+  .notification-dropdown {
+    position: fixed !important;
+    top: 60px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 94% !important;
+    border-radius: 20px;
+  }
+
+  /* 表格轉卡片邏輯 */
+  .table-responsive table,
+  .table-responsive tbody {
+    display: block;
+    width: 100%;
+  }
+  .table-responsive thead {
+    display: none;
+  }
+  .table-responsive tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-gap: 10px;
+    background: #fff;
+    margin-bottom: 16px;
+    border-radius: 15px;
+    border: 1px solid #eee;
+    padding: 15px;
+  }
+  .table-responsive td {
+    display: block;
+    border: none;
+    padding: 0;
+  }
+  .table-responsive td:nth-child(3) {
+    grid-column: 1 / -1;
+    padding: 10px 0;
+    border-top: 1px dashed #eee;
+    border-bottom: 1px dashed #eee;
+    margin: 8px 0;
+  }
+}
+
+/* --- [6. 動態與狀態效果] --- */
+@keyframes bell-shake {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(10deg);
+  }
+}
+@keyframes notifSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.calc-comparison-row.is-winner {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  font-weight: 800;
+  position: relative;
+}
+.calc-comparison-row.is-winner::after {
+  content: "✔ 計費依據";
+  font-size: 10px;
+  background: #28a745;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+/* --- 通知內容項目 (Notification Content Items) 旗艦美化 --- */
+
+.dropdown-body {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* 通知單項容器 */
+.notification-item {
+  padding: 16px 20px;
+  display: flex;
+  gap: 15px;
+  border-bottom: 1px solid #f1f3f5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  align-items: flex-start;
+}
+
+.notification-item:hover {
+  background: #f8f9fa;
+}
+
+/* 未讀狀態：左側小藍點與微妙背景 */
+.notification-item.unread {
+  background: rgba(26, 115, 232, 0.02);
+}
+
+.notification-item.unread::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(26, 115, 232, 0.5);
+}
+
+/* 通知圖示圓圈 */
+.notif-icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 15px;
+  transition: transform 0.2s ease;
+}
+
+.notification-item:hover .notif-icon-circle {
+  transform: scale(1.1);
+}
+
+/* 根據通知類型定義配色 */
+.notif-type-wallet {
+  background: #e6f9ec;
+  color: #28a745;
+} /* 錢包：綠色 */
+.notif-type-package {
+  background: #eef6ff;
+  color: #1a73e8;
+} /* 包裹：藍色 */
+.notif-type-shipment {
+  background: #fff7e6;
+  color: #fa8c16;
+} /* 集運：橘色 */
+.notif-type-system {
+  background: #f1f3f5;
+  color: #6c757d;
+} /* 系統：灰色 */
+
+.notif-content-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.notif-message {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notif-time {
+  font-size: 11px;
+  color: #adb5bd;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+
+/* 空狀態美化 */
+.empty-state {
+  padding: 50px 20px;
+  text-align: center;
+  color: #ced4da;
+}
+
+.empty-state i {
+  font-size: 40px;
+  margin-bottom: 12px;
+  display: block;
+  opacity: 0.5;
+}
+/* --- 通知中心標頭與「全部已讀」按鈕美化 --- */
+
+.notification-dropdown .dropdown-header {
+  padding: 18px 20px;
+  background: #ffffff;
+  border-bottom: 1.5px solid #f1f3f5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 通知中心標題 */
+.notification-dropdown .dropdown-header span {
+  font-weight: 900;
+  color: #1a1d23;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 標題前的裝飾小點 */
+.notification-dropdown .dropdown-header span::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+
+/* 「全部已讀」按鈕重新設計 */
+.notification-dropdown .btn-read-all {
+  background: rgba(26, 115, 232, 0.08); /* 品牌藍的極淺背景 */
+  color: var(--color-primary);
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.notification-dropdown .btn-read-all i {
+  font-size: 10px;
+}
+
+/* 按鈕懸浮效果：顏色反轉與輕微浮起 */
+.notification-dropdown .btn-read-all:hover {
+  background: var(--color-primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
+}
+
+/* 按鈕點擊回饋 */
+.notification-dropdown .btn-read-all:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+/* 滾動條美化 (適用於下拉選單內部) */
+.dropdown-body::-webkit-scrollbar {
+  width: 5px;
+}
+.dropdown-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dropdown-body::-webkit-scrollbar-thumb {
+  background: #e9ecef;
+  border-radius: 10px;
+}
+.dropdown-body::-webkit-scrollbar-thumb:hover {
+  background: #dee2e6;
+}
+/* --- 旗艦版帳號設定彈窗專屬樣式 (V34.0) --- */
+
+.profile-modal-v2 {
+  max-width: 520px !important;
+  padding: 0 !important;
+  border-radius: 20px !important;
+  overflow: hidden;
+}
+
+.profile-modal-header {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #003a8c 100%);
+  padding: 30px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.avatar-big {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.user-main-info h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.member-badge {
+  display: inline-block;
+  font-size: 11px;
+  background: #ffc107;
+  color: #856404;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+/* 專屬標識碼卡片 */
+.user-id-card {
+  text-align: right;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 10px 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-id-card label {
+  display: block;
+  font-size: 10px;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.user-id-card .id-value {
+  font-family: "Monaco", monospace;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+
+/* 內容區分段 */
+.profile-modal-body {
+  padding: 25px 30px;
+}
+
+.modal-section-title {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--color-primary);
+  margin: 20px 0 15px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #f0f2f5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-section-title:first-of-type {
+  margin-top: 0;
+}
+
+.security-action-box {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #eee;
+}
+
+.security-action-box p {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.modal-footer-actions {
+  margin-top: 30px;
+  display: flex;
+  gap: 12px;
+}
+
+.modal-footer-actions .btn-save {
+  flex: 2;
+  height: 48px;
+  font-weight: 800;
+}
+
+.modal-footer-actions .btn-secondary {
+  flex: 1;
+}
+
+/* 手機版彈窗微調 */
+@media (max-width: 600px) {
+  .profile-modal-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  .user-avatar-section {
+    flex-direction: column;
+  }
+  .user-id-card {
+    width: 100%;
+    text-align: center;
+  }
 }

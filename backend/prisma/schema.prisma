@@ -1,4 +1,5 @@
-// backend/prisma/schema.prisma (V12.10 - 旗艦穩定版)
+// backend/prisma/schema.prisma
+// V13.0 - 旗艦穩定版：整合 RP 系列會員編號 (piggyId) 欄位
 
 generator client {
   provider = "prisma-client-js"
@@ -12,6 +13,10 @@ datasource db {
 // --- 1. 會員 (客戶) 資料模型 ---
 model User {
   id                  String   @id @default(cuid())
+  
+  // [新增] 專屬會員標識碼：格式為 RP0000889
+  piggyId             String?  @unique
+  
   email               String   @unique
   passwordHash        String
   name                String?
@@ -90,7 +95,7 @@ model Shipment {
   taxId                 String?
   invoiceTitle          String?
   note                  String?
-  additionalServices    Json?     @default("{}")
+  additionalServices    Json?      @default("{}")
   deliveryLocationRate  Float?
   status                String    @default("PENDING_PAYMENT")
   totalCost             Float?
@@ -146,13 +151,13 @@ model ActivityLog {
   @@index([action])
 }
 
-// --- 6. 系統設定 (已修正：補齊 group 與 type 欄位) ---
+// --- 6. 系統設定 ---
 model SystemSetting {
   key         String   @id
   value       Json
   category    String?  // 費率、公告、系統等大類
-  group       String?  // [新增] 對應 Controller 中的寫入
-  type        String?  // [新增] 對應 Controller 中的寫入 (如 number, string)
+  group       String?  
+  type        String?  
   description String?
   updatedAt   DateTime @updatedAt
 

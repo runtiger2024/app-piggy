@@ -1,5 +1,5 @@
 // backend/controllers/authController.js
-// V12 - Added Invoice Defaults to Response
+// V13 - 整合 RP 系列會員編號遞增邏輯與完整資料同步
 
 const prisma = require("../config/db.js");
 const bcrypt = require("bcryptjs");
@@ -7,37 +7,65 @@ const crypto = require("crypto");
 const generateToken = require("../utils/generateToken.js");
 const sgMail = require("@sendgrid/mail");
 
+/**
+ * 註冊使用者：包含 RP0000889 遞增編號邏輯
+ */
 const registerUser = async (req, res) => {
   try {
     const { email, password, name } = req.body;
-    if (!email || !password)
+    if (!email || !password) {
       return res
         .status(400)
         .json({ success: false, message: "請提供 email 和 password" });
+    }
+
+    const lowerEmail = email.toLowerCase();
     const userExists = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: lowerEmail },
     });
-    if (userExists)
+
+    if (userExists) {
       return res
         .status(400)
         .json({ success: false, message: "這個 Email 已經被註冊了" });
+    }
+
+    // --- [關鍵邏輯：生成遞增的 RP 會員編號] ---
+    // 查找資料庫中最後一位以 RP 開頭的會員
+    const lastUser = await prisma.user.findFirst({
+      where: { piggyId: { startsWith: "RP" } },
+      orderBy: { piggyId: "desc" },
+    });
+
+    let nextPiggyId = "RP0000889"; // 預設起始值
+
+    if (lastUser && lastUser.piggyId) {
+      // 提取數字部分並遞增：例如 RP0000889 -> 889 -> 890
+      const currentNum = parseInt(lastUser.piggyId.replace("RP", ""), 10);
+      nextPiggyId = "RP" + String(currentNum + 1).padStart(7, "0");
+    }
+    // ----------------------------------------
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
     const newUser = await prisma.user.create({
       data: {
-        email: email.toLowerCase(),
+        email: lowerEmail,
         passwordHash: passwordHash,
         name: name,
+        piggyId: nextPiggyId, // 存入自定義編號
         permissions: [],
       },
     });
+
     if (newUser) {
       res.status(201).json({
         success: true,
         message: "註冊成功！",
         user: {
           id: newUser.id,
+          piggyId: newUser.piggyId,
           email: newUser.email,
           name: newUser.name,
           permissions: [],
@@ -53,16 +81,22 @@ const registerUser = async (req, res) => {
   }
 };
 
+/**
+ * 登入使用者
+ */
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
+    if (!email || !password) {
       return res
         .status(400)
         .json({ success: false, message: "請提供 email 和 password" });
+    }
+
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
+
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
       const permissions = user.permissions || [];
 
@@ -71,10 +105,10 @@ const loginUser = async (req, res) => {
         message: "登入成功！",
         user: {
           id: user.id,
+          piggyId: user.piggyId, // 回傳編號
           email: user.email,
           name: user.name,
           permissions: permissions,
-          // [New] 回傳預設發票資料
           defaultTaxId: user.defaultTaxId,
           defaultInvoiceTitle: user.defaultInvoiceTitle,
         },
@@ -91,6 +125,9 @@ const loginUser = async (req, res) => {
   }
 };
 
+/**
+ * 取得目前登入者資料
+ */
 const getMe = async (req, res) => {
   try {
     const user = req.user;
@@ -99,22 +136,21 @@ const getMe = async (req, res) => {
         where: { id: user.id },
         select: {
           id: true,
+          piggyId: true, // 確保拿到編號
           email: true,
           name: true,
           permissions: true,
           phone: true,
           defaultAddress: true,
           createdAt: true,
-          // [New] 確保前端能拿到預設發票資料
           defaultTaxId: true,
           defaultInvoiceTitle: true,
         },
       });
-      const permissions = userFromDb.permissions || [];
 
       res.status(200).json({
         success: true,
-        user: { ...userFromDb, permissions: permissions },
+        user: userFromDb,
       });
     } else {
       return res.status(404).json({ success: false, message: "找不到使用者" });
@@ -125,6 +161,9 @@ const getMe = async (req, res) => {
   }
 };
 
+/**
+ * 更新個人資料
+ */
 const updateMe = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -137,12 +176,12 @@ const updateMe = async (req, res) => {
         name,
         phone,
         defaultAddress,
-        // [New] 允許使用者更新預設發票資料
         defaultTaxId,
         defaultInvoiceTitle,
       },
       select: {
         id: true,
+        piggyId: true,
         email: true,
         name: true,
         phone: true,
@@ -152,12 +191,11 @@ const updateMe = async (req, res) => {
         defaultInvoiceTitle: true,
       },
     });
-    const permissions = updatedUser.permissions || [];
 
     res.status(200).json({
       success: true,
       message: "個人資料更新成功",
-      user: { ...updatedUser, permissions: permissions },
+      user: updatedUser,
     });
   } catch (error) {
     console.error("更新個人資料錯誤:", error);
@@ -165,32 +203,34 @@ const updateMe = async (req, res) => {
   }
 };
 
+/**
+ * 忘記密碼發送 Email
+ */
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
-    if (!user)
+
+    if (!user) {
       return res
         .status(200)
         .json({ success: true, message: "若 Email 存在，重設信件已發送" });
+    }
+
     const resetToken = crypto.randomBytes(20).toString("hex");
     const resetPasswordToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
-    const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
-    try {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { resetPasswordToken, resetPasswordExpire },
-      });
-    } catch (dbError) {
-      return res
-        .status(500)
-        .json({ success: false, message: "系統尚未支援此功能 (DB Error)" });
-    }
+    const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 分鐘有效
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetPasswordToken, resetPasswordExpire },
+    });
+
     if (process.env.SENDGRID_API_KEY) {
       const resetUrl = `${
         process.env.FRONTEND_URL || "http://localhost:3000"
@@ -203,6 +243,7 @@ const forgotPassword = async (req, res) => {
       };
       await sgMail.send(msg);
     }
+
     res.status(200).json({ success: true, message: "重設信件已發送" });
   } catch (error) {
     console.error("忘記密碼錯誤:", error);
@@ -210,10 +251,14 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+/**
+ * 重設密碼
+ */
 const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
+
     const resetPasswordToken = crypto
       .createHash("sha256")
       .update(token)
@@ -221,12 +266,16 @@ const resetPassword = async (req, res) => {
     const user = await prisma.user.findFirst({
       where: { resetPasswordToken, resetPasswordExpire: { gt: new Date() } },
     });
-    if (!user)
+
+    if (!user) {
       return res
         .status(400)
         .json({ success: false, message: "Token 無效或已過期" });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -235,6 +284,7 @@ const resetPassword = async (req, res) => {
         resetPasswordExpire: null,
       },
     });
+
     res
       .status(200)
       .json({ success: true, message: "密碼重設成功，請重新登入" });
@@ -244,28 +294,40 @@ const resetPassword = async (req, res) => {
   }
 };
 
+/**
+ * 修改密碼 (已登入狀態)
+ */
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
-    if (!currentPassword || !newPassword)
+
+    if (!currentPassword || !newPassword) {
       return res
         .status(400)
         .json({ success: false, message: "請輸入舊密碼與新密碼" });
-    if (newPassword.length < 6)
+    }
+
+    if (newPassword.length < 6) {
       return res
         .status(400)
         .json({ success: false, message: "新密碼長度至少需 6 位數" });
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user)
       return res.status(404).json({ success: false, message: "找不到使用者" });
+
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isMatch)
+    if (!isMatch) {
       return res
         .status(400)
         .json({ success: false, message: "目前的密碼輸入錯誤" });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(newPassword, salt);
+
     await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
     res.json({ success: true, message: "密碼修改成功，下次登入請使用新密碼" });
   } catch (error) {
