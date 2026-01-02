@@ -16,7 +16,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <style>
-      /* 保留您原本必要的預覽樣式，其餘已整合至 CSS 檔案 */
+      /* 保留您原本必要的預覽樣式 */
       .preview-container {
         display: flex;
         flex-wrap: wrap;
@@ -33,8 +33,7 @@
     </style>
   </head>
   <body class="dashboard-theme">
-    <div class="app-layout-wrapper"></div>
-    <div class="container dashboard-container">
+    <div class="app-layout-wrapper">
       <header class="dashboard-header">
         <div class="header-left">
           <img src="assets/logo.png" alt="Logo" class="header-logo-sm" />
@@ -295,8 +294,9 @@
         </div>
       </main>
 
-      <nav class="mobile-bottom-nav" id="mobile-bottom-nav"></nav>
+      <div style="height: 100px"></div>
     </div>
+    <nav id="mobile-bottom-nav" class="universal-bottom-nav"></nav>
 
     <div id="modal-container-profile-edit"></div>
     <div id="modal-container-password-change"></div>
@@ -398,7 +398,6 @@
           <i class="fas fa-check-circle"></i> 訂單建立成功！
         </h3>
         <p class="text-sub">已寄送訂單至您的 Email (可能存在垃圾郵件)</p>
-
         <div class="bank-details-card">
           <p>請匯款至：</p>
           <div class="bank-row">
@@ -584,7 +583,7 @@
           "components/modals/claim-package.html"
         ),
       ]).then(() => {
-        // 保留您的 DOMContentLoaded 攔截邏輯
+        // 保留您的 DOMContentLoaded 攔截邏輯，確保組件載入後再執行 JS
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
           if (type === "DOMContentLoaded") {
@@ -624,19 +623,5 @@
         })();
       });
     </script>
-    <nav class="universal-bottom-nav">
-      <a href="index.html" class="nav-item active">
-        <i class="fas fa-calculator"></i><span>運費試算</span>
-      </a>
-      <a href="dashboard.html" class="nav-item">
-        <i class="fas fa-box"></i><span>我的包裹</span>
-      </a>
-      <a href="dashboard.html#shipments" class="nav-item">
-        <i class="fas fa-file-invoice"></i><span>集運訂單</span>
-      </a>
-      <a href="dashboard.html#profile" class="nav-item">
-        <i class="fas fa-user"></i><span>會員中心</span>
-      </a>
-    </nav>
   </body>
 </html>

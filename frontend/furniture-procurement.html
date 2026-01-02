@@ -4,223 +4,256 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>傢俱代採購服務 | 跑得快集運</title>
+    <title>傢俱代採購服務 | 小跑豬傢俱專線</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
+
     <script src="js/styleLoader.js"></script>
+
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-    <style>
-      /* 修正 LOGO 與頭部對齊樣式 */
-      .header-logo-sm {
-        height: 32px; /* 比照 dashboard-core 標準高度 */
-        width: auto;
-        margin-right: 12px;
-        display: block;
-      }
-      .header-left {
-        display: flex;
-        align-items: center;
-      }
-      .dashboard-header h1 {
-        font-size: 18px;
-        margin: 0;
-        white-space: nowrap;
-      }
 
-      /* 試算區塊樣式 */
+    <style>
+      /* 針對代採購頁面的局部動態樣式優化 */
       .calculation-box {
-        background: #f0f7ff;
-        border: 1px solid #cce3ff;
-        border-radius: 8px;
-        padding: 15px;
+        background: var(--p-primary-bg);
+        border: 1px solid var(--p-primary-light);
+        border-radius: var(--radius-md);
+        padding: 20px;
         margin-top: 15px;
+        box-shadow: var(--shadow-inner);
       }
       .calc-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 14px;
+        margin-bottom: 10px;
+        font-size: 0.95rem;
+        color: var(--text-body);
       }
       .calc-row.total {
-        border-top: 1px solid #ddd;
-        padding-top: 10px;
+        border-top: 1.5px dashed var(--border-main);
+        padding-top: 15px;
         margin-top: 10px;
-        font-weight: bold;
-        color: #d32f2f;
-        font-size: 18px;
+        font-weight: 800;
+        color: var(--p-danger);
+        font-size: 1.25rem;
       }
-      .rate-info {
-        font-size: 12px;
-        color: #666;
-        background: #fff;
-        padding: 5px 10px;
-        border-radius: 4px;
-        display: inline-block;
+      .rate-info-pill {
+        font-size: 0.75rem;
+        color: var(--p-primary);
+        background: var(--p-primary-light);
+        padding: 6px 12px;
+        border-radius: var(--radius-full);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 15px;
+        font-weight: 600;
+      }
+      /* 強化輸入框標籤 */
+      .forecast-form-grid .form-group label {
+        color: var(--text-main);
+        font-size: 0.9rem;
         margin-bottom: 10px;
-        border: 1px solid #eee;
       }
     </style>
   </head>
+
   <body class="dashboard-theme">
-    <div class="container dashboard-container">
-      <header class="dashboard-header">
+    <div class="app-layout-wrapper">
+      <header class="site-header">
         <div class="header-left">
-          <img src="assets/logo.png" alt="Logo" class="header-logo-sm" />
-          <h1>傢俱代採購</h1>
+          <a href="index.html" class="logo-link">
+            <img src="assets/logo.png" alt="Logo" class="header-logo-img" />
+            <span class="logo-text">
+              傢俱代採購
+              <small>兩隻老虎專業服務</small>
+            </span>
+          </a>
         </div>
-        <div
-          class="header-right-actions"
-          style="display: flex; align-items: center; gap: 15px"
-        >
+        <div class="header-right-actions">
           <nav class="main-nav header-nav-right"></nav>
         </div>
       </header>
 
-      <div id="message-box" class="alert" style="display: none"></div>
+      <div class="container main-content">
+        <div
+          id="message-box"
+          class="alert alert-modern"
+          style="display: none"
+        ></div>
 
-      <div class="section-card">
-        <div class="card-header">
-          <h3><i class="fas fa-couch"></i> 申請代採購服務</h3>
-          <p style="font-size: 13px; color: #666; margin: 0">
-            當您無法支付人民幣給工廠時，由我們為您代付，並提供正式品項發票。
-          </p>
-        </div>
-        <div class="card-body">
-          <div id="procurement-rate-display" class="rate-info">
-            <i class="fas fa-info-circle"></i> 當前代採購匯率：載入中... |
-            服務費率：載入中...
+        <div class="section-card animate-slide-up">
+          <div class="card-header">
+            <h3><i class="fas fa-couch"></i> 申請代採購服務</h3>
           </div>
+          <div class="card-body">
+            <p class="text-sub mb-20" style="font-size: 0.85rem">
+              當您無法直接支付人民幣給工廠時，由我們為您代付貨款，並提供具備正式品項的台灣發票。
+            </p>
 
-          <form id="furniture-form" class="forecast-form-grid">
-            <div class="form-group full">
-              <label class="required">傢俱工廠名稱</label>
-              <input
-                type="text"
-                id="factoryName"
-                class="form-control"
-                placeholder="請輸入工廠全名或代號"
-                required
-              />
-            </div>
-            <div class="form-group full">
-              <label class="required">代採購商品品名</label>
-              <input
-                type="text"
-                id="productName"
-                class="form-control"
-                placeholder="例：北歐風實木沙發、大理石餐桌"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label class="required">數量</label>
-              <input
-                type="number"
-                id="quantity"
-                class="form-control"
-                value="1"
-                min="1"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label class="required">人民幣單價 (RMB)</label>
-              <input
-                type="number"
-                id="priceRMB"
-                class="form-control"
-                placeholder="0.00"
-                step="0.01"
-                required
-              />
+            <div id="procurement-rate-display" class="rate-info-pill">
+              <i class="fas fa-info-circle"></i> 當前匯率：載入中... |
+              服務費率：載入中...
             </div>
 
-            <div class="form-group full">
-              <div class="calculation-box">
-                <div class="calc-row">
-                  <span>商品總額 (RMB):</span>
-                  <span id="display-subtotal-rmb">¥ 0.00</span>
-                </div>
-                <div class="calc-row">
-                  <span>服務費 (含品項發票):</span>
-                  <span id="display-service-fee">¥ 0.00</span>
-                </div>
-                <div class="calc-row total">
-                  <span>預計支付總額 (TWD):</span>
-                  <span id="display-total-twd">$ 0</span>
-                </div>
-                <small style="color: #666; font-size: 11px"
-                  >* 實際金額以管理員審核後為準</small
-                >
+            <form id="furniture-form" class="forecast-form-grid">
+              <div class="form-group full">
+                <label class="required">傢俱工廠名稱</label>
+                <input
+                  type="text"
+                  id="factoryName"
+                  class="form-control"
+                  placeholder="請輸入工廠全名或代號"
+                  required
+                />
               </div>
-            </div>
 
-            <div class="form-group full">
-              <label>備註需求</label>
-              <textarea
-                id="note"
-                class="form-control"
-                rows="3"
-                placeholder="如有特定規格或聯繫方式請註明..."
-              ></textarea>
-            </div>
+              <div class="form-group full">
+                <label class="required">代採購商品品名</label>
+                <input
+                  type="text"
+                  id="productName"
+                  class="form-control"
+                  placeholder="例：北歐風實木沙發、大理石餐桌"
+                  required
+                />
+              </div>
 
-            <div class="form-group full" style="text-align: right">
-              <button
-                type="submit"
-                class="btn btn-primary"
-                style="width: 200px"
-              >
-                <i class="fas fa-paper-plane"></i> 提交代採購申請
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+              <div class="flex-between" style="gap: 15px; width: 100%">
+                <div class="form-group" style="flex: 1">
+                  <label class="required">數量</label>
+                  <input
+                    type="number"
+                    id="quantity"
+                    class="form-control"
+                    value="1"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div class="form-group" style="flex: 2">
+                  <label class="required">人民幣單價 (RMB)</label>
+                  <input
+                    type="number"
+                    id="priceRMB"
+                    class="form-control"
+                    placeholder="0.00"
+                    step="0.01"
+                    required
+                  />
+                </div>
+              </div>
 
-      <div class="section-card">
-        <div class="card-header">
-          <h3><i class="fas fa-history"></i> 我的申請紀錄</h3>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table style="width: 100%">
-              <thead>
-                <tr>
-                  <th>申請日期</th>
-                  <th>工廠名稱</th>
-                  <th>商品品名</th>
-                  <th>金額 (RMB)</th>
-                  <th>狀態</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="furniture-history-body">
-                <tr>
-                  <td
-                    colspan="6"
-                    class="text-center"
-                    style="padding: 20px; color: #999"
-                  >
-                    載入中...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+              <div class="form-group full">
+                <div class="calculation-box">
+                  <div class="calc-row">
+                    <span>商品總額 (RMB):</span>
+                    <span
+                      id="display-subtotal-rmb"
+                      style="font-family: 'Monaco', monospace"
+                      >¥ 0.00</span
+                    >
+                  </div>
+                  <div class="calc-row">
+                    <span>服務費 (含品項發票):</span>
+                    <span
+                      id="display-service-fee"
+                      style="font-family: 'Monaco', monospace"
+                      >¥ 0.00</span
+                    >
+                  </div>
+                  <div class="calc-row total">
+                    <span>預計支付總額 (TWD):</span>
+                    <span id="display-total-twd">$ 0</span>
+                  </div>
+                  <div class="text-center mt-10">
+                    <small class="text-sub" style="font-size: 11px"
+                      >* 實際匯率與總額以管理員審核結果為準</small
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group full">
+                <label>備註需求</label>
+                <textarea
+                  id="note"
+                  class="form-control"
+                  rows="3"
+                  placeholder="如有特定規格、顏色或聯繫方式請註明..."
+                ></textarea>
+              </div>
+
+              <div class="form-group full" style="margin-top: 10px">
+                <button
+                  type="submit"
+                  class="btn btn-primary animate-slide-up"
+                  style="width: 100%; height: 50px"
+                >
+                  <i class="fas fa-paper-plane"></i> 提交代採購申請
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
 
-      <nav class="mobile-bottom-nav" id="mobile-bottom-nav"></nav>
+        <div class="section-card" style="margin-top: 24px">
+          <div class="card-header">
+            <h3><i class="fas fa-history"></i> 我的申請紀錄</h3>
+          </div>
+          <div class="card-body" style="padding: 0">
+            <div class="app-table-container">
+              <table class="app-table">
+                <thead>
+                  <tr>
+                    <th>申請日期</th>
+                    <th>工廠與商品</th>
+                    <th>金額 (RMB)</th>
+                    <th>狀態</th>
+                    <th class="text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="furniture-history-body">
+                  <tr>
+                    <td colspan="5" class="text-center" style="padding: 40px">
+                      <div
+                        class="spinner-apple"
+                        style="margin: 0 auto 10px"
+                      ></div>
+                      <p class="text-sub">正在同步紀錄中...</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="safe-area-spacer"></div>
+      </div>
     </div>
+
+    <nav id="mobile-bottom-nav" class="universal-bottom-nav"></nav>
 
     <script src="js/apiConfig.js" defer></script>
     <script src="js/navigation.js" defer></script>
     <script src="js/dashboard-core.js" defer></script>
     <script src="js/dashboard-furniture.js" defer></script>
+
+    <script>
+      // 頁面載入完成後的小細節處理
+      document.addEventListener("DOMContentLoaded", () => {
+        // 確保 Wrapper 陰影在桌面版正常顯示
+        if (window.innerWidth > 800) {
+          document
+            .querySelector(".app-layout-wrapper")
+            .classList.add("desktop-view");
+        }
+      });
+    </script>
   </body>
 </html>
