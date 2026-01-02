@@ -1,0 +1,269 @@
+/* frontend/css/theme-client.css - V4.0 終極修復版 (整合所有原始美編) */
+
+/* 1. 核心變數系統 (完全繼承自原始 client.css) */
+:root {
+  --color-primary: #1a73e8;
+  --color-primary-hover: #1557b0;
+  --color-primary-light: #e8f0fe;
+  --color-accent: #ff5000;
+  --color-accent-hover: #e04600;
+  --color-success: #00b578;
+  --color-danger: #ff3b30;
+  --text-main: #1f1f1f;
+  --text-body: #333333;
+  --text-secondary: #666666;
+  --bg-body: #f0f2f5;
+  --bg-input: #f7f8fa;
+  --border-color: #e5e5e5;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* App 適配專用變數 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --header-h: calc(60px + var(--safe-top));
+  --nav-bottom-h: calc(65px + var(--safe-bottom));
+}
+
+/* 2. 基礎重置與 App 佈局殼 */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", Roboto,
+    sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-body);
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+}
+
+.app-layout-wrapper {
+  width: 100%;
+  max-width: 800px; /* 電腦端置中縮限 */
+  margin: 0 auto;
+  min-height: 100vh;
+  background-color: var(--bg-body);
+  padding-bottom: var(--nav-bottom-h);
+  position: relative;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.05);
+}
+
+/* 修復 Container 排版跑掉 */
+.app-layout-wrapper .container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 16px !important;
+  margin: 0 auto !important;
+}
+
+@media (max-width: 768px) {
+  .app-layout-wrapper {
+    max-width: 100%;
+    box-shadow: none;
+  }
+}
+
+/* 3. Header 與 LOGO 修復 (繼承自 client.css 與 dashboard.css) */
+.site-header,
+.dashboard-header {
+  height: var(--header-h);
+  background: #ffffff;
+  padding-top: var(--safe-top);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  padding-right: 16px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* 核心修復：限制 LOGO 大小 */
+.header-logo-img {
+  height: 36px !important;
+  width: auto;
+}
+.header-logo-sm {
+  height: 32px !important;
+  width: auto;
+}
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.logo-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1.1;
+  display: flex;
+  flex-direction: column;
+}
+.logo-text small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* 4. 按鈕美編全面回歸 (繼承自 client.css) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff !important;
+}
+.btn-outline-primary {
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  width: auto;
+}
+
+/* 試算按鈕專屬樣式 */
+.btn-checkout {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-accent)
+  ) !important;
+  color: #fff !important;
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 12px rgba(255, 80, 0, 0.2);
+}
+
+/* 5. 卡片與表單元件修復 (解決內容崩壞) */
+.section-card,
+.warehouse-card,
+.calculator-wrapper,
+.user-profile-card,
+.rate-section-wrapper,
+.notice-card {
+  background-color: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.section-header-row,
+.card-header,
+.warehouse-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--bg-body);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-body,
+.warehouse-body {
+  padding: 24px;
+}
+
+/* 表單修復 */
+.form-group {
+  margin-bottom: 20px;
+}
+.form-control,
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.form-control:focus {
+  background: #fff;
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+/* 6. 狀態標籤 (Badges) */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-PENDING {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+.status-ARRIVED {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+.status-IN_SHIPMENT {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+/* 7. 手機底部導航 (配合 navigation.js 結構) */
+.universal-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 800px;
+  height: var(--nav-bottom-h);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  padding-bottom: var(--safe-bottom);
+  z-index: 2000;
+}
+
+/* 這裡必須使用 .mobile-nav-item 以對應 navigation.js */
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #999;
+  font-size: 10px;
+}
+.mobile-nav-item.active {
+  color: var(--color-primary);
+}
+.mobile-nav-item i {
+  font-size: 20px;
+  margin-bottom: 4px;
+}

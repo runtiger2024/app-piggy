@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>傢俱代採購管理 - 小跑豬後台</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/admin-modern.css" />
+    <style>
+      /* 針對彈窗內的捲軸進行微調，確保行動端體驗 */
+      #order-modal .card {
+        margin: 1rem;
+        max-height: calc(100vh - 2rem);
+      }
+      .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1 class="page-title">傢俱代採購管理</h1>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <div
+            class="filters-bar"
+            style="margin-bottom: 0; display: flex; flex-wrap: wrap; gap: 15px"
+          >
+            <div style="flex: 1; min-width: 250px">
+              <input
+                type="text"
+                id="search-input"
+                class="form-control"
+                placeholder="搜尋工廠名稱 / 品名 / 會員姓名或Email..."
+              />
+            </div>
+            <div style="flex: 0 0 200px">
+              <select id="status-filter" class="form-control">
+                <option value="">所有狀態</option>
+                <option value="PENDING">待處理 (PENDING)</option>
+                <option value="PROCESSING">處理中 (PROCESSING)</option>
+                <option value="PAID">已支付工廠 (PAID)</option>
+                <option value="COMPLETED">已結案 (COMPLETED)</option>
+                <option value="CANCELLED">已取消 (CANCELLED)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btn-search">
+              <i class="fas fa-search"></i> 搜尋
+            </button>
+            <button class="btn btn-outline-secondary" id="btn-export">
+              <i class="fas fa-file-export"></i> 匯出
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <span><i class="fas fa-couch"></i> 代採購需求列表</span>
+          <small class="text-muted">顯示最近申請的傢俱訂單</small>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>申請日期</th>
+                  <th>會員資訊</th>
+                  <th>傢俱工廠名稱</th>
+                  <th>品名 / 數量</th>
+                  <th>人民幣金額</th>
+                  <th>服務費(TWD)</th>
+                  <th>應付總額 (TWD)</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="furnitureTableBody">
+                <tr>
+                  <td colspan="9" class="text-center p-5">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <br />數據載入中，請稍候...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div
+          class="card-body border-top"
+          id="pagination"
+          style="display: flex; justify-content: flex-end; gap: 5px"
+        ></div>
+      </div>
+
+      <div
+        id="order-modal"
+        class="modal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.7);
+          z-index: 9999;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <div
+          class="card"
+          style="
+            width: 750px;
+            max-width: 95%;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border: none;
+          "
+        >
+          <div
+            class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+          >
+            <h5 class="mb-0" id="modal-title">
+              <i class="fas fa-edit mr-2"></i> 代採購訂單詳情與審核
+            </h5>
+            <button
+              type="button"
+              class="btn btn-sm btn-light modal-close-btn"
+              style="border-radius: 50%; width: 30px; height: 30px; padding: 0"
+            >
+              <i class="fas fa-times text-primary"></i>
+            </button>
+          </div>
+          <div class="card-body" style="overflow-y: auto; max-height: 80vh">
+            <form id="order-form">
+              <input type="hidden" id="modal-order-id" />
+
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label class="small font-weight-bold text-uppercase"
+                    >申請人資訊</label
+                  >
+                  <div
+                    id="modal-user-info"
+                    class="p-2 border rounded bg-light"
+                    style="min-height: 45px; display: flex; align-items: center"
+                  >
+                    -
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="small font-weight-bold text-uppercase"
+                    >更新訂單狀態</label
+                  >
+                  <select id="modal-status" class="form-control border-primary">
+                    <option value="PENDING">待處理 (PENDING)</option>
+                    <option value="PROCESSING">處理中 (PROCESSING)</option>
+                    <option value="PAID">已支付工廠 (PAID)</option>
+                    <option value="COMPLETED">已結案 (COMPLETED)</option>
+                    <option value="CANCELLED">已取消 (CANCELLED)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="small font-weight-bold">傢俱工廠名稱</label>
+                <input
+                  type="text"
+                  id="modal-factoryName"
+                  class="form-control bg-light"
+                  readonly
+                />
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-8">
+                  <label class="small font-weight-bold">代採購商品品名</label>
+                  <input
+                    type="text"
+                    id="modal-productName"
+                    class="form-control bg-light"
+                    readonly
+                  />
+                </div>
+                <div class="col-md-4">
+                  <label class="small font-weight-bold">申請數量</label>
+                  <input
+                    type="number"
+                    id="modal-quantity"
+                    class="form-control bg-light"
+                    readonly
+                  />
+                </div>
+              </div>
+
+              <div class="row mb-4">
+                <div class="col-md-4">
+                  <label class="small font-weight-bold">人民幣單價 (¥)</label>
+                  <input
+                    type="number"
+                    id="modal-priceRMB"
+                    class="form-control bg-light"
+                    readonly
+                  />
+                </div>
+                <div class="col-md-4">
+                  <label class="small font-weight-bold">手動調整匯率</label>
+                  <input
+                    type="number"
+                    id="modal-exchangeRate"
+                    class="form-control"
+                    step="0.001"
+                    placeholder="例如 4.65"
+                  />
+                </div>
+                <div class="col-md-4">
+                  <label class="small font-weight-bold">服務費率 (%)</label>
+                  <input
+                    type="number"
+                    id="modal-serviceRate"
+                    class="form-control"
+                    step="0.1"
+                    placeholder="預設 5.0"
+                  />
+                </div>
+              </div>
+
+              <div
+                class="p-4 mb-4 border rounded"
+                style="
+                  background-color: #f0f7ff;
+                  border-left: 6px solid #007bff !important;
+                "
+              >
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="text-secondary">商品貨值總計 (TWD):</span>
+                  <span
+                    id="calc-base-twd"
+                    class="font-weight-bold"
+                    style="font-size: 1.1rem"
+                    >$0</span
+                  >
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="text-secondary">服務費 (含稅金/低消判定):</span>
+                  <span
+                    id="calc-service-fee"
+                    class="font-weight-bold text-info"
+                    style="font-size: 1.1rem"
+                    >$0</span
+                  >
+                </div>
+                <hr style="border-top: 1px solid #cce5ff; margin: 12px 0" />
+                <div class="d-flex justify-content-between align-items-center">
+                  <span
+                    class="font-weight-bold text-dark"
+                    style="font-size: 1.2rem"
+                    >客戶應付總額:</span
+                  >
+                  <span
+                    id="calc-total-twd"
+                    class="text-danger font-weight-bold"
+                    style="font-size: 1.6rem"
+                    >$0</span
+                  >
+                </div>
+                <div
+                  class="mt-2"
+                  style="font-size: 12px; color: #6c757d; line-height: 1.4"
+                >
+                  * 此金額為試算預覽，儲存後將正式更新客戶端的付款資訊。
+                </div>
+              </div>
+
+              <div class="form-group mb-4">
+                <label class="small font-weight-bold text-uppercase"
+                  >內部管理備註 (僅管理員可見)</label
+                >
+                <textarea
+                  id="modal-adminNote"
+                  class="form-control"
+                  rows="3"
+                  placeholder="輸入處理進度、工廠聯繫紀錄或異常說明..."
+                ></textarea>
+              </div>
+
+              <div
+                class="d-flex justify-content-end gap-2"
+                style="margin-top: 10px"
+              >
+                <button
+                  type="button"
+                  class="btn btn-light modal-close-btn px-4"
+                  style="border: 1px solid #ddd; margin-right: 10px"
+                >
+                  取消返回
+                </button>
+                <button type="submit" class="btn btn-primary px-5 shadow-sm">
+                  <i class="fas fa-save mr-2"></i> 儲存並更新訂單
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/apiConfig.js"></script>
+    <script src="js/admin-layout.js"></script>
+    <script src="js/admin-furniture.js"></script>
+  </body>
+</html>

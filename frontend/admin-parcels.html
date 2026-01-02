@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>包裹管理 - 小跑豬後台</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/admin-modern.css" />
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1 class="page-title">包裹管理系統</h1>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="filters-bar" style="margin-bottom: 0">
+            <div style="flex: 1; min-width: 200px">
+              <input
+                type="text"
+                id="search-input"
+                class="form-control"
+                placeholder="搜尋運單號 / 會員編號 / 姓名..."
+              />
+            </div>
+            <div style="flex: 0 0 150px">
+              <select id="status-filter" class="form-control">
+                <option value="">所有狀態</option>
+                <option value="PENDING">待入庫 (PENDING)</option>
+                <option value="ARRIVED">已入庫 (ARRIVED)</option>
+                <option value="IN_SHIPMENT">集運中 (IN_SHIPMENT)</option>
+                <option value="COMPLETED">已完成 (COMPLETED)</option>
+                <option value="CANCELLED">已取消 (CANCELLED)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btn-search">
+              <i class="fas fa-search"></i> 搜尋
+            </button>
+            <button class="btn btn-success" id="btn-show-create-modal">
+              <i class="fas fa-plus"></i> 代客預報 / 入庫
+            </button>
+            <button class="btn btn-secondary" id="btn-export">
+              <i class="fas fa-file-export"></i> 匯出 CSV
+            </button>
+            <button
+              class="btn btn-danger"
+              id="btn-bulk-delete"
+              style="display: none"
+            >
+              <i class="fas fa-trash"></i> 批量刪除
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fas fa-box"></i> 包裹列表</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px">
+                    <input type="checkbox" id="select-all" />
+                  </th>
+                  <th>預報時間</th>
+                  <th>會員</th>
+                  <th>物流單號</th>
+                  <th>商品名稱</th>
+                  <th>重量/尺寸</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="parcelsTableBody">
+                <tr>
+                  <td colspan="8" class="text-center p-4">
+                    <i class="fas fa-spinner fa-spin"></i> 數據載入中...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div
+          class="card-body border-top"
+          id="pagination"
+          style="display: flex; justify-content: flex-end; gap: 5px"
+        ></div>
+      </div>
+
+      <div
+        id="parcel-modal"
+        class="modal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.6);
+          z-index: 9999;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <div
+          class="card"
+          style="
+            width: 650px;
+            max-width: 95%;
+            margin: 2% auto;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: none;
+          "
+        >
+          <div
+            class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+          >
+            <span id="modal-title" class="font-weight-bold">包裹資訊詳情</span>
+            <button
+              type="button"
+              class="btn btn-sm btn-light modal-close-btn"
+              style="border-radius: 50%; width: 30px; height: 30px; padding: 0"
+            >
+              <i class="fas fa-times text-primary"></i>
+            </button>
+          </div>
+          <div class="card-body">
+            <form id="parcel-form">
+              <input type="hidden" id="modal-pkg-id" />
+
+              <div
+                id="user-info-section"
+                style="
+                  background: #f8f9fc;
+                  padding: 12px;
+                  border-radius: 5px;
+                  margin-bottom: 15px;
+                  border-left: 4px solid #4e73df;
+                "
+              >
+                <label class="small font-weight-bold text-primary"
+                  >歸屬會員 (Owner)</label
+                >
+                <div id="modal-user-display" class="mb-1"></div>
+
+                <div id="create-user-search" style="display: none" class="mt-2">
+                  <div style="display: flex; gap: 5px">
+                    <input
+                      type="text"
+                      id="admin-customer-search"
+                      class="form-control"
+                      placeholder="輸入 Email 或姓名搜尋..."
+                    />
+                    <button
+                      type="button"
+                      id="btn-set-unclaimed"
+                      class="btn btn-warning btn-sm"
+                      style="white-space: nowrap"
+                      title="將此包裹歸類為官方無主件庫存"
+                    >
+                      <i class="fas fa-user-secret"></i> 設為無主
+                    </button>
+                  </div>
+                  <div
+                    id="admin-customer-search-results"
+                    style="
+                      border: 1px solid #ddd;
+                      max-height: 150px;
+                      overflow-y: auto;
+                      display: none;
+                      background: white;
+                      position: absolute;
+                      width: 90%;
+                      z-index: 10001;
+                    "
+                  ></div>
+                  <input type="hidden" id="admin-create-userId" />
+                </div>
+              </div>
+
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 15px;
+                  margin-bottom: 15px;
+                "
+              >
+                <div>
+                  <label class="small font-weight-bold">物流單號</label>
+                  <input
+                    type="text"
+                    id="modal-trackingNumber"
+                    class="form-control"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="small font-weight-bold">狀態</label>
+                  <select id="modal-status" class="form-control">
+                    <option value="PENDING">待確認 (PENDING)</option>
+                    <option value="ARRIVED">已入庫 (ARRIVED)</option>
+                    <option value="IN_SHIPMENT">集運中</option>
+                    <option value="COMPLETED">已完成</option>
+                    <option value="CANCELLED">已取消</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="small font-weight-bold">商品名稱</label>
+                  <input
+                    type="text"
+                    id="modal-productName"
+                    class="form-control"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="small font-weight-bold">數量</label>
+                  <input
+                    type="number"
+                    id="modal-quantity"
+                    class="form-control"
+                    value="1"
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="small font-weight-bold"
+                  >商品購買連結 (User Link)</label
+                >
+                <div
+                  id="modal-productUrl-display"
+                  style="
+                    padding: 5px;
+                    font-size: 14px;
+                    background: #eee;
+                    border-radius: 4px;
+                    overflow-wrap: break-word;
+                  "
+                ></div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="small font-weight-bold">備註</label>
+                <textarea
+                  id="modal-note"
+                  class="form-control"
+                  rows="2"
+                  placeholder="輸入包裹特殊說明..."
+                ></textarea>
+              </div>
+
+              <div class="form-group mb-3" id="client-images-section">
+                <label class="text-secondary font-weight-bold small"
+                  >📷 客戶預報照片</label
+                >
+                <div
+                  id="modal-client-images-preview"
+                  style="
+                    display: flex;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                    margin-top: 5px;
+                    padding: 10px;
+                    background-color: #f1f3f5;
+                    border-radius: 5px;
+                  "
+                ></div>
+              </div>
+
+              <hr />
+
+              <div id="boxes-section" style="display: none">
+                <label class="text-primary font-weight-bold small"
+                  >📦 倉庫入庫數據 (分箱明細)</label
+                >
+                <div id="sub-package-list"></div>
+                <button
+                  type="button"
+                  id="btn-add-sub-package"
+                  class="btn btn-sm btn-outline-info mt-2"
+                >
+                  <i class="fas fa-plus"></i> 新增分箱
+                </button>
+
+                <div class="mt-3 p-3 bg-light border rounded">
+                  <label class="small font-weight-bold">總運費試算 (NT$)</label>
+                  <input
+                    type="text"
+                    id="modal-shippingFee"
+                    class="form-control font-weight-bold text-danger"
+                    style="font-size: 1.2rem"
+                    readonly
+                  />
+                  <small id="modal-fee-tips" class="text-danger"></small>
+                </div>
+              </div>
+
+              <div class="form-group mt-3">
+                <label class="text-primary font-weight-bold small"
+                  >🏭 倉庫實拍照片 (入庫照片)</label
+                >
+                <input
+                  type="file"
+                  id="modal-warehouseImages"
+                  multiple
+                  accept="image/*"
+                  class="form-control"
+                />
+                <div
+                  id="modal-warehouse-images-preview"
+                  style="
+                    display: flex;
+                    gap: 5px;
+                    flex-wrap: wrap;
+                    margin-top: 5px;
+                  "
+                ></div>
+              </div>
+
+              <div class="d-flex justify-content-end mt-4">
+                <button
+                  type="button"
+                  class="btn btn-secondary modal-close-btn mr-2 px-4"
+                >
+                  取消
+                </button>
+                <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                  <i class="fas fa-save mr-1"></i> 儲存變更
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/apiConfig.js"></script>
+    <script src="js/shippingData.js"></script>
+    <script src="js/admin-layout.js"></script>
+    <script src="js/admin-parcels.js"></script>
+  </body>
+</html>

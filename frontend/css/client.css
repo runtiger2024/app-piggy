@@ -1,0 +1,500 @@
+/* frontend/css/client.css - 核心共用樣式 */
+
+/* 1. 核心變數系統 (保留原樣) */
+:root {
+  --color-primary: #1a73e8;
+  --color-primary-hover: #1557b0;
+  --color-primary-light: #e8f0fe;
+  --color-primary-bg: #f8faff;
+  --color-accent: #ff5000;
+  --color-accent-hover: #e04600;
+  --color-success: #00b578;
+  --color-success-bg: #e6f7f0;
+  --color-warning: #ff9000;
+  --color-warning-bg: #fff7e6;
+  --color-danger: #ff3b30;
+  --color-danger-bg: #fff2f0;
+  --color-info: #00b5ff;
+  --color-info-bg: #e6f7ff;
+  --color-white: #ffffff;
+  --text-main: #1f1f1f;
+  --text-body: #333333;
+  --text-secondary: #666666;
+  --text-placeholder: #999999;
+  --bg-body: #f0f2f5;
+  --bg-input: #f7f8fa;
+  --border-color: #e5e5e5;
+  --border-dashed: #d9d9d9;
+  --header-height-desktop: 72px;
+  --header-height-mobile: 56px;
+  --mobile-nav-height: 60px;
+  --sticky-footer-height: 70px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  --font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", Roboto,
+    sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
+  --z-sticky: 100;
+  --z-header: 500;
+  --z-modal: 1050;
+}
+
+/* 2. 基礎重置 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  height: 100%;
+}
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-body);
+  color: var(--text-body);
+  margin: 0;
+  padding: 0;
+  padding-top: var(--header-height-desktop);
+  padding-bottom: 100px;
+}
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+h1,
+h2,
+h3,
+h4,
+h5 {
+  margin-top: 0;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+/* 3. 佈局容器 */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+.main-content {
+  margin-top: var(--spacing-lg);
+}
+
+/* 4. 卡片基礎 (共用) */
+.section-card,
+.warehouse-card,
+.rate-section-wrapper,
+.calculator-wrapper,
+.user-profile-card,
+.notice-card,
+.result-summary-card,
+.result-detail-card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-lg);
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+}
+.section-header-row,
+.card-header {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--bg-body);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+}
+.section-header-row h3,
+.card-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.card-body {
+  padding: var(--spacing-lg);
+}
+
+/* 5. 導航列 (Header & Mobile Nav) */
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--header-height-desktop);
+  background: var(--color-white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  z-index: var(--z-header);
+  display: flex;
+  align-items: center;
+}
+.header-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-logo-img {
+  height: 40px;
+  width: auto;
+}
+.logo-text {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.logo-text small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+.header-nav {
+  display: flex;
+  gap: 8px;
+}
+.nav-link {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  color: var(--text-body);
+  font-weight: 500;
+}
+.nav-link:hover {
+  background: var(--bg-body);
+  color: var(--color-primary);
+}
+.nav-link.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.header-search {
+  display: none !important;
+}
+#announcement-bar {
+  display: none;
+  padding: 10px;
+  text-align: center;
+  color: #856404;
+  background: #fff3cd;
+}
+
+/* Mobile Bottom Nav */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: var(--mobile-nav-height);
+  background: #fff;
+  border-top: 1px solid var(--border-color);
+  z-index: var(--z-sticky);
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mobile-nav-item {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 10px;
+}
+.mobile-nav-item i {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+.mobile-nav-item.active {
+  color: var(--color-primary);
+}
+
+/* 6. 表單元件 */
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.form-group label.required::after {
+  content: "*";
+  color: var(--color-danger);
+  margin-left: 4px;
+}
+.form-control,
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.form-control:focus {
+  background: #fff;
+  border-color: var(--color-primary);
+  outline: none;
+}
+.file-upload-btn,
+.file-upload-box {
+  cursor: pointer;
+} /* 簡化 */
+
+/* 7. 按鈕元件 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: none;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-secondary {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+.btn-success {
+  background: var(--color-success);
+  color: #fff;
+}
+.btn-outline-primary {
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.btn-checkout {
+  background: linear-gradient(135deg, #ff9000, #ff5000);
+  color: #fff;
+  width: 100%;
+  border-radius: var(--radius-full);
+  padding: 14px;
+}
+
+/* 8. 狀態標籤 (Badge) */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-PENDING {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+.status-ARRIVED {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+.status-IN_SHIPMENT {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+.status-COMPLETED {
+  background: #f6ffed;
+  color: #52c41a;
+}
+.status-CANCELLED {
+  background: #fff1f0;
+  color: #f5222d;
+}
+.status-PENDING_PAYMENT {
+  background: #fffbe6;
+  color: #faad14;
+}
+.status-PENDING_REVIEW {
+  background: #fcffe6;
+  color: #a0d911;
+}
+
+/* 9. 提示框 & 載入 */
+.alert {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  display: none;
+}
+.alert-error {
+  background: #fff1f0;
+  color: #ff3b30;
+  border: 1px solid #ffccc7;
+}
+.alert-success {
+  background: #f6ffed;
+  color: #389e0d;
+  border: 1px solid #b7eb8f;
+}
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e8f0fe;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 10. 彈窗 (Modals) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-modal);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-content {
+  background: #fff;
+  width: 95%;
+  max-width: 500px;
+  max-height: 85vh;
+  border-radius: var(--radius-lg);
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+.modal-content.modal-lg {
+  max-width: 800px;
+}
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+}
+.modal-body {
+  padding: 20px;
+}
+.modal-footer {
+  padding: 20px;
+  background: var(--bg-body);
+  text-align: right;
+}
+.modal-close,
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+/* 11. 頁尾 */
+.site-footer {
+  background: #232f3e;
+  color: #ddd;
+  padding: 40px 0 100px;
+  text-align: center;
+  margin-top: 50px;
+}
+
+/* [修改] 全域隱藏客服連結區塊 */
+/* 加上 !important 確保覆蓋之前的 RWD 設定，電腦與手機版皆會隱藏 */
+.footer-links {
+  display: none !important;
+}
+
+/* 12. RWD 通用 */
+@media (max-width: 768px) {
+  .header-container {
+    height: var(--header-height-mobile);
+    padding: 0 15px;
+  }
+  .header-nav {
+    display: none;
+  }
+  .mobile-bottom-nav {
+    display: flex;
+  }
+  .btn {
+    width: 100%;
+  }
+
+  /* 若之前有在此處加入 .footer-links 的 Flex 設定，
+     上面的 !important 已經會將其覆蓋，無需特別刪除，
+     但為了代碼整潔，您也可以將之前的 footer-links 樣式區塊移除。 */
+}

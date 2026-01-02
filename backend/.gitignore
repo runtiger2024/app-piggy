@@ -1,0 +1,7 @@
+node_modules/
+.env
+dist/
+*.log
+
+# Prisma 產出的產物
+/node_modules/.prisma/

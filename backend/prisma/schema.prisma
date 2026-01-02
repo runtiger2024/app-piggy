@@ -1,0 +1,252 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- 1. 會員 (客戶) 資料模型 ---
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  passwordHash        String
+  name                String?
+  phone               String?
+  defaultAddress      String?
+
+  // 發票預設資料
+  defaultTaxId        String?
+  defaultInvoiceTitle String?
+
+  // 權限控制
+  permissions         Json     @default("[]")
+
+  // 帳號狀態
+  isActive            Boolean  @default(true)
+
+  // 忘記密碼欄位
+  resetPasswordToken  String?
+  resetPasswordExpire DateTime?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // 關聯
+  packages            Package[]
+  shipments           Shipment[]
+  activityLogs        ActivityLog[]
+  recipients          Recipient[]
+  wallet              Wallet?
+  notifications       Notification[]
+  
+  // [新增] 家具代採購關聯
+  furnitureOrders     FurnitureOrder[]
+}
+
+// --- 2. 包裹 (預報) 資料模型 ---
+model Package {
+  id                  String   @id @default(cuid())
+  trackingNumber      String   @unique
+  productName         String
+  quantity            Int      @default(1)
+  note                String?
+  
+  productUrl          String?   
+
+  productImages       Json     @default("[]")
+  warehouseImages     Json     @default("[]")
+  warehouseThumbnails Json     @default("[]")
+  status              String   @default("PENDING")
+  arrivedBoxesJson    Json     @default("[]")
+  totalCalculatedFee  Float?
+  warehouseRemark     String?
+  claimProof          String?
+  exceptionStatus     String?
+  exceptionNote       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  shipmentId          String?
+  shipment            Shipment? @relation(fields: [shipmentId], references: [id])
+
+  @@index([userId])
+  @@index([shipmentId])
+}
+
+// --- 3. 集運單資料模型 ---
+model Shipment {
+  id                    String    @id @default(cuid())
+  recipientName         String
+  phone                 String
+  shippingAddress       String
+  idNumber              String
+  taxId                 String?
+  invoiceTitle          String?
+  note                  String?
+  additionalServices    Json?     @default("{}")
+  deliveryLocationRate  Float?
+  status                String    @default("PENDING_PAYMENT")
+  totalCost             Float?
+  trackingNumberTW      String?
+  paymentProof          String?
+  
+  carrierType           String?   
+  carrierId             String?   
+  loadingDate           DateTime? 
+  returnReason          String?   
+
+  // 發票相關
+  invoiceNumber         String?
+  invoiceDate           DateTime?
+  invoiceRandomCode     String?
+  invoiceStatus         String?
+  productUrl            String?
+  shipmentProductImages Json      @default("[]")
+
+  transactionId         String?   @unique
+  transaction           Transaction? @relation(fields: [transactionId], references: [id])
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id])
+  packages              Package[]
+
+  @@index([userId])
+}
+
+// --- 4. 估價單 ---
+model CalculationQuote {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+  calculationResult Json
+}
+
+// --- 5. 操作日誌 ---
+model ActivityLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  action    String
+  targetId  String?
+  details   String?
+  userId    String
+  userEmail String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+}
+
+// --- 6. 系統設定 ---
+model SystemSetting {
+  key         String   @id
+  value       Json
+  category    String?  // 建議加上分類，方便後台管理
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+// --- 7. 常用收件人 ---
+model Recipient {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  phone       String
+  address     String
+  idNumber    String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// --- 8. 通知中心 ---
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        String
+  isRead      Boolean  @default(false)
+  link        String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+// --- 9. 電子錢包 ---
+model Wallet {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  transactions Transaction[]
+}
+
+// --- 10. 交易紀錄 ---
+model Transaction {
+  id                String   @id @default(cuid())
+  walletId          String
+  wallet            Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount            Float
+  type              String   // DEPOSIT, PAYMENT, REFUND, ADJUST
+  status            String   // PENDING, COMPLETED, FAILED, REJECTED
+  description       String?
+  proofImage        String?
+
+  taxId             String?  
+  invoiceTitle      String?  
+  invoiceNumber     String?
+  invoiceDate       DateTime?
+  invoiceRandomCode String?
+  invoiceStatus     String?  
+
+  shipment          Shipment?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([walletId])
+}
+
+// --- 11. [新增] 家具代採購訂單模型 ---
+model FurnitureOrder {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 代採購資訊
+  factoryName    String
+  productName    String
+  quantity       Int
+  priceRMB       Float
+  
+  // 計算結果與當時費率 (重要：保留當時計算依據)
+  serviceFeeRMB  Float    
+  exchangeRate   Float    
+  serviceFeeRate Float    
+  totalAmountTWD Int      // 最終台幣金額，採整數存檔
+  
+  // 狀態與備註
+  status         String   @default("PENDING") // PENDING, APPROVED, PAID, SHIPPED, COMPLETED, CANCELLED
+  note           String?  @db.Text
+  adminRemark    String?  @db.Text
+  invoiceUrl     String?  // 採購憑證或發票圖檔
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}

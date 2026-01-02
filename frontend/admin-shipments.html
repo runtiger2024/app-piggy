@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>集運單管理 - 小跑豬後台 2026</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/admin-modern.css" />
+    <style>
+      /* --- [核心修復] 補上 Modal 定位樣式，確保視窗能出現在螢幕中央 --- */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 9999; /* 確保在最上層 */
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-content {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+      .package-list-box {
+        border: 1px solid #eee;
+        padding: 10px;
+        background: #fcfcfc;
+        border-radius: 6px;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+      /* 狀態標籤顏色保持不變 */
+      .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .status-PENDING_PAYMENT {
+        background: #fff3e0;
+        color: #e65100;
+        border: 1px solid #ffb74d;
+      }
+      .status-PENDING_REVIEW {
+        background: #f3e5f5;
+        color: #7b1fa2;
+        border: 1px solid #ce93d8;
+      }
+      .status-PROCESSING {
+        background: #e0f7fa;
+        color: #006064;
+        border: 1px solid #4dd0e1;
+      }
+      .status-SHIPPED {
+        background: #e3f2fd;
+        color: #0d47a1;
+        border: 1px solid #64b5f6;
+      }
+      .status-COMPLETED {
+        background: #e8f5e9;
+        color: #1b5e20;
+        border: 1px solid #81c784;
+      }
+      .status-CANCELLED,
+      .status-RETURNED {
+        background: #ffebee;
+        color: #b71c1c;
+        border: 1px solid #ffcdd2;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1 class="page-title"><i class="fas fa-boxes"></i> 集運單管理</h1>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <div
+            class="filters-bar"
+            style="
+              display: flex;
+              gap: 10px;
+              flex-wrap: wrap;
+              align-items: center;
+            "
+          >
+            <div style="flex: 1; min-width: 250px">
+              <input
+                type="text"
+                id="search-input"
+                class="form-control"
+                placeholder="搜尋訂單號 / 會員 Email / 收件人..."
+              />
+            </div>
+            <div style="flex: 0 0 200px">
+              <select id="status-filter" class="form-control">
+                <option value="">所有狀態</option>
+                <option value="PENDING_PAYMENT">待付款</option>
+                <option value="PENDING_REVIEW">已付款(待審核)</option>
+                <option value="PROCESSING">已收款(處理中)</option>
+                <option value="SHIPPED">已裝櫃</option>
+                <option value="CUSTOMS_CHECK">海關查驗中</option>
+                <option value="UNSTUFFING">拆櫃派送中</option>
+                <option value="COMPLETED">已完成</option>
+                <option value="RETURNED">訂單退回</option>
+                <option value="CANCELLED">已取消</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btn-search">
+              <i class="fas fa-search"></i> 搜尋
+            </button>
+            <button class="btn btn-outline-secondary" id="btn-export">
+              匯出
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <div>
+            <i class="fas fa-list"></i> 訂單列表
+            <span
+              id="selected-count"
+              class="badge badge-danger ml-2"
+              style="display: none"
+              >已選 0 筆</span
+            >
+          </div>
+          <div class="bulk-actions">
+            <button
+              class="btn btn-sm btn-info"
+              id="btn-bulk-process"
+              style="display: none"
+            >
+              <i class="fas fa-check-double"></i> 批量收款
+            </button>
+            <button
+              class="btn btn-sm btn-danger"
+              id="btn-bulk-delete"
+              style="display: none"
+            >
+              <i class="fas fa-trash-alt"></i> 批量刪除
+            </button>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px">
+                    <input type="checkbox" id="select-all" />
+                  </th>
+                  <th>訂單號</th>
+                  <th>建立時間</th>
+                  <th>會員/收件人</th>
+                  <th>總金額</th>
+                  <th>發票狀態</th>
+                  <th>訂單狀態</th>
+                  <th class="text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody id="shipment-list">
+                <tr>
+                  <td colspan="8" class="text-center p-4">載入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer" id="pagination"></div>
+      </div>
+
+      <div id="shipment-modal" class="modal">
+        <div class="modal-content card" style="width: 750px; max-width: 95%">
+          <div class="card-header">
+            <span id="modal-title">集運單詳細管理</span>
+            <button type="button" class="modal-close-btn">&times;</button>
+          </div>
+          <div class="card-body">
+            <form id="edit-shipment-form">
+              <input type="hidden" id="edit-shipment-id" />
+              <div class="info-grid mb-3">
+                <div class="info-item">
+                  <strong>收件人:</strong> <span id="m-recipient"></span>
+                </div>
+                <div class="info-item">
+                  <strong>電話:</strong> <span id="m-phone"></span>
+                </div>
+                <div class="info-item full-width">
+                  <strong>地址:</strong> <span id="m-address"></span>
+                </div>
+                <div class="info-item">
+                  <strong>身分證:</strong> <span id="m-id"></span>
+                </div>
+                <div class="info-item">
+                  <strong>會員:</strong> <span id="m-user"></span>
+                </div>
+              </div>
+
+              <div class="section-box mb-3 border p-2 rounded">
+                <label class="font-weight-bold text-primary"
+                  ><i class="fas fa-file-invoice"></i> 發票與稅務</label
+                >
+                <div class="row">
+                  <div class="col">
+                    <small>統一編號</small>
+                    <input
+                      type="text"
+                      id="m-tax-id"
+                      class="form-control form-control-sm"
+                      placeholder="8碼數字"
+                    />
+                  </div>
+                  <div class="col">
+                    <small>發票抬頭</small>
+                    <input
+                      type="text"
+                      id="m-invoice-title"
+                      class="form-control form-control-sm"
+                      placeholder="抬頭全銜"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="font-weight-bold">📦 包裹內容</label>
+                <div id="m-packages" class="package-list-box"></div>
+              </div>
+
+              <div id="invoice-management-section" class="mb-3"></div>
+
+              <div class="section-box mb-3 bg-light p-3 rounded">
+                <div class="row">
+                  <div class="col-md-6">
+                    <label>訂單狀態</label>
+                    <select id="m-status" class="form-control">
+                      <option value="PENDING_PAYMENT">待付款</option>
+                      <option value="PENDING_REVIEW">已付款(待審核)</option>
+                      <option value="PROCESSING">已收款(處理中)</option>
+                      <option value="SHIPPED">已裝櫃</option>
+                      <option value="CUSTOMS_CHECK">海關查驗中</option>
+                      <option value="UNSTUFFING">拆櫃派送中</option>
+                      <option value="COMPLETED">已完成</option>
+                      <option value="RETURNED">訂單退回</option>
+                      <option value="CANCELLED">已取消</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label>總金額 (NT$)</label>
+                    <input type="number" id="m-cost" class="form-control" />
+                  </div>
+                </div>
+                <div class="row mt-2">
+                  <div class="col-md-6">
+                    <label>台灣端單號</label>
+                    <input
+                      type="text"
+                      id="m-tracking-tw"
+                      class="form-control"
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label>🚢 裝櫃日期</label>
+                    <input
+                      type="date"
+                      id="m-loading-date"
+                      class="form-control"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-box mb-3 border p-2 rounded">
+                <label class="text-warning"
+                  ><i class="fas fa-image"></i> 付款憑證</label
+                >
+                <div id="m-proof" class="text-center p-2 bg-white border"></div>
+              </div>
+
+              <div class="modal-footer d-flex justify-content-between">
+                <button
+                  type="button"
+                  id="btn-return-shipment"
+                  class="btn btn-outline-danger"
+                >
+                  退回訂單
+                </button>
+                <div class="btn-group">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    onclick="window.printShipment()"
+                  >
+                    列印
+                  </button>
+                  <button type="submit" class="btn btn-success">
+                    儲存更新
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="adjust-price-modal" class="modal">
+        <div class="modal-content card" style="width: 450px">
+          <div class="card-header bg-warning text-dark">
+            <span><i class="fas fa-edit"></i> 修改訂單總金額</span>
+            <button type="button" class="modal-close-btn">&times;</button>
+          </div>
+          <div class="card-body">
+            <form id="adjust-price-form">
+              <input type="hidden" id="adjust-shipment-id" />
+              <div class="form-group mb-3">
+                <label>目前金額</label
+                ><input
+                  type="text"
+                  id="adjust-original-price"
+                  class="form-control"
+                  disabled
+                />
+              </div>
+              <div class="form-group mb-3">
+                <label class="text-danger">新金額 (NT$)</label
+                ><input
+                  type="number"
+                  id="adjust-new-price"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group mb-3">
+                <label>原因</label
+                ><textarea
+                  id="adjust-reason"
+                  class="form-control"
+                  rows="3"
+                  required
+                ></textarea>
+              </div>
+              <div class="text-right">
+                <button type="button" class="btn btn-light modal-close-btn">
+                  取消
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="window.confirmAdjustPrice()"
+                >
+                  確認
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="js/apiConfig.js"></script>
+    <script src="js/admin-layout.js"></script>
+    <script src="js/admin-shipments.js"></script>
+  </body>
+</html>

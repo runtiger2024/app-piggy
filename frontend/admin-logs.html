@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>系統操作日誌 - 小跑豬後台</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/admin-modern.css" />
+    <style>
+      .log-details {
+        font-size: 0.85rem;
+        color: #666;
+        max-width: 400px;
+        word-break: break-all;
+      }
+      .action-tag {
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        display: inline-block;
+      }
+      /* 狀態標籤顏色 (同步專案風格) */
+      .tag-red {
+        background: #ffebee;
+        color: #b71c1c;
+        border: 1px solid #ffcdd2;
+      }
+      .tag-green {
+        background: #e8f5e9;
+        color: #1b5e20;
+        border: 1px solid #81c784;
+      }
+      .tag-orange {
+        background: #fff3e0;
+        color: #e65100;
+        border: 1px solid #ffb74d;
+      }
+      .tag-blue {
+        background: #e3f2fd;
+        color: #0d47a1;
+        border: 1px solid #64b5f6;
+      }
+      .tag-dark {
+        background: #f5f5f5;
+        color: #333;
+        border: 1px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1 class="page-title"><i class="fas fa-history"></i> 系統操作日誌</h1>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <div
+            class="filters-bar"
+            style="
+              display: flex;
+              gap: 10px;
+              flex-wrap: wrap;
+              align-items: center;
+            "
+          >
+            <div style="flex: 1; min-width: 250px">
+              <input
+                type="text"
+                id="search-input"
+                class="form-control"
+                placeholder="搜尋管理員 Email 或 備註細節..."
+              />
+            </div>
+            <div style="flex: 0 0 200px">
+              <select id="action-filter" class="form-control">
+                <option value="">所有動作類型</option>
+                <optgroup label="包裹管理">
+                  <option value="CREATE_PACKAGE">建立包裹</option>
+                  <option value="UPDATE_PACKAGE">更新包裹</option>
+                  <option value="DELETE_PACKAGE">刪除包裹</option>
+                  <option value="CLAIM_PACKAGE">認領包裹</option>
+                </optgroup>
+                <optgroup label="集運訂單">
+                  <option value="CREATE_SHIPMENT">建立集運單</option>
+                  <option value="UPDATE_SHIPMENT">更新訂單狀態</option>
+                  <option value="ADJUST_PRICE">人工改價</option>
+                  <option value="REJECT_SHIPMENT">退回訂單</option>
+                </optgroup>
+                <optgroup label="財務審核">
+                  <option value="APPROVE_TRANSACTION">通過儲值</option>
+                  <option value="REJECT_TRANSACTION">駁回儲值</option>
+                  <option value="ADJUST_BALANCE">手動調整餘額</option>
+                  <option value="ISSUE_INVOICE">開立發票</option>
+                </optgroup>
+                <optgroup label="帳號安全">
+                  <option value="LOGIN">管理員登入</option>
+                  <option value="UPDATE_PERMISSIONS">修改權限</option>
+                  <option value="IMPERSONATE">模擬會員登入</option>
+                </optgroup>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btn-search">
+              <i class="fas fa-search"></i> 查詢
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fas fa-list"></i> 操作紀錄 (最近 50 筆/頁)</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th style="width: 180px">操作時間</th>
+                  <th>操作者</th>
+                  <th>動作類型</th>
+                  <th>對象 ID</th>
+                  <th>詳細說明</th>
+                </tr>
+              </thead>
+              <tbody id="logs-list">
+                <tr>
+                  <td colspan="5" class="text-center p-4">資料載入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div
+          class="card-footer d-flex justify-content-between align-items-center"
+        >
+          <div id="page-info" class="small text-muted">第 1 / 1 頁</div>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary" id="btn-prev">
+              <i class="fas fa-chevron-left"></i> 上一頁
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" id="btn-next">
+              下一頁 <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/apiConfig.js"></script>
+    <script src="js/admin-layout.js"></script>
+    <script src="js/admin-logs.js"></script>
+  </body>
+</html>

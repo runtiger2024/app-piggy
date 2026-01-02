@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>系統設定 - 小跑豬後台</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/admin-modern.css" />
+    <style>
+      .settings-tab-nav {
+        display: flex;
+        background: white;
+        border-bottom: 1px solid #e3e6f0;
+        padding: 0 20px;
+        overflow-x: auto;
+      }
+      .tab-btn {
+        padding: 15px 25px;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        color: #858796;
+        font-weight: 600;
+        transition: 0.2s;
+        white-space: nowrap;
+      }
+      .tab-btn:hover {
+        color: #4e73df;
+      }
+      .tab-btn.active {
+        color: #4e73df;
+        border-bottom-color: #4e73df;
+      }
+      .tab-content {
+        display: none;
+        padding: 20px;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .btn-remove-cat {
+        color: #e74a3b;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .btn-remove-cat:hover {
+        color: #c0392b;
+        transform: scale(1.1);
+      }
+      /* 偏遠地區區塊樣式 */
+      .remote-block {
+        border-left: 4px solid #36b9cc;
+        background: #fff;
+        margin-bottom: 15px;
+      }
+      .remote-header {
+        background: #f8f9fc;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e3e6f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1 class="page-title">系統全域設定</h1>
+
+      <div class="card">
+        <div class="settings-tab-nav">
+          <div class="tab-btn active" data-tab="tab-rates">
+            <i class="fas fa-calculator"></i> 運費費率
+          </div>
+          <div class="tab-btn" data-tab="tab-remote">
+            <i class="fas fa-map-marked-alt"></i> 偏遠地區
+          </div>
+          <div class="tab-btn" data-tab="tab-furniture">
+            <i class="fas fa-couch"></i> 傢俱代採購
+          </div>
+          <div class="tab-btn" data-tab="tab-sys">
+            <i class="fas fa-bullhorn"></i> 公告與系統
+          </div>
+          <div class="tab-btn" data-tab="tab-bank">
+            <i class="fas fa-university"></i> 銀行資訊
+          </div>
+          <div class="tab-btn" data-tab="tab-invoice">
+            <i class="fas fa-file-invoice"></i> 電子發票
+          </div>
+          <div class="tab-btn" data-tab="tab-email">
+            <i class="fas fa-envelope"></i> 郵件通知
+          </div>
+        </div>
+
+        <div id="tab-rates" class="tab-content active">
+          <form id="form-rates">
+            <h5 class="text-primary font-weight-bold mb-3">
+              全域運算常數 (Constants)
+            </h5>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 20px;
+              "
+            >
+              <div>
+                <label>海運低消 (NT$)</label>
+                <input
+                  type="number"
+                  id="const-MINIMUM_CHARGE"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div>
+                <label>材積換算係數 (Divisor)</label>
+                <input
+                  type="number"
+                  id="const-VOLUME_DIVISOR"
+                  class="form-control"
+                  placeholder="28317"
+                  required
+                />
+              </div>
+              <div>
+                <label>CBM 轉材積係數</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  id="const-CBM_TO_CAI_FACTOR"
+                  class="form-control"
+                  placeholder="35.3"
+                />
+              </div>
+              <div>
+                <label>超長限制 (cm)</label>
+                <input
+                  type="number"
+                  id="const-OVERSIZED_LIMIT"
+                  class="form-control"
+                  placeholder="300"
+                />
+              </div>
+              <div>
+                <label>超長附加費 ($)</label>
+                <input
+                  type="number"
+                  id="const-OVERSIZED_FEE"
+                  class="form-control"
+                  placeholder="800"
+                />
+              </div>
+              <div>
+                <label>超重限制 (kg)</label>
+                <input
+                  type="number"
+                  id="const-OVERWEIGHT_LIMIT"
+                  class="form-control"
+                  placeholder="100"
+                />
+              </div>
+              <div>
+                <label>超重附加費 ($)</label>
+                <input
+                  type="number"
+                  id="const-OVERWEIGHT_FEE"
+                  class="form-control"
+                  placeholder="800"
+                />
+              </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+              "
+            >
+              <h5 class="text-primary font-weight-bold mb-0">
+                家具類別費率 (Categories)
+              </h5>
+              <small class="text-muted">修改後將即時同步至客戶端首頁</small>
+            </div>
+
+            <div id="categories-container"></div>
+
+            <div class="mb-4">
+              <button
+                type="button"
+                id="btn-add-category"
+                class="btn btn-outline-primary btn-sm"
+                style="border-style: dashed"
+              >
+                <i class="fas fa-plus"></i> 新增類別
+              </button>
+            </div>
+
+            <div style="text-align: right; margin-top: 20px">
+              <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-save"></i> 儲存所有費率設定
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div id="tab-remote" class="tab-content">
+          <form id="form-remote">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle"></i>
+              在此設定偏遠地區的加收費用（每 CBM
+              價格）。系統會自動比對地址中的關鍵字。
+            </div>
+
+            <div id="remote-container"></div>
+
+            <div class="mb-4">
+              <button
+                type="button"
+                id="btn-add-remote"
+                class="btn btn-outline-info btn-sm"
+                style="border-style: dashed"
+              >
+                <i class="fas fa-plus"></i> 新增費率區間
+              </button>
+            </div>
+
+            <div style="text-align: right">
+              <button type="submit" class="btn btn-info btn-lg">
+                <i class="fas fa-map-marked-alt"></i> 儲存偏遠地區設定
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div id="tab-furniture" class="tab-content">
+          <form id="form-furniture">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle"></i>
+              設定傢俱代採購專用的換算匯率與服務手續費。
+            </div>
+            <div class="form-group mb-3">
+              <label class="font-weight-bold"
+                >代採購人民幣匯率 (1 RMB = ? TWD)</label
+              >
+              <input
+                type="number"
+                step="0.0001"
+                id="fur-exchange-rate"
+                class="form-control"
+                placeholder="例如：4.65"
+                required
+              />
+              <small class="text-muted"
+                >此匯率將用於計算客戶支付給工廠的台幣總額。</small
+              >
+            </div>
+            <div class="form-group mb-3">
+              <label class="font-weight-bold">代採購服務費率 (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                id="fur-service-fee-rate"
+                class="form-control"
+                placeholder="例如：5.0"
+                required
+              />
+              <small class="text-muted"
+                >收取的百分比服務費（已包含品項發票開立成本）。</small
+              >
+            </div>
+            <div class="form-group mb-4">
+              <label class="font-weight-bold">最低服務費 (TWD)</label>
+              <input
+                type="number"
+                id="fur-min-service-fee"
+                class="form-control"
+                placeholder="例如：500"
+              />
+              <small class="text-muted"
+                >若計算出的服務費低於此數值，將以此金額計費。</small
+              >
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> 儲存代採購設定
+            </button>
+          </form>
+        </div>
+
+        <div id="tab-sys" class="tab-content">
+          <form id="form-announcement">
+            <div class="form-group mb-3">
+              <label class="font-weight-bold">前台全域公告</label>
+              <textarea
+                id="ann-text"
+                class="form-control"
+                rows="3"
+                placeholder="例如：因颱風影響，船期延誤..."
+              ></textarea>
+            </div>
+            <div class="form-check mb-4">
+              <input
+                type="checkbox"
+                id="ann-enabled"
+                style="transform: scale(1.2)"
+              />
+              <label for="ann-enabled" style="margin-left: 5px"
+                >啟用公告顯示</label
+              >
+            </div>
+            <div class="form-group mb-3">
+              <label>公告顏色</label>
+              <select
+                id="ann-color"
+                class="form-control"
+                style="max-width: 200px"
+              >
+                <option value="info">藍色 (資訊)</option>
+                <option value="warning">黃色 (警告)</option>
+                <option value="danger">紅色 (緊急)</option>
+                <option value="success">綠色 (成功)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-bullhorn"></i> 更新公告
+            </button>
+          </form>
+        </div>
+
+        <div id="tab-bank" class="tab-content">
+          <form id="form-bank">
+            <div class="form-group mb-3">
+              <label>銀行名稱 (含代碼)</label>
+              <input type="text" id="bank-name" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>分行名稱</label>
+              <input type="text" id="bank-branch" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>銀行帳號</label>
+              <input
+                type="text"
+                id="bank-account"
+                class="form-control"
+                style="font-family: monospace"
+              />
+            </div>
+            <div class="form-group mb-4">
+              <label>戶名</label>
+              <input type="text" id="bank-holder" class="form-control" />
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-university"></i> 更新匯款資料
+            </button>
+          </form>
+        </div>
+
+        <div id="tab-invoice" class="tab-content">
+          <form id="form-invoice">
+            <div class="form-group mb-3">
+              <label class="font-weight-bold">功能開關</label>
+              <div class="form-check">
+                <input type="checkbox" id="inv-enabled" />
+                <label for="inv-enabled">啟用電子發票開立功能</label>
+              </div>
+            </div>
+            <div class="form-group mb-3">
+              <label>Merchant ID (商店代號)</label>
+              <input type="text" id="inv-merchant-id" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>Hash Key (金鑰)</label>
+              <input type="text" id="inv-hash-key" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>環境模式</label>
+              <select id="inv-mode" class="form-control">
+                <option value="TEST">測試環境 (Test)</option>
+                <option value="PROD">正式環境 (Production)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> 儲存發票設定
+            </button>
+          </form>
+        </div>
+
+        <div id="tab-email" class="tab-content">
+          <form id="form-email">
+            <div class="form-group mb-3">
+              <label>寄件者名稱</label>
+              <input type="text" id="email-sender-name" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>寄件者 Email</label>
+              <input type="email" id="email-sender-addr" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>管理員通知名單 (以逗號分隔)</label>
+              <textarea
+                id="email-recipients"
+                class="form-control"
+                rows="3"
+              ></textarea>
+            </div>
+            <div style="display: flex; gap: 10px">
+              <button type="submit" class="btn btn-primary" style="flex: 2">
+                <i class="fas fa-paper-plane"></i> 更新郵件設定
+              </button>
+              <button
+                type="button"
+                id="btn-test-email"
+                class="btn btn-secondary"
+                style="flex: 1"
+              >
+                <i class="fas fa-vial"></i> 發送測試信
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/apiConfig.js"></script>
+    <script src="js/admin-layout.js"></script>
+    <script src="js/admin-settings.js"></script>
+  </body>
+</html>

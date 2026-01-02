@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>新增員工 - 小跑豬後台</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/admin-modern.css" />
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1 class="page-title">新增內部員工帳號</h1>
+
+      <div style="max-width: 700px; margin: 0 auto">
+        <div class="card">
+          <div
+            class="card-header bg-primary text-white"
+            style="background: linear-gradient(135deg, #4e73df, #224abe)"
+          >
+            <span style="font-size: 1.1rem"
+              ><i class="fas fa-user-shield"></i> 建立管理帳號</span
+            >
+          </div>
+          <div class="card-body">
+            <form id="register-form">
+              <div class="form-group mb-3">
+                <label class="font-weight-bold">員工姓名</label>
+                <input
+                  type="text"
+                  id="staff-name"
+                  class="form-control"
+                  placeholder="請輸入姓名"
+                  required
+                />
+              </div>
+              <div class="form-group mb-3">
+                <label class="font-weight-bold">登入 Email</label>
+                <input
+                  type="email"
+                  id="staff-email"
+                  class="form-control"
+                  placeholder="example@runpiggy.com"
+                  required
+                />
+              </div>
+              <div class="form-group mb-3">
+                <label class="font-weight-bold">登入密碼 (至少6位)</label>
+                <input
+                  type="password"
+                  id="staff-password"
+                  class="form-control"
+                  minlength="6"
+                  placeholder="******"
+                  required
+                />
+              </div>
+
+              <div class="form-group mb-4">
+                <label class="font-weight-bold mb-2">權限設定</label>
+                <div
+                  style="
+                    background: #f8f9fc;
+                    padding: 15px;
+                    border-radius: 8px;
+                    border: 1px solid #e3e6f0;
+                  "
+                >
+                  <div class="mb-3 border-bottom pb-2">
+                    <strong class="text-secondary small">基礎功能</strong>
+                    <div
+                      style="
+                        display: flex;
+                        gap: 15px;
+                        flex-wrap: wrap;
+                        margin-top: 5px;
+                      "
+                    >
+                      <div>
+                        <input type="checkbox" value="DASHBOARD_VIEW" checked />
+                        查看儀表板
+                      </div>
+                      <div>
+                        <input type="checkbox" value="LOGS_VIEW" /> 查看操作日誌
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mb-3 border-bottom pb-2">
+                    <strong class="text-primary small"
+                      >包裹管理 (Warehouse)</strong
+                    >
+                    <div
+                      style="
+                        display: flex;
+                        gap: 15px;
+                        flex-wrap: wrap;
+                        margin-top: 5px;
+                      "
+                    >
+                      <div>
+                        <input type="checkbox" value="PACKAGE_VIEW" checked />
+                        查看列表
+                      </div>
+                      <div>
+                        <input type="checkbox" value="PACKAGE_EDIT" /> 入庫/編輯
+                        (操作員)
+                      </div>
+                      <div>
+                        <input type="checkbox" value="PACKAGE_DELETE" />
+                        <span class="text-danger">刪除包裹</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mb-3 border-bottom pb-2">
+                    <strong class="text-success small"
+                      >訂單與財務 (Shipment & Finance)</strong
+                    >
+                    <div
+                      style="
+                        display: flex;
+                        gap: 15px;
+                        flex-wrap: wrap;
+                        margin-top: 5px;
+                      "
+                    >
+                      <div>
+                        <input type="checkbox" value="SHIPMENT_VIEW" checked />
+                        查看訂單
+                      </div>
+                      <div>
+                        <input type="checkbox" value="SHIPMENT_PROCESS" />
+                        審核/發貨
+                      </div>
+                      <div>
+                        <input type="checkbox" value="FINANCE_AUDIT" />
+                        <span class="text-danger">財務審核 (收款/退款)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <strong class="text-info small">高階管理 (Admin)</strong>
+                    <div
+                      style="
+                        display: flex;
+                        gap: 15px;
+                        flex-wrap: wrap;
+                        margin-top: 5px;
+                      "
+                    >
+                      <div>
+                        <input type="checkbox" value="USER_VIEW" /> 查看會員
+                      </div>
+                      <div>
+                        <input type="checkbox" value="USER_IMPERSONATE" />
+                        模擬登入 (客服)
+                      </div>
+                      <div>
+                        <input type="checkbox" value="USER_MANAGE" />
+                        <span class="text-danger">管理會員 (刪除/改密碼)</span>
+                      </div>
+                      <div>
+                        <input type="checkbox" value="SYSTEM_CONFIG" />
+                        <span class="text-danger">系統全域設定</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100 py-2">
+                <i class="fas fa-check"></i> 建立帳號
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/apiConfig.js"></script>
+    <script src="js/admin-layout.js"></script>
+    <script src="js/admin-register.js"></script>
+  </body>
+</html>
