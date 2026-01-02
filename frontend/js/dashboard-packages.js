@@ -367,7 +367,27 @@ function renderPackagesTable(dataToRender = null) {
       if (typeof window.updateCheckoutBar === "function")
         window.updateCheckoutBar();
     });
-    tr.querySelector(".btn-edit")?.addEventListener("click", () => {
+    tr.querySelector(".btn-edit")?.addEventListener("click", (e) => {
+      // 1. 阻止事件冒泡 (關鍵防護)
+      e.stopPropagation();
+      e.preventDefault();
+
+      const normalizedStatus = (pkg.status || "")
+        .toString()
+        .toUpperCase()
+        .trim();
+
+      if (normalizedStatus === "ARRIVED") {
+        const msg = "包裹已經入庫量完尺寸、重量，不予修改，如有問題請洽客服";
+
+        // 2. 即使通知功能報錯，這裡也能獨立運行
+        if (typeof window.showMessage === "function") {
+          window.showMessage(msg, "error");
+        } else {
+          alert(msg);
+        }
+        return;
+      }
       openEditPackageModal(pkg);
     });
     tr.querySelector(".btn-delete")?.addEventListener("click", () =>

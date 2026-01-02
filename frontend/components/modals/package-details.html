@@ -1,0 +1,100 @@
+<div
+  class="modal-content"
+  style="max-width: 700px; width: 95%; max-height: 90vh; overflow-y: auto"
+>
+  <div class="modal-header">
+    <h3 style="margin: 0; font-weight: 800; color: #1e293b">
+      <i class="fas fa-box-open" style="color: #1a73e8; margin-right: 10px"></i
+      >包裹詳情
+    </h3>
+    <span class="modal-close">&times;</span>
+  </div>
+
+  <div class="modal-body">
+    <div
+      style="
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+      "
+    >
+      <div style="text-align: center">
+        <label
+          style="
+            display: block;
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 5px;
+          "
+          >總重量</label
+        >
+        <span style="font-size: 20px; font-weight: 800; color: #1a73e8"
+          ><span id="details-total-weight">0.0</span> kg</span
+        >
+      </div>
+      <div style="text-align: center; border-left: 1px solid #e2e8f0">
+        <label
+          style="
+            display: block;
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 5px;
+          "
+          >預估基本運費</label
+        >
+        <span
+          id="details-total-fee"
+          style="font-size: 20px; font-weight: 800; color: #d32f2f"
+          >NT$ 0</span
+        >
+      </div>
+    </div>
+
+    <div id="details-boxes-list"></div>
+
+    <div style="margin-top: 25px">
+      <h4
+        style="
+          margin-bottom: 12px;
+          font-size: 14px;
+          color: #1e293b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        "
+      >
+        <i class="fas fa-camera"></i> 倉庫入庫照片
+      </h4>
+      <div
+        id="details-images-gallery"
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+          gap: 10px;
+        "
+      ></div>
+    </div>
+  </div>
+
+  <div
+    class="modal-footer"
+    style="
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+      text-align: right;
+    "
+  >
+    <button
+      class="btn btn-secondary modal-close-btn"
+      style="padding: 10px 25px"
+    >
+      關閉視窗
+    </button>
+  </div>
+</div>

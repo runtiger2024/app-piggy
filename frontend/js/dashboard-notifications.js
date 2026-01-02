@@ -76,15 +76,28 @@
    */
   async function checkUnreadCount() {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/notifications?limit=1`, {
-        headers: { Authorization: `Bearer ${window.dashboardToken}` },
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/api/notifications/unread-count`,
+        {
+          headers: { Authorization: `Bearer ${window.dashboardToken}` },
+        }
+      );
+
+      // 如果 API 回傳 404 或其他錯誤，直接終止，不要嘗試解析 JSON
+      if (!res.ok) {
+        console.warn(`[通知系統] API 異常 (${res.status})，功能暫時停用。`);
+        return;
+      }
+
       const data = await res.json();
-      if (data.success) {
-        updateBadge(data.unreadCount);
+      const badge = document.getElementById("notif-badge");
+      if (badge && data.count !== undefined) {
+        badge.textContent = data.count;
+        badge.style.display = data.count > 0 ? "block" : "none";
       }
     } catch (e) {
-      console.warn("通知未讀數檢查失敗:", e);
+      // 關鍵：攔截錯誤，不要讓它往外噴，以免中斷其他腳本執行
+      console.error("通知功能載入失敗，已安全攔截：", e.message);
     }
   }
 

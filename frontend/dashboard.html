@@ -739,6 +739,11 @@
           "modal-container-claim-package",
           "components/modals/claim-package.html"
         ),
+        loadHtml(
+          "package-details-modal",
+          "components/modals/package-details.html"
+        ),
+        loadHtml("edit-package-modal", "components/modals/edit-package.html"),
       ]).then(() => {
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
