@@ -1,5 +1,5 @@
 // frontend/js/dashboard-main.js
-// V2026.1.14 - 旗艦終極穩定版：100% 還原核心邏輯、整合發票欄位、修復全域控制項與安全檢查
+// V2026.1.14 - 旗艦終極穩定版：100% 還原核心邏輯、整合發票欄位、修復全域控制項、安全檢查與分頁自動滾動
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!window.dashboardToken) {
@@ -76,7 +76,7 @@ window.closeChangePasswordModal = function () {
   if (modal) modal.style.display = "none";
 };
 
-// --- Tab 管理 ---
+// --- Tab 管理 (整合自動滾動功能) ---
 function setupTabs() {
   const tabs = [
     { id: "tab-packages", section: "packages-section" },
@@ -103,6 +103,7 @@ function setupTabs() {
     if (!btn) return;
 
     btn.addEventListener("click", () => {
+      // 1. 切換按鈕與內容顯示
       document
         .querySelectorAll(".tab-btn")
         .forEach((b) => b.classList.remove("active"));
@@ -114,7 +115,22 @@ function setupTabs() {
       const section = document.getElementById(tab.section);
       if (section) section.style.display = "block";
 
-      // 切換時執行對應的載入函式 (如: 重新整理列表)
+      // 2. [新增實裝] 自動滾動至選單容器位置
+      // 使用平滑滾動對齊 dashboard-tabs-wrapper，並考慮 Header 遮擋
+      const wrapper = document.querySelector(".dashboard-tabs-wrapper");
+      if (wrapper) {
+        const headerOffset = 80; // 配合 sticky top 高度
+        const elementPosition =
+          wrapper.getBoundingClientRect().top + window.pageYOffset;
+        const offsetPosition = elementPosition - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth",
+        });
+      }
+
+      // 3. 切換時執行對應的載入函式 (如: 重新整理列表)
       if (tab.loadFn && typeof tab.loadFn === "function") {
         tab.loadFn();
       }
@@ -280,7 +296,7 @@ function bindGlobalButtons() {
     btnChangePwd.addEventListener("click", window.openChangePasswordModal);
   }
 
-  // 錢包快速捷蹟點擊事件
+  // 錢包快速捷蹟點擊事件 (延續原有滾動邏輯)
   const btnQuickWallet = document.getElementById("btn-quick-wallet");
   if (btnQuickWallet) {
     btnQuickWallet.addEventListener("click", () => {

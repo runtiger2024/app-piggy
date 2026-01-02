@@ -1,23 +1,35 @@
 // frontend/js/dashboard-shipments.js
 // V2025.Final.Transparent.UI - 前端費用透明化顯示邏輯適配 (含傢俱類型顯示修復 & 圖片路徑修復)
+// [Update] 修正合併打包結算條顯隱控制邏輯
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
+  const bar = document.getElementById("checkout-bar");
+  const countEl = document.getElementById("selected-pkg-count");
+  const btn = document.getElementById("btn-create-shipment");
+
   const checkboxes = document.querySelectorAll(".package-checkbox:checked");
   const count = checkboxes.length;
 
-  const countEl = document.getElementById("selected-pkg-count");
+  // 1.1 更新件數文字
   if (countEl) countEl.textContent = count;
 
-  const btn = document.getElementById("btn-create-shipment");
-  if (btn) {
-    btn.disabled = count === 0;
+  // 1.2 [關鍵修復] 控制結算條容器的顯示與隱藏
+  if (bar) {
     if (count > 0) {
-      btn.classList.remove("btn-secondary");
-      btn.classList.add("btn-primary");
+      bar.style.display = "flex"; // 有選中包裹時顯示
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("btn-secondary");
+        btn.classList.add("btn-primary");
+      }
     } else {
-      btn.classList.add("btn-secondary");
-      btn.classList.remove("btn-primary");
+      bar.style.display = "none"; // 沒選中時隱藏
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add("btn-secondary");
+        btn.classList.remove("btn-primary");
+      }
     }
   }
 };
@@ -45,31 +57,32 @@ window.handleCreateShipmentClick = async function () {
 
   // 渲染包裹清單 (左側清單)
   const listContainer = document.getElementById("shipment-package-list");
-  listContainer.innerHTML = "";
+  if (listContainer) {
+    listContainer.innerHTML = "";
+    selectedPackages.forEach((pkg, idx) => {
+      let alerts = "";
+      if (pkg.isOverweight)
+        alerts += `<span class="badge badge-danger" style="margin-left:5px;">超重</span>`;
+      if (pkg.isOversized)
+        alerts += `<span class="badge badge-warning" style="margin-left:5px;">超長</span>`;
 
-  selectedPackages.forEach((pkg, idx) => {
-    let alerts = "";
-    if (pkg.isOverweight)
-      alerts += `<span class="badge badge-danger" style="margin-left:5px;">超重</span>`;
-    if (pkg.isOversized)
-      alerts += `<span class="badge badge-warning" style="margin-left:5px;">超長</span>`;
-
-    listContainer.innerHTML += `
-      <div class="shipment-package-item" style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-        <div class="info">
-          <div style="font-weight:bold; font-size: 14px;">${idx + 1}. ${
-      pkg.productName
-    } ${alerts}</div>
-          <div style="font-size:12px; color:#888;">單號: ${
-            pkg.trackingNumber
-          }</div>
+      listContainer.innerHTML += `
+        <div class="shipment-package-item" style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+          <div class="info">
+            <div style="font-weight:bold; font-size: 14px;">${idx + 1}. ${
+        pkg.productName
+      } ${alerts}</div>
+            <div style="font-size:12px; color:#888;">單號: ${
+              pkg.trackingNumber
+            }</div>
+          </div>
+          <div class="cost" style="text-align: right; font-size: 13px; color: #555;">
+              <i class="fas fa-box"></i>
+          </div>
         </div>
-        <div class="cost" style="text-align: right; font-size: 13px; color: #555;">
-            <i class="fas fa-box"></i>
-        </div>
-      </div>
-    `;
-  });
+      `;
+    });
+  }
 
   // 自動填入收件人
   if (window.currentUser) {
@@ -91,7 +104,8 @@ window.handleCreateShipmentClick = async function () {
 
   renderDeliveryLocations();
 
-  document.getElementById("create-shipment-modal").style.display = "flex";
+  const modal = document.getElementById("create-shipment-modal");
+  if (modal) modal.style.display = "flex";
 
   // 立即觸發後端精確試算
   window.recalculateShipmentTotal();
@@ -108,7 +122,7 @@ window.recalculateShipmentTotal = async function () {
   );
   const locationSelect = document.getElementById("ship-delivery-location");
 
-  if (selectedCheckboxes.length === 0) return;
+  if (selectedCheckboxes.length === 0 || !breakdownDiv) return;
 
   const packageIds = Array.from(selectedCheckboxes).map((cb) => cb.dataset.id);
   const rate = locationSelect.value || 0;
@@ -120,9 +134,9 @@ window.recalculateShipmentTotal = async function () {
     document.getElementById("ship-selected-area-name").textContent =
       selectedOption.text;
     document.getElementById("ship-selected-area-fee").textContent = `$${rate}`;
-    remoteInfo.style.display = "block";
+    if (remoteInfo) remoteInfo.style.display = "block";
   } else {
-    remoteInfo.style.display = "none";
+    if (remoteInfo) remoteInfo.style.display = "none";
   }
 
   // 顯示 Loading
@@ -155,11 +169,9 @@ window.recalculateShipmentTotal = async function () {
       if (volumetricEl) volumetricEl.textContent = `${p.totalVolumetricCai} 材`;
 
       // 2. 渲染透明化報表
-      // 檢查後端是否回傳了詳細 breakdown (V2025 新功能)
       if (p.breakdown) {
         renderBreakdownTable(p.breakdown, breakdownDiv, rate);
       } else {
-        // 相容舊版 (Fallback)
         renderSimpleTable(p, breakdownDiv, rate);
       }
 
@@ -192,10 +204,7 @@ function renderBreakdownTable(breakdown, container, rate) {
 
   // 1. 包裹明細列表
   breakdown.packages.forEach((pkg) => {
-    // 判斷哪個數值比較大，做 highlight
     const isVol = pkg.calcMethod === "材積計費";
-
-    // [新增] 檢查是否有 type 欄位，若有則顯示
     const productTypeBadge = pkg.type
       ? `<span style="background:#e3f2fd; color:#0d47a1; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:5px; border:1px solid #bbdefb;">${pkg.type}</span>`
       : "";
@@ -257,9 +266,7 @@ function renderBreakdownTable(breakdown, container, rate) {
 
   // 4. 其他附加費 (超長、超重、偏遠)
   breakdown.surcharges.forEach((s) => {
-    // 低消已在上面處理，這裡跳過
     if (s.name === "低消補足") return;
-
     html += `
       <tr>
         <td colspan="2" style="padding: 8px; text-align: right; color: #d32f2f;">
@@ -277,13 +284,11 @@ function renderBreakdownTable(breakdown, container, rate) {
         </tbody>
       </table>
     </div>
-    
     <div style="margin-top: 15px; text-align: right;">
         <div style="font-size: 14px; color: #555;">總金額 (TWD)</div>
         <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">$${breakdown.finalTotal.toLocaleString()}</div>
     </div>
   `;
-
   container.innerHTML = html;
 }
 
@@ -319,10 +324,11 @@ function renderSimpleTable(p, container, rate) {
 // --- 4. 提交建立訂單 ---
 window.handleCreateShipmentSubmit = async function (e) {
   e.preventDefault();
-
   const btn = e.target.querySelector(".btn-place-order");
-  btn.disabled = true;
-  btn.textContent = "提交中...";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "提交中...";
+  }
 
   const selectedCheckboxes = document.querySelectorAll(
     ".package-checkbox:checked"
@@ -385,16 +391,12 @@ window.handleCreateShipmentSubmit = async function (e) {
 
     const data = await res.json();
     if (res.ok) {
-      document.getElementById("create-shipment-modal").style.display = "none";
+      const modal = document.getElementById("create-shipment-modal");
+      if (modal) modal.style.display = "none";
       window.lastCreatedShipmentId = data.shipment.id;
 
       if (paymentMethod === "WALLET") {
         alert("訂單建立成功！費用已從錢包扣除，系統將自動安排出貨。");
-        window.loadMyShipments();
-        window.loadMyPackages();
-        if (typeof window.loadWalletData === "function") {
-          window.loadWalletData();
-        }
       } else {
         if (window.BANK_INFO_CACHE) {
           const bName = document.getElementById("bank-name");
@@ -406,14 +408,15 @@ window.handleCreateShipmentSubmit = async function (e) {
           const bHolder = document.getElementById("bank-holder");
           if (bHolder) bHolder.textContent = window.BANK_INFO_CACHE.holder;
         }
-        document.getElementById("bank-info-modal").style.display = "flex";
-        window.loadMyShipments();
-        window.loadMyPackages();
+        const bankModal = document.getElementById("bank-info-modal");
+        if (bankModal) bankModal.style.display = "flex";
       }
+      window.loadMyShipments();
+      window.loadMyPackages();
+      if (typeof window.loadWalletData === "function") window.loadWalletData();
 
       e.target.reset();
-      const countEl = document.getElementById("selected-pkg-count");
-      if (countEl) countEl.textContent = "0";
+      window.updateCheckoutBar();
     } else {
       alert(data.message || "建立失敗");
     }
@@ -421,8 +424,10 @@ window.handleCreateShipmentSubmit = async function (e) {
     alert("網路錯誤");
     console.error(err);
   } finally {
-    btn.disabled = false;
-    btn.textContent = "提交訂單";
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "提交訂單";
+    }
   }
 };
 
@@ -432,7 +437,6 @@ window.togglePaymentMethod = function (method) {
   const btnSubmit = document.querySelector(".btn-place-order");
 
   if (method === "WALLET") {
-    // 顯示餘額檢查
     if (walletBalanceInfo) {
       walletBalanceInfo.style.display = "block";
       const currentTotal = window.currentShipmentTotal || 0;
@@ -446,10 +450,10 @@ window.togglePaymentMethod = function (method) {
             const bal = d.wallet.balance;
             if (bal < currentTotal) {
               walletBalanceInfo.innerHTML = `餘額: $${bal.toLocaleString()} <span style="color:red; font-weight:bold;">(不足，請先儲值)</span>`;
-              btnSubmit.disabled = true;
+              if (btnSubmit) btnSubmit.disabled = true;
             } else {
               walletBalanceInfo.innerHTML = `餘額: $${bal.toLocaleString()} <span style="color:green; font-weight:bold;">(足夠支付)</span>`;
-              btnSubmit.disabled = false;
+              if (btnSubmit) btnSubmit.disabled = false;
             }
           }
         })
@@ -458,9 +462,8 @@ window.togglePaymentMethod = function (method) {
         });
     }
   } else {
-    // 轉帳模式
     if (walletBalanceInfo) walletBalanceInfo.style.display = "none";
-    btnSubmit.disabled = false;
+    if (btnSubmit) btnSubmit.disabled = false;
   }
 };
 
@@ -536,24 +539,28 @@ window.openShipmentDetails = async function (id) {
     if (!data.success) throw new Error(data.message);
 
     const s = data.shipment;
-    document.getElementById("sd-id").textContent = s.id.slice(-8).toUpperCase();
+    const idEl = document.getElementById("sd-id");
+    if (idEl) idEl.textContent = s.id.slice(-8).toUpperCase();
 
     const timelineContainer = document.getElementById("sd-timeline");
     if (timelineContainer) {
       renderTimeline(timelineContainer, s.status);
     } else {
       const statusEl = document.getElementById("sd-status");
-      if (statusEl) statusEl.textContent = s.status;
+      if (statusEl)
+        statusEl.textContent = window.SHIPMENT_STATUS_MAP[s.status] || s.status;
     }
 
     const statusEl = document.getElementById("sd-status");
-    if (s.status === "RETURNED") {
-      statusEl.innerHTML = `<span class="status-badge status-CANCELLED">訂單已退回</span>
-        <div style="background:#fff1f0; border:1px solid #ffa39e; padding:8px; border-radius:4px; margin-top:5px; font-size:13px; color:#c0392b;">
-            <strong>退回原因：</strong> ${s.returnReason || "未說明"}
-        </div>`;
-    } else {
-      statusEl.textContent = window.SHIPMENT_STATUS_MAP[s.status] || s.status;
+    if (statusEl) {
+      if (s.status === "RETURNED") {
+        statusEl.innerHTML = `<span class="status-badge status-CANCELLED">訂單已退回</span>
+          <div style="background:#fff1f0; border:1px solid #ffa39e; padding:8px; border-radius:4px; margin-top:5px; font-size:13px; color:#c0392b;">
+              <strong>退回原因：</strong> ${s.returnReason || "未說明"}
+          </div>`;
+      } else {
+        statusEl.textContent = window.SHIPMENT_STATUS_MAP[s.status] || s.status;
+      }
     }
 
     let dateHtml = `<div><strong>建立日期:</strong> <span>${new Date(
@@ -566,53 +573,55 @@ window.openShipmentDetails = async function (id) {
             ).toLocaleDateString()}
         </div>`;
     }
-    document.getElementById("sd-date").innerHTML = dateHtml;
+    const dateBox = document.getElementById("sd-date");
+    if (dateBox) dateBox.innerHTML = dateHtml;
 
-    document.getElementById("sd-trackingTW").textContent =
-      s.trackingNumberTW || "尚未產生";
+    const trackEl = document.getElementById("sd-trackingTW");
+    if (trackEl) trackEl.textContent = s.trackingNumberTW || "尚未產生";
 
     document.getElementById("sd-name").textContent = s.recipientName;
     document.getElementById("sd-phone").textContent = s.phone;
     document.getElementById("sd-address").textContent = s.shippingAddress;
 
     const breakdown = document.getElementById("sd-fee-breakdown");
-    breakdown.innerHTML = `
-        <div>運費總計: <strong>$${(
-          s.totalCost || 0
-        ).toLocaleString()}</strong></div>
-        ${
-          s.invoiceNumber
-            ? `<div style="margin-top:5px; color:#28a745;">發票已開立: ${s.invoiceNumber}</div>`
-            : ""
-        }
-    `;
+    if (breakdown) {
+      breakdown.innerHTML = `
+          <div>運費總計: <strong>$${(
+            s.totalCost || 0
+          ).toLocaleString()}</strong></div>
+          ${
+            s.invoiceNumber
+              ? `<div style="margin-top:5px; color:#28a745;">發票已開立: ${s.invoiceNumber}</div>`
+              : ""
+          }
+      `;
+    }
 
-    // [Fix] 圖片路徑修復邏輯
     const gallery = document.getElementById("sd-proof-images");
-    gallery.innerHTML = "";
-
-    if (s.paymentProof) {
-      if (s.paymentProof === "WALLET_PAY") {
-        gallery.innerHTML = `<div style="text-align:center; padding:10px; background:#f0f8ff; border-radius:5px; color:#0056b3;">
-                <i class="fas fa-wallet"></i> 使用錢包餘額支付
-            </div>`;
-      } else {
-        // [Key Fix] 判斷是否為 URL
-        const isUrl =
-          s.paymentProof.startsWith("http") ||
-          s.paymentProof.startsWith("https");
-        const imgSrc = isUrl
-          ? s.paymentProof
-          : `${API_BASE_URL}${s.paymentProof}`;
-
-        gallery.innerHTML += `<div style="text-align:center;">
-          <p>付款憑證</p>
-          <img src="${imgSrc}" onclick="window.open(this.src)" style="max-width:100px; cursor:pointer; border:1px solid #ccc;">
-        </div>`;
+    if (gallery) {
+      gallery.innerHTML = "";
+      if (s.paymentProof) {
+        if (s.paymentProof === "WALLET_PAY") {
+          gallery.innerHTML = `<div style="text-align:center; padding:10px; background:#f0f8ff; border-radius:5px; color:#0056b3;">
+                  <i class="fas fa-wallet"></i> 使用錢包餘額支付
+              </div>`;
+        } else {
+          const isUrl =
+            s.paymentProof.startsWith("http") ||
+            s.paymentProof.startsWith("https");
+          const imgSrc = isUrl
+            ? s.paymentProof
+            : `${API_BASE_URL}${s.paymentProof}`;
+          gallery.innerHTML += `<div style="text-align:center;">
+            <p>付款憑證</p>
+            <img src="${imgSrc}" onclick="window.open(this.src)" style="max-width:100px; cursor:pointer; border:1px solid #ccc;">
+          </div>`;
+        }
       }
     }
 
-    document.getElementById("shipment-details-modal").style.display = "flex";
+    const detailModal = document.getElementById("shipment-details-modal");
+    if (detailModal) detailModal.style.display = "flex";
   } catch (e) {
     alert("無法載入詳情");
   }
@@ -632,7 +641,6 @@ window.cancelShipment = async function (id) {
       headers: { Authorization: `Bearer ${window.dashboardToken}` },
     });
     const data = await res.json();
-
     if (res.ok) {
       alert(data.message);
       window.loadMyShipments();
@@ -667,29 +675,25 @@ function renderTimeline(container, currentStatus) {
 
   let html = `<div class="timeline-container" style="display:flex; justify-content:space-between; margin:20px 0; position:relative; padding:0 10px; overflow-x:auto;">`;
   html += `<div style="position:absolute; top:15px; left:20px; right:20px; height:4px; background:#eee; z-index:0; min-width:400px;"></div>`;
-
-  const stepCount = steps.length;
-  const progressPercent = (currentIndex / (stepCount - 1)) * 100;
-
+  const progressPercent = (currentIndex / (steps.length - 1)) * 100;
   html += `<div style="position:absolute; top:15px; left:20px; width:calc(${progressPercent}% - 40px); max-width:calc(100% - 40px); height:4px; background:#28a745; z-index:0; transition:width 0.3s; min-width:0;"></div>`;
 
   steps.forEach((step, idx) => {
     const isCompleted = idx <= currentIndex;
     const color = isCompleted ? "#28a745" : "#ccc";
     const icon = isCompleted ? "fa-check-circle" : "fa-circle";
-
     html += `
-            <div style="position:relative; z-index:1; text-align:center; flex:1; min-width:60px;">
-                <i class="fas ${icon}" style="color:${color}; font-size:24px; background:#fff; border-radius:50%;"></i>
-                <div style="font-size:12px; margin-top:5px; color:${
-                  isCompleted ? "#333" : "#999"
-                }; font-weight:${
+        <div style="position:relative; z-index:1; text-align:center; flex:1; min-width:60px;">
+            <i class="fas ${icon}" style="color:${color}; font-size:24px; background:#fff; border-radius:50%;"></i>
+            <div style="font-size:12px; margin-top:5px; color:${
+              isCompleted ? "#333" : "#999"
+            }; font-weight:${
       idx === currentIndex ? "bold" : "normal"
     }; white-space:nowrap;">
-                    ${step.label}
-                </div>
+                ${step.label}
             </div>
-        `;
+        </div>
+    `;
   });
   html += `</div>`;
   container.innerHTML = html;
@@ -726,16 +730,15 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   Object.keys(toggles).forEach((id) => {
-    const checkbox = document.getElementById(id);
+    const el = document.getElementById(id);
     const target = document.getElementById(toggles[id]);
-    if (checkbox && target) {
-      checkbox.addEventListener("change", (e) => {
+    if (el && target) {
+      el.addEventListener("change", (e) => {
         target.style.display = e.target.checked ? "block" : "none";
       });
     }
   });
 
-  // [Fix] 增加配送地區變更監聽，即時更新運費試算
   const locationSelect = document.getElementById("ship-delivery-location");
   if (locationSelect) {
     locationSelect.addEventListener("change", () => {

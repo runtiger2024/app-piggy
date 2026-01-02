@@ -84,10 +84,10 @@
         font-family: "Monaco", monospace;
       }
 
-      /* 3. [核心修正] 分頁標籤容器：解決遮擋、背景穿透並置中選單 */
+      /* 3. 分頁標籤容器：黏性定位與樣式優化 */
       .dashboard-tabs-wrapper {
         position: sticky;
-        top: 70px; /* 對齊 Header 高度 */
+        top: 70px;
         z-index: 1000;
         background: #f4f7fa;
         padding: 12px 0;
@@ -128,7 +128,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
 
-      /* 4. [核心修正] 表格美編置中優化 */
+      /* 4. 表格與內容展示卡片區塊 */
       .app-table {
         width: 100%;
         border-collapse: collapse;
@@ -143,26 +143,8 @@
         text-align: center;
         border-bottom: 2px solid #edf2f7;
         font-size: 14px;
-        white-space: nowrap;
       }
 
-      .app-table td {
-        padding: 15px 10px;
-        text-align: center;
-        vertical-align: middle;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
-        font-size: 14px;
-      }
-
-      .table-actions {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      /* 5. 內容展示卡片區塊 */
       .dashboard-main-card {
         background: #fff;
         border-radius: 24px;
@@ -172,7 +154,7 @@
         margin-bottom: 25px;
       }
 
-      /* 6. 其他 UI 元件 */
+      /* 5. 快捷操作與狀態列 */
       .quick-actions-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -204,14 +186,69 @@
         border: 1px solid #eee;
       }
 
-      /* 7. 手機版 RWD 置中補丁 */
-      @media (max-width: 800px) {
-        .dashboard-tabs-wrapper {
-          top: 60px;
-          padding: 8px 0;
+      /* 6. 合併打包結算條樣式 [NEW] */
+      .checkout-bar {
+        position: fixed;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 95%;
+        max-width: 700px;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(12px);
+        padding: 16px 24px;
+        border-radius: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 2100;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        animation: slideUpUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes slideUpUp {
+        from {
+          bottom: -100px;
+          opacity: 0;
         }
-        .tab-btn {
-          font-size: 12px;
+        to {
+          bottom: 25px;
+          opacity: 1;
+        }
+      }
+
+      .checkout-info {
+        color: white;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .checkout-info .highlight {
+        color: #ffc107;
+        font-size: 1.5rem;
+      }
+
+      .btn-checkout-active {
+        background: linear-gradient(
+          135deg,
+          #28a745 0%,
+          #1e7e34 100%
+        ) !important;
+        color: white !important;
+        border: none !important;
+        padding: 12px 28px !important;
+        border-radius: 14px !important;
+        font-weight: 900 !important;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      @media (max-width: 800px) {
+        .checkout-bar {
+          bottom: 90px;
         }
         .hero-dashboard {
           flex-direction: column;
@@ -223,13 +260,6 @@
         }
         .quick-actions-grid {
           grid-template-columns: repeat(2, 1fr);
-        }
-        .table-responsive tr {
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 20px;
         }
       }
     </style>
@@ -328,26 +358,6 @@
           </div>
         </section>
 
-        <div class="dashboard-tabs-wrapper">
-          <div class="dashboard-tabs">
-            <button id="tab-packages" class="tab-btn active">
-              <i class="fas fa-boxes"></i> <span>包裹</span>
-            </button>
-            <button id="tab-shipments" class="tab-btn">
-              <i class="fas fa-file-invoice-dollar"></i> <span>集運訂單</span>
-            </button>
-            <button id="tab-wallet" class="tab-btn">
-              <i class="fas fa-history"></i> <span>帳務</span>
-            </button>
-            <button id="tab-recipients" class="tab-btn">
-              <i class="fas fa-users"></i> <span>收件人</span>
-            </button>
-            <button id="tab-unclaimed" class="tab-btn">
-              <i class="fas fa-question-circle"></i> <span>無主包裹</span>
-            </button>
-          </div>
-        </div>
-
         <section
           class="live-status-bar animate-slide-up"
           style="animation-delay: 0.1s"
@@ -380,7 +390,7 @@
           </div>
           <div
             class="action-tile"
-            onclick="document.getElementById('tab-shipments').click()"
+            onclick="document.getElementById('tab-packages').click()"
           >
             <div class="tile-icon"><i class="fas fa-shipping-fast"></i></div>
             <span>申請集運</span>
@@ -433,8 +443,8 @@
               <i
                 class="fas fa-box-open"
                 style="color: #1a73e8; margin-right: 10px"
-              ></i>
-              預報
+              ></i
+              >預報
             </h3>
             <div style="display: flex; gap: 8px">
               <button
@@ -468,8 +478,8 @@
                 "
               >
                 <div class="form-group">
-                  <label class="required">物流單號</label>
-                  <input
+                  <label class="required">物流單號</label
+                  ><input
                     type="text"
                     id="trackingNumber"
                     class="form-control"
@@ -478,8 +488,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">商品名稱</label>
-                  <input
+                  <label class="required">商品名稱</label
+                  ><input
                     type="text"
                     id="productName"
                     class="form-control"
@@ -488,8 +498,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label>數量</label>
-                  <input
+                  <label>數量</label
+                  ><input
                     type="number"
                     id="quantity"
                     class="form-control"
@@ -499,8 +509,8 @@
                 </div>
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>商品照片 (報關用)</label>
-                <input
+                <label>商品照片 (報關用)</label
+                ><input
                   type="file"
                   id="images"
                   multiple
@@ -513,8 +523,8 @@
                 ></div>
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>商品購買連結 (照片與連結擇一)</label>
-                <input
+                <label>商品購買連結 (照片與連結擇一)</label
+                ><input
                   type="url"
                   id="productUrl"
                   class="form-control"
@@ -522,8 +532,8 @@
                 />
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>備註</label>
-                <input
+                <label>備註</label
+                ><input
                   type="text"
                   id="note"
                   class="form-control"
@@ -544,6 +554,26 @@
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <div class="dashboard-tabs-wrapper">
+          <div class="dashboard-tabs">
+            <button id="tab-packages" class="tab-btn active">
+              <i class="fas fa-boxes"></i> <span>包裹</span>
+            </button>
+            <button id="tab-shipments" class="tab-btn">
+              <i class="fas fa-file-invoice-dollar"></i> <span>集運訂單</span>
+            </button>
+            <button id="tab-wallet" class="tab-btn">
+              <i class="fas fa-history"></i> <span>帳務</span>
+            </button>
+            <button id="tab-recipients" class="tab-btn">
+              <i class="fas fa-users"></i> <span>收件人</span>
+            </button>
+            <button id="tab-unclaimed" class="tab-btn">
+              <i class="fas fa-question-circle"></i> <span>無主包裹</span>
+            </button>
           </div>
         </div>
 
@@ -580,7 +610,7 @@
                     <thead>
                       <tr>
                         <th>入庫時間</th>
-                        <th>單號(末5碼)</th>
+                        <th>物流單號 (末5碼)</th>
                         <th>商品名稱</th>
                         <th>重量/資訊</th>
                         <th>操作</th>
@@ -604,6 +634,22 @@
     </div>
 
     <nav id="mobile-bottom-nav" class="universal-bottom-nav"></nav>
+
+    <div id="checkout-bar" class="checkout-bar" style="display: none">
+      <div class="checkout-info">
+        <i class="fas fa-shopping-basket" style="color: #ffc107"></i>
+        <span
+          >已選取
+          <span id="selected-pkg-count" class="highlight">0</span>
+          件待打包包裹</span
+        >
+      </div>
+      <div class="checkout-actions">
+        <button id="btn-create-shipment" class="btn-checkout-active">
+          <i class="fas fa-box-check"></i> 開始合併打包
+        </button>
+      </div>
+    </div>
 
     <div id="modal-container-profile-edit"></div>
     <div id="modal-container-password-change"></div>
