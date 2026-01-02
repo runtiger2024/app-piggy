@@ -1,5 +1,5 @@
 // frontend/js/dashboard-main.js
-// V2026.1.13 - 旗艦終極穩定版：100% 還原 V29.6 核心邏輯、修復 ReferenceError、補強安全檢查
+// V2026.1.14 - 旗艦終極穩定版：100% 還原核心邏輯、整合發票欄位、修復全域控制項與安全檢查
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!window.dashboardToken) {
@@ -147,6 +147,7 @@ function bindForms() {
       window.handleCreateShipmentSubmit
     );
 
+  // 個人資料更新表單 (支持新舊 ID 兼容，並整合發票欄位)
   const profileForm =
     document.getElementById("profile-edit-form") ||
     document.getElementById("edit-profile-form");
@@ -157,9 +158,12 @@ function bindForms() {
         name: document.getElementById("edit-name")?.value || "",
         phone: document.getElementById("edit-phone")?.value || "",
         defaultAddress: document.getElementById("edit-address")?.value || "",
+        defaultTaxId: document.getElementById("edit-taxId")?.value || "",
+        defaultInvoiceTitle:
+          document.getElementById("edit-invoiceTitle")?.value || "",
       };
       try {
-        await fetch(`${API_BASE_URL}/api/auth/me`, {
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${window.dashboardToken}`,
@@ -167,9 +171,13 @@ function bindForms() {
           },
           body: JSON.stringify(data),
         });
-        window.closeProfileModal();
-        window.loadUserProfile();
-        if (window.showMessage) window.showMessage("已更新", "success");
+
+        if (res.ok) {
+          window.closeProfileModal();
+          window.loadUserProfile();
+          if (window.showMessage)
+            window.showMessage("個人資料與發票設定已更新", "success");
+        }
       } catch (err) {
         alert("更新失敗");
       }
@@ -248,10 +256,16 @@ function bindGlobalButtons() {
         const nameInput = document.getElementById("edit-name");
         const phoneInput = document.getElementById("edit-phone");
         const addrInput = document.getElementById("edit-address");
+        const taxInput = document.getElementById("edit-taxId");
+        const titleInput = document.getElementById("edit-invoiceTitle");
+
         if (nameInput) nameInput.value = window.currentUser.name || "";
         if (phoneInput) phoneInput.value = window.currentUser.phone || "";
         if (addrInput)
           addrInput.value = window.currentUser.defaultAddress || "";
+        if (taxInput) taxInput.value = window.currentUser.defaultTaxId || "";
+        if (titleInput)
+          titleInput.value = window.currentUser.defaultInvoiceTitle || "";
 
         const modal =
           document.getElementById("profile-edit-modal") ||
@@ -266,7 +280,7 @@ function bindGlobalButtons() {
     btnChangePwd.addEventListener("click", window.openChangePasswordModal);
   }
 
-  // 錢包快速捷徑點擊事件
+  // 錢包快速捷蹟點擊事件
   const btnQuickWallet = document.getElementById("btn-quick-wallet");
   if (btnQuickWallet) {
     btnQuickWallet.addEventListener("click", () => {

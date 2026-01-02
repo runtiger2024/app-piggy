@@ -1,6 +1,8 @@
 <div id="profile-edit-modal" class="modal-overlay" style="display: none">
   <div class="modal-content profile-modal-v2 animate-pop-in">
-    <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+    <button class="modal-close" onclick="window.closeProfileModal()">
+      &times;
+    </button>
 
     <div class="profile-modal-header">
       <div class="user-avatar-section">
@@ -14,85 +16,131 @@
       </div>
       <div class="user-id-card">
         <label>我的專屬標識碼</label>
-        <div class="id-value">PIGGY-<span id="modal-user-id">...</span></div>
+        <div class="id-value"><span id="modal-user-id">...</span></div>
       </div>
     </div>
 
-    <form id="profile-edit-form" class="profile-modal-body">
-      <div class="modal-section-title">
-        <i class="fas fa-id-card"></i> 基本聯絡資訊
-      </div>
-      <div class="form-row-2">
-        <div class="form-group">
-          <label class="required">真實姓名</label>
-          <input
-            type="text"
-            id="edit-name"
-            class="form-control"
-            placeholder="收件用真實姓名"
-            required
-          />
+    <form id="profile-edit-form" style="display: contents">
+      <div class="profile-modal-body">
+        <div class="modal-section-card">
+          <div class="modal-section-title">
+            <i class="fas fa-id-card"></i> 基本聯絡資訊
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="required">真實姓名</label>
+              <input
+                type="text"
+                id="edit-name"
+                class="form-control"
+                placeholder="請輸入姓名"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="required">手機號碼</label>
+              <input
+                type="tel"
+                id="edit-phone"
+                class="form-control"
+                placeholder="09xxxxxxxx"
+                required
+              />
+            </div>
+          </div>
+          <div class="form-group" style="margin-top: 15px">
+            <label>電子信箱 (不可更改)</label>
+            <input
+              type="email"
+              id="edit-email"
+              class="form-control"
+              disabled
+              style="background: #f1f5f9 !important"
+            />
+          </div>
         </div>
-        <div class="form-group">
-          <label class="required">手機號碼</label>
-          <input
-            type="tel"
-            id="edit-phone"
-            class="form-control"
-            placeholder="09xxxxxxxx"
-            required
-          />
+
+        <div class="modal-section-card">
+          <div class="modal-section-title">
+            <i class="fas fa-map-marker-alt"></i> 預設配送資訊
+          </div>
+          <div class="form-group">
+            <label>預設收件地址</label>
+            <textarea
+              id="edit-address"
+              class="form-control"
+              rows="2"
+              placeholder="請輸入台灣預設地址"
+            ></textarea>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label>電子信箱 (帳號)</label>
-        <input
-          type="email"
-          id="edit-email"
-          class="form-control"
-          disabled
-          style="background: #f5f5f5; cursor: not-allowed"
-        />
-        <small class="text-sub">※ Email 為登入帳號，無法自行更改。</small>
-      </div>
+        <div class="modal-section-card">
+          <div class="modal-section-title">
+            <i class="fas fa-file-invoice"></i> 預設發票設定
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>統一編號</label>
+              <input
+                type="text"
+                id="edit-taxId"
+                class="form-control"
+                maxlength="8"
+                placeholder="8碼統編"
+              />
+            </div>
+            <div class="form-group">
+              <label>發票抬頭</label>
+              <input
+                type="text"
+                id="edit-invoiceTitle"
+                class="form-control"
+                placeholder="公司全名"
+              />
+            </div>
+          </div>
+        </div>
 
-      <div class="modal-section-title">
-        <i class="fas fa-truck-loading"></i> 預設配送資訊
-      </div>
-      <div class="form-group">
-        <label>預設收件地址</label>
-        <textarea
-          id="edit-address"
-          class="form-control"
-          rows="2"
-          placeholder="請輸入您的台灣預設配送地址"
-        ></textarea>
-      </div>
-
-      <div class="modal-section-title">
-        <i class="fas fa-user-lock"></i> 帳號安全
-      </div>
-      <div class="security-action-box">
-        <p>定期更改密碼可保障帳戶安全</p>
-        <button
-          type="button"
-          class="btn btn-outline-primary btn-sm"
-          onclick="openChangePasswordModal()"
+        <div
+          class="modal-section-card"
+          style="border: 1px dashed #cbd5e1; background: #f8fafc"
         >
-          <i class="fas fa-key"></i> 修改登入密碼
-        </button>
+          <div class="modal-section-title">
+            <i class="fas fa-user-lock"></i> 帳號安全
+          </div>
+          <div
+            class="security-action-box"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <span style="font-size: 13px; color: #64748b"
+              >定期更改密碼保護帳戶安全</span
+            >
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-sm"
+              onclick="window.openChangePasswordModal()"
+            >
+              修改密碼
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="modal-footer-actions">
         <button
           type="button"
           class="btn btn-secondary"
-          onclick="closeProfileModal()"
+          style="flex: 1"
+          onclick="window.closeProfileModal()"
         >
           取消
         </button>
-        <button type="submit" class="btn btn-primary btn-save">
+        <button type="submit" class="btn btn-primary btn-save" style="flex: 2">
           <i class="fas fa-save"></i> 儲存所有變更
         </button>
       </div>

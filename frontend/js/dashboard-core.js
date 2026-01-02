@@ -1,6 +1,6 @@
 // frontend/js/dashboard-core.js
 // 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件
-// V2026.1.9 - 旗艦版：整合 RP0000889 遞增編號邏輯、強化 DOM 安全檢查與資料同步
+// V2026.1.10 - 旗艦穩定版：移除 PIGGY- 前綴、同步 RP 會員編號與發票資訊
 
 // --- [1. 全域變數與狀態管理] ---
 window.currentUser = null;
@@ -87,6 +87,7 @@ window.loadUserProfile = async function () {
 
 /**
  * 將使用者資料渲染至畫面上所有相關的 ID (包含最新的 RP 編號)
+ * [V2026.1.10 修正：徹底移除 PIGGY- 前綴]
  */
 function syncProfileToUI(user) {
   // 1. 迎賓文字 (Dashboard & Header)
@@ -105,8 +106,8 @@ function syncProfileToUI(user) {
     "edit-phone": user.phone || "",
     "edit-email": user.email,
     "edit-address": user.defaultAddress || user.address || "",
-    "edit-taxId": user.defaultTaxId || "",
-    "edit-invoiceTitle": user.defaultInvoiceTitle || "",
+    "edit-taxId": user.defaultTaxId || "", // 同步發票統編
+    "edit-invoiceTitle": user.defaultInvoiceTitle || "", // 同步發票抬頭
     "modal-user-name": user.name || "未設定姓名",
   };
 
@@ -122,16 +123,16 @@ function syncProfileToUI(user) {
     }
   }
 
-  // 3. [核心更新] 顯示專屬會員標識碼 (優先讀取資料庫 piggyId)
+  // 3. [核心更新] 顯示專屬會員標識碼：移除 PIGGY- 前綴
   const userIdEl = document.getElementById("modal-user-id");
   if (userIdEl) {
-    // 優先使用資料庫中的 RP0000889 格式編號，若無則回退至舊有截取 ID 邏輯
+    // 優先使用資料庫中的 RP0000XXX 格式，若無則回退至純 ID 截取邏輯 (不再加上 PIGGY-)
     if (user.piggyId) {
       userIdEl.textContent = user.piggyId;
     } else if (user.id) {
-      userIdEl.textContent = `PIGGY-${user.id.slice(-6).toUpperCase()}`;
+      userIdEl.textContent = user.id.slice(-6).toUpperCase();
     } else {
-      userIdEl.textContent = "載入中...";
+      userIdEl.textContent = "...";
     }
   }
 }
@@ -180,7 +181,6 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
   const container = document.getElementById(containerId);
   if (!mainInput || !container) return;
 
-  // 使用 DataTransfer 對象模擬檔案清單操作
   const dataTransfer = new DataTransfer();
 
   function render() {
@@ -201,7 +201,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
       removeBtn.onclick = (e) => {
         e.stopPropagation();
         dataTransfer.items.remove(index);
-        mainInput.files = dataTransfer.files; // 同步回原始 Input
+        mainInput.files = dataTransfer.files;
         render();
       };
 
@@ -210,7 +210,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
       container.appendChild(item);
     });
 
-    // 2. 若未達張數上限，則顯示「+」按鈕
+    // 2. 顯示添加按鈕
     if (dataTransfer.files.length < maxFiles) {
       const addLabel = document.createElement("label");
       addLabel.className = "upload-add-btn";
@@ -241,9 +241,8 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
     }
   }
 
-  render(); // 執行初始渲染
+  render();
 
-  // 公開重置方法：方便表單提交成功後外部呼叫
   mainInput.resetUploader = () => {
     dataTransfer.items.clear();
     mainInput.value = "";
@@ -252,13 +251,10 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
 };
 
 /**
- * 全域導向詳情輔助 (用於通知系統跳轉至指定集運單)
+ * 全域導向詳情輔助 (用於通知系統跳轉)
  */
 window.openShipmentDetails = function (id) {
   if (window.viewShipmentDetail) {
     window.viewShipmentDetail(id);
-  } else if (window.openShipmentDetails) {
-    // 兼容不同版本的命名慣例
-    window.openShipmentDetails(id);
   }
 };

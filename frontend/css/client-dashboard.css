@@ -1478,3 +1478,175 @@
     text-align: center;
   }
 }
+/* --- 帳號設定彈窗滑動與高度修正 (V34.1) --- */
+
+/* 1. 修正遮罩層：確保當彈窗太長時，背景可以捲動 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: none; /* JS 控制 */
+  align-items: center;
+  justify-content: center;
+  padding: 20px; /* 確保手機版邊距 */
+  overflow-y: auto; /* 核心修正：允許遮罩層捲動 */
+}
+
+/* 2. 修正彈窗本體：限制最大高度並改為 Flex 佈局 */
+.profile-modal-v2 {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh; /* 核心修正：限制彈窗最大高度為視窗的 90% */
+  background: #fff;
+  border-radius: 20px;
+  display: flex; /* 改為 Flex 佈局 */
+  flex-direction: column;
+  overflow: hidden; /* 保持外框圓角乾淨 */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  margin: auto; /* 配合遮罩層捲動 */
+}
+
+/* 3. 保持 Header 固定 */
+.profile-modal-header {
+  flex-shrink: 0; /* 確保 Header 不會被壓縮 */
+  background: linear-gradient(135deg, var(--color-primary) 0%, #003a8c 100%);
+  padding: 25px 30px;
+  color: white;
+  position: relative;
+}
+
+/* 4. 核心修正：讓 Body 區塊可以獨立捲動 */
+.profile-modal-body {
+  flex: 1; /* 自動撐滿剩餘空間 */
+  overflow-y: auto; /* 核心修正：內容過多時顯示滾動條 */
+  padding: 25px 30px;
+  -webkit-overflow-scrolling: touch; /* 優化手機滑動感 */
+}
+
+/* 捲動條美化 (非必要，但能提升質感) */
+.profile-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.profile-modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.profile-modal-body::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+.profile-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* 5. 確保 Footer 動作按鈕也固定 */
+.modal-footer-actions {
+  flex-shrink: 0;
+  padding: 20px 30px;
+  background: #f8fafc;
+  border-top: 1px solid #edf2f7;
+  display: flex;
+  gap: 12px;
+  margin-top: 0; /* 移除原本的 margin */
+}
+/* --- 帳號設定彈窗：美化與捲動終極修正版 --- */
+
+/* 1. 遮罩層：加深背景以突顯彈窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.7); /* 加深底色，使用深藍灰透明 */
+  backdrop-filter: blur(8px); /* 增加模糊感，拉開空間層次 */
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* 2. 彈窗主體：加強陰影與邊界 */
+.profile-modal-v2 {
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh; /* 確保不超出螢幕 */
+  background: #ffffff;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* 強力陰影，產生懸浮感 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin: auto;
+}
+
+/* 3. 標頭區：維持品牌色 */
+.profile-modal-header {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1a73e8 0%, #003a8c 100%);
+  padding: 30px;
+  color: white;
+  border-bottom: 4px solid #ffc107; /* 加入黃色飾條，增加辨識度 */
+}
+
+/* 4. 內容區：解決無法下拉問題，並優化對比 */
+.profile-modal-body {
+  flex: 1;
+  overflow-y: auto; /* 核心：允許內部捲動 */
+  padding: 30px;
+  background-color: #f8fafc; /* 給予內容區微灰色，與純白彈窗外殼區分 */
+}
+
+/* 5. 分區塊美化：使用白色卡片感區分 */
+.modal-section-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0; /* 細邊框防止與底色融為一體 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.modal-section-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 4px solid var(--color-primary); /* 左側標籤條 */
+  padding-left: 10px;
+}
+
+/* 6. 輸入框優化：增加對比度 */
+.form-control {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important; /* 加深邊框色 */
+  border-radius: 10px;
+  padding: 12px 15px;
+  transition: all 0.2s;
+}
+
+.form-control:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1);
+  background: #fff !important;
+}
+
+/* 7. 固定底部：確保儲存按鈕永遠可見 */
+.modal-footer-actions {
+  flex-shrink: 0;
+  padding: 20px 30px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 15px;
+}
