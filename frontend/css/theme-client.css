@@ -155,17 +155,20 @@ textarea {
 
   /* [核心修正] 計算按鈕列：在電腦版不再強制貼底，跟隨內容流 */
   .sticky-footer-bar {
-    position: relative !important;
+    position: relative !important; /* 從 fixed 改為 relative */
     bottom: auto !important;
     left: auto !important;
-    transform: none !important;
     width: 100% !important;
-    margin-top: 24px;
+    transform: none !important;
+
+    /* 調整間距，讓它像一個頁面內的結帳區塊 */
+    margin: 24px 0 !important;
     padding: 24px !important;
+    background: var(--p-primary-bg) !important; /* 使用淺藍背景做區隔 */
+    border: 1.5px solid var(--p-primary-light);
     border-radius: var(--radius-md);
-    border: 2px solid var(--p-primary-light);
-    background: var(--p-primary-bg) !important;
-    box-shadow: var(--shadow-inner) !important;
+    box-shadow: var(--shadow-inner) !important; /* 使用內陰影更有質感 */
+    z-index: 1;
   }
   .sticky-footer-bar .footer-content {
     flex-direction: row-reverse;
@@ -186,6 +189,10 @@ textarea {
 }
 
 @media (max-width: 800px) {
+  /* [新增] 隱藏頂部導覽列 */
+  .site-header {
+    display: none !important;
+  }
   .app-layout-wrapper {
     box-shadow: none;
   }
@@ -198,7 +205,7 @@ textarea {
     z-index: 2000;
   }
   .sticky-footer-bar {
-    position: fixed !important;
+    position: relative !important;
     bottom: var(--nav-bottom-h);
     left: 0;
     width: 100%;
@@ -270,6 +277,23 @@ textarea {
   background: #fff;
   border-color: var(--p-primary);
   box-shadow: 0 0 0 4px var(--p-primary-light);
+}
+/* 1. 修正標頭容器，確保內部元素（Logo 與 Nav）能夠左右撐開 */
+.header-container {
+  width: 100%;
+  max-width: var(--max-w); /* 遵循 App 框架的 800px 寬度 */
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between; /* 這會將 Logo 推向左邊，Nav 推向右邊 */
+  align-items: center;
+  height: 100%;
+}
+
+/* 2. 定義導覽列連結的排列方式 */
+.header-nav {
+  display: flex;
+  gap: 12px; /* 連結之間的間距 */
+  align-items: center;
 }
 
 /* --- [5. 按鈕系統庫] --- */
@@ -1054,4 +1078,1254 @@ textarea {
   color: #666;
   text-decoration: none;
   font-size: 11px;
+}
+/* frontend/css/theme-client.css */
+
+/* 3. 調整電腦版連結樣式，使其更美觀且符合右側對齊視覺 */
+@media (min-width: 801px) {
+  .header-nav .nav-link {
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-body);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+  }
+
+  .header-nav .nav-link:hover {
+    background-color: var(--p-primary-light);
+    color: var(--p-primary);
+  }
+
+  .header-nav .nav-link.active {
+    background-color: var(--p-primary);
+    color: #fff !important;
+  }
+}
+/* --- 會員中心標頭優化 --- */
+.dashboard-header {
+  display: flex !important;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-main);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 2000;
+}
+
+/* 確保標頭內容在 800px 內左右撐開 */
+.dashboard-header .header-container {
+  width: 100%;
+  max-width: var(--max-w); /* 800px */
+  padding: 0 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: var(--header-h);
+}
+
+/* 右側行為區排列 (通知 + 導航) */
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+@media (max-width: 800px) {
+  /* 手機版隱藏導航選單 (已有底部選單)，但保留通知鈴鐺 */
+  .dashboard-header .main-nav {
+    display: none;
+  }
+}
+/* frontend/css/theme-client.css */
+
+@media (min-width: 801px) {
+  /* 針對導覽列連結的文字顏色優化 */
+  .header-nav .nav-link {
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    font-weight: 700; /* 加粗讓顏色更顯眼 */
+    color: var(--p-primary) !important; /* [修改] 強制呈現網站主軸藍色 */
+    border-radius: var(--radius-sm);
+    transition: all 0.2s var(--ease-ios);
+    display: flex;
+    align-items: center;
+  }
+
+  /* 滑鼠懸停效果：背景變淺藍，文字顏色加深 */
+  .header-nav .nav-link:hover {
+    background-color: var(--p-primary-light);
+    color: var(--p-primary-hover) !important;
+    transform: translateY(-1px);
+  }
+
+  /* 當前頁面 (Active) 效果：藍底白字 */
+  .header-nav .nav-link.active {
+    background-color: var(--p-primary);
+    color: #ffffff !important; /* 確保白字在藍底上清晰 */
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
+  }
+}
+/* --- 統一標頭容器樣式 --- */
+.site-header,
+.dashboard-header {
+  display: flex !important;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-main);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 2000;
+  height: var(--header-h);
+}
+
+.header-container {
+  width: 100%;
+  max-width: var(--max-w); /* 800px */
+  padding: 0 16px;
+  display: flex;
+  justify-content: space-between; /* Logo左，Actions右 */
+  align-items: center;
+  height: 100%;
+}
+
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* --- 導覽連結顏色：主軸藍色 (#1a73e8) --- */
+@media (min-width: 801px) {
+  .main-nav .nav-link {
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    font-weight: 700; /* 加粗 */
+    color: var(--p-primary) !important; /* 網站主軸藍 */
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+  }
+
+  .main-nav .nav-link:hover {
+    background-color: var(--p-primary-light);
+    color: var(--p-primary-hover) !important;
+  }
+
+  .main-nav .nav-link.active {
+    background-color: var(--p-primary);
+    color: #ffffff !important; /* 啟動中頁面維持藍底白字 */
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
+  }
+}
+
+/* 手機版隱藏 nav (改由底部導航負責) */
+@media (max-width: 800px) {
+  .main-nav {
+    display: none;
+  }
+  .dashboard-header .header-left h1 {
+    font-size: 1.1rem;
+  }
+}
+/* --- [運費試算區塊 - 深度視覺優化] --- */
+
+/* 1. 目的地選擇區塊 (Delivery Block) - 提升層次感 */
+.delivery-block {
+  background: linear-gradient(135deg, #ffffff 0%, var(--p-primary-bg) 100%);
+  border-top: 1px solid var(--border-light);
+  border-left: 6px solid var(--p-primary); /* 品牌色左側條，強調操作重點 */
+  padding: 24px !important;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  margin-top: 10px;
+}
+
+/* 2. 商品項目清單 (Shopping List) 優化 */
+.shopping-list .item-group {
+  background-color: #fff;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: all 0.3s var(--ease-ios);
+}
+
+.shopping-list .item-group:hover {
+  border-color: var(--p-primary-light);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
+
+/* 3. 統一試算輸入框：圓潤淺灰質感 (客戶一看就想填) */
+.calculator-wrapper .form-control,
+.calculator-wrapper select,
+.calculator-wrapper input {
+  background-color: #f2f4f7 !important; /* 質感淺灰，取代原本生硬的背景 */
+  border: 1.5px solid #e2e8f0 !important; /* 柔和邊框色 */
+  border-radius: 12px !important;
+  color: var(--text-main) !important;
+  font-weight: 600 !important;
+  padding: 12px 16px !important;
+  transition: all 0.3s var(--ease-ios) !important;
+}
+
+/* 4. 聚焦狀態 (Focus)：從灰轉白，帶有品牌藍呼吸燈效果 */
+.calculator-wrapper .form-control:focus {
+  background-color: #ffffff !important;
+  border-color: var(--p-primary) !important;
+  box-shadow: 0 0 0 4px var(--p-primary-light),
+    0 8px 20px rgba(26, 115, 232, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+/* 5. 針對商品序號與圖示的配色優化 */
+.section-header-row h3 i {
+  background: linear-gradient(135deg, var(--p-primary), var(--p-info));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-right: 10px;
+}
+
+/* 6. 加入商品按鈕：虛線質感化 */
+.btn-dashed-add {
+  border: 2px dashed #cbd5e0;
+  background: #f8fafc;
+  color: var(--text-body);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  font-weight: 700;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-dashed-add:hover {
+  border-color: var(--p-primary);
+  color: var(--p-primary);
+  background: var(--p-primary-bg);
+  transform: scale(1.01);
+}
+
+/* 7. 地區提示框 (Remote Area Info) 動態感 */
+#remoteAreaInfo.alert-info {
+  background: var(--p-info-light);
+  border: none;
+  border-left: 4px solid var(--p-info);
+  color: #005a8d;
+  padding: 15px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  animation: appSlideUp 0.4s ease;
+}
+
+/* 8. 必填符號顏色微調 */
+.text-danger {
+  color: var(--p-danger) !important;
+  font-weight: 800;
+}
+/* --- [傢俱倉地址區塊 - 旗艦級視覺重構] --- */
+
+/* 1. 倉庫卡片主體 - 增加頂部品牌色條與深邃陰影 */
+.warehouse-card {
+  border-top: 5px solid var(--p-primary) !important;
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+/* 2. 標頭區塊優化 - 讓標題與圖示更立體 */
+.warehouse-header {
+  padding: 20px 24px;
+  background: linear-gradient(to right, #ffffff, var(--p-primary-bg));
+  border-bottom: 1px dashed var(--border-main);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wh-icon {
+  width: 42px;
+  height: 42px;
+  background: var(--p-primary);
+  color: #fff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3);
+}
+
+.wh-title h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* 3. 地址資訊網格 - 電腦版雙欄，手機版單欄 */
+.warehouse-body {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 600px) {
+  .warehouse-body {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+}
+
+/* 4. 資訊列優化 - 模仿 App 內的「不可編輯輸入框」質感 */
+.wh-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wh-info-row .label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  padding-left: 4px;
+}
+
+/* [核心優化] 資訊數值容器：淺灰底色 + 圓潤邊框 */
+.wh-info-row .value {
+  background-color: var(--bg-input) !important; /* 使用您要求的質感淺灰 */
+  border: 1.5px solid var(--border-input);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  font-family: "Monaco", "Consolas", monospace; /* 使用等寬字體方便核對單號 */
+  transition: all 0.2s;
+  cursor: text;
+}
+
+.wh-info-row .value:hover {
+  background-color: #fff !important;
+  border-color: var(--p-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 5. 倉庫地址長欄位特別強化 */
+.wh-info-row.full-width {
+  grid-column: 1 / -1;
+}
+
+.wh-info-row.full-width .value {
+  background: linear-gradient(to right, var(--bg-input), #ffffff);
+  border: 1.5px dashed var(--p-primary-light); /* 使用虛線暗示「這是重點內容」 */
+  line-height: 1.6;
+  color: var(--p-primary); /* 地址字體使用品牌藍，增加辨識度 */
+}
+
+/* 6. 注意事項小貼士 */
+.wh-notice {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background-color: var(--p-accent-light);
+  border-radius: 8px;
+  color: var(--p-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.wh-notice i {
+  font-size: 1rem;
+  margin-top: 2px;
+}
+
+/* 7. 複製按鈕美化 */
+#copyAddressBtn {
+  background: var(--p-primary-light);
+  color: var(--p-primary);
+  border: 1px solid var(--p-primary-light);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.3s;
+}
+
+#copyAddressBtn:hover {
+  background: var(--p-primary);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+}
+/* --- [收費標準區塊 - 旗艦級視覺重構] --- */
+
+/* 1. 外層容器：延續 V12 圓潤卡片與陰影 */
+.rate-section-wrapper {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-main);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: 24px;
+  animation: appSlideUp 0.6s var(--ease-ios);
+}
+
+/* 2. 標頭列：與試算區塊風格統一 */
+.section-header-row {
+  padding: 18px 24px;
+  background: linear-gradient(to right, #ffffff, var(--p-primary-bg));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-main);
+}
+
+.section-header-row h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-header-row h3 i {
+  color: var(--p-primary);
+}
+
+/* 3. 表格容器：增加內距與圓角 */
+.rate-table-container {
+  padding: 15px;
+  background-color: #fff;
+}
+
+/* 4. 費率表格核心樣式：App 化質感 */
+.rate-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  overflow: hidden; /* 確保圓角生效 */
+}
+
+/* 表頭樣式：品牌藍底色與白字 */
+.rate-table th {
+  background-color: var(--p-primary-bg);
+  color: var(--p-primary);
+  font-weight: 800;
+  padding: 14px 16px;
+  font-size: 0.9rem;
+  text-align: left;
+  border-bottom: 2px solid var(--p-primary-light);
+}
+
+/* 儲存格樣式：淺灰線條與質感文字 */
+.rate-table td {
+  padding: 14px 16px;
+  font-size: 0.95rem;
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border-light);
+  background-color: #ffffff;
+  transition: background-color 0.2s;
+}
+
+/* 隔行變色：增加閱讀舒適度 */
+.rate-table tbody tr:nth-child(even) td {
+  background-color: var(--bg-input); /* 使用您要求的質感淺灰 */
+}
+
+.rate-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 滑鼠懸停效果 */
+.rate-table tbody tr:hover td {
+  background-color: var(--p-primary-light);
+  color: var(--p-primary);
+}
+
+/* 5. 注意事項區塊：延續溫暖橘色調 */
+.rate-notes {
+  padding: 20px 24px;
+  background-color: var(--p-accent-light);
+  border-top: 1px dashed var(--p-accent);
+  color: var(--p-accent);
+}
+
+.rate-notes strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: var(--p-accent);
+}
+
+.rate-notes ul {
+  list-style: none;
+  padding-left: 5px;
+}
+
+.rate-notes li {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.6;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.rate-notes li::before {
+  content: "•";
+  color: var(--p-accent);
+  font-weight: bold;
+}
+
+/* 6. 查看詳情按鈕美化 */
+.rate-section-wrapper .btn-secondary {
+  background-color: #fff;
+  border: 1.5px solid var(--p-primary-light);
+  color: var(--p-primary);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+}
+
+.rate-section-wrapper .btn-secondary:hover {
+  background-color: var(--p-primary);
+  color: #fff;
+  transform: translateY(-2px);
+}
+/* --- [按鈕優化：加入下一件商品] --- */
+
+.btn-dashed-add {
+  width: 100%;
+  padding: 18px;
+  /* 1. 邊框：使用品牌藍的半透明色，比純灰色更有活力，但又不刺眼 */
+  border: 2.5px dashed rgba(26, 115, 232, 0.35);
+  border-radius: var(--radius-md);
+
+  /* 2. 背景：微妙的「空氣感」漸層，從純白過渡到極淺藍，製造層次 */
+  background: linear-gradient(to bottom, #ffffff 0%, var(--p-primary-bg) 100%);
+
+  /* 3. 文字：使用品牌主色藍，提高辨識度，告訴用戶這是一個可互動區域 */
+  color: var(--p-primary);
+  font-weight: 700;
+  font-size: 1.05rem; /* 字體稍微加大一點點 */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+
+  /* 4. 陰影：非常輕微的底部光暈，讓它從背景中「浮」出來一點點 */
+  box-shadow: 0 4px 10px rgba(26, 115, 232, 0.06);
+
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 優化加號圖示，讓它成為視覺焦點 */
+.btn-dashed-add i {
+  font-size: 1.25rem;
+  /* 讓圖示自帶一點點發光效果 */
+  filter: drop-shadow(0 2px 3px rgba(26, 115, 232, 0.2));
+  transition: transform 0.3s ease;
+}
+
+/* --- [懸停交互效果] --- */
+.btn-dashed-add:hover {
+  /* 懸停時，背景變為更明顯的淺藍色 */
+  background: var(--p-primary-light);
+  /* 邊框變為實線品牌色，暗示「即將變為實體卡片」 */
+  border-color: var(--p-primary);
+  border-style: solid;
+  color: var(--p-primary-hover);
+
+  /* 明顯的升起感與陰影加深 */
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(26, 115, 232, 0.18);
+}
+
+/* 懸停時圖示會有一個輕微的旋轉動效，增加趣味性 */
+.btn-dashed-add:hover i {
+  transform: rotate(90deg);
+}
+
+/* 點擊時的按壓感 */
+.btn-dashed-add:active {
+  transform: scale(0.98) translateY(0);
+  box-shadow: 0 2px 5px rgba(26, 115, 232, 0.1);
+}
+/* --- [按鈕美化：開始計算 / 結帳按鈕] --- */
+
+.btn-checkout {
+  /* 1. 背景：改用品牌藍到深藍的細膩漸層，取代突兀的橘色 */
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
+
+  /* 2. 文字：純白，並增加細微的文字陰影提升清晰度 */
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 1px;
+
+  /* 3. 邊框與形狀：全圓角，並加入半透明的品牌色邊框增加立體感 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+
+  /* 4. 陰影：這是關鍵！使用帶有藍色的「擴散陰影」，產生發光感 */
+  box-shadow: 0 8px 24px rgba(26, 115, 232, 0.35);
+
+  padding: 12px 36px;
+  min-width: 180px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 增加按鈕表面的「光影掃過」質感 */
+.btn-checkout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: all 0.6s;
+}
+
+/* --- [互動交互效果] --- */
+
+.btn-checkout:hover {
+  /* 懸停時按鈕稍微變亮，陰影加深 */
+  background: linear-gradient(135deg, #2b82fb 0%, #1557b0 100%) !important;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(26, 115, 232, 0.45);
+}
+
+.btn-checkout:hover::before {
+  left: 100%; /* 光影掃過效果 */
+}
+
+.btn-checkout:active {
+  /* 點擊時的物理按壓感 */
+  transform: translateY(-1px) scale(0.98);
+  box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3);
+}
+
+/* 5. 針對底部計算列的數字也同步美化，讓它與按鈕呼應 */
+.footer-total .price {
+  color: var(--p-primary) !important; /* 原本可能是橘色，改為品牌藍 */
+  font-family: "Monaco", monospace;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(26, 115, 232, 0.1);
+}
+/* --- [配送目的地下拉選單 - 旗艦級視覺優化] --- */
+
+/* 1. 優化選單本體：增加品牌色引導與層次感 */
+#deliveryLocation {
+  /* 使用您要求的質感淺灰背景 */
+  background-color: var(--bg-input) !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 14px 45px 14px 18px !important; /* 右側預留空間給自定義箭頭 */
+  font-weight: 700 !important;
+  color: var(--p-primary) !important; /* 選中的文字直接呈現品牌藍 */
+  cursor: pointer;
+
+  /* 移除原生生硬的箭頭 */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* 引入高質感自定義 SVG 藍色箭頭 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231a73e8' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 18px center;
+  background-size: 18px;
+
+  transition: all 0.3s var(--ease-ios);
+}
+
+/* 2. 聚焦狀態：增加呼吸感光暈 */
+#deliveryLocation:focus {
+  background-color: #ffffff !important;
+  border-color: var(--p-primary) !important;
+  box-shadow: 0 0 0 4px var(--p-primary-light),
+    0 8px 20px rgba(26, 115, 232, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+/* 3. 針對選單展開後的 Option 進行基礎美化 (受限於瀏覽器) */
+#deliveryLocation option {
+  color: var(--text-main);
+  background-color: #ffffff;
+  padding: 12px;
+  font-weight: 500;
+}
+
+/* 第一個提示選項 (Placeholder) 的顏色淡化 */
+#deliveryLocation option:first-child {
+  color: var(--text-sub);
+}
+
+/* 4. 優化目的地標籤 (Label) 的視覺引導 */
+.delivery-block .form-label {
+  color: var(--p-primary);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.delivery-block .form-label i {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 2px 4px rgba(26, 115, 232, 0.2));
+}
+
+/* 5. 選取後的地區資訊框 (Remote Area Info) 加強 */
+#remoteAreaInfo {
+  margin-top: 20px;
+  background: linear-gradient(to right, #eef6ff, #ffffff);
+  border: none;
+  border-left: 5px solid var(--p-primary);
+  padding: 16px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: appSlideUp 0.4s var(--ease-ios);
+}
+
+#remoteAreaInfo i {
+  color: var(--p-primary);
+  font-size: 1.2rem;
+}
+
+#selectedAreaName {
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+#selectedAreaFee {
+  background: var(--p-danger);
+  color: #fff !important;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-left: auto; /* 將費用推至最右側 */
+}
+/* --- [試算結果：費用總結旗艦化優化] --- */
+
+/* 1. 總結卡片容器 - 強化專業感與穩定感 */
+.result-summary-card {
+  background: #ffffff;
+  border: 2px solid var(--p-primary-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-top: 25px;
+  animation: appSlideUp 0.6s var(--ease-ios);
+}
+
+/* 2. 卡片標題：改用沈穩的藍色調 */
+.result-summary-card h3 {
+  background: linear-gradient(135deg, var(--p-primary) 0%, #0d47a1 100%);
+  color: #ffffff;
+  text-align: center;
+  padding: 18px;
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* 3. 明細列優化：增加呼吸感 */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px dashed var(--border-main);
+  font-size: 0.95rem;
+  color: var(--text-body);
+}
+
+.summary-row:last-of-type {
+  border-bottom: none;
+}
+
+.summary-row span:first-child {
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+/* 4. [核心優化] 總計金額區塊：高質感呈現 */
+.summary-total {
+  padding: 30px 24px;
+  text-align: right;
+  background: linear-gradient(to right, #ffffff, var(--p-primary-bg));
+  border-top: 2px solid var(--p-primary-light);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.summary-total small {
+  font-size: 0.85rem;
+  color: var(--p-primary);
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+/* 價格數字：改用品牌藍 + 等寬字體 + 強力縮放 */
+.summary-total .total-amount {
+  font-size: 2.5rem; /* 加大價格字體 */
+  font-weight: 900;
+  color: var(--p-primary) !important; /* [優化] 棄用紅色，改用高級品牌藍 */
+  font-family: "Monaco", "Consolas", monospace; /* 專業感字體 */
+  line-height: 1;
+  text-shadow: 0 2px 10px rgba(26, 115, 232, 0.15);
+}
+
+/* 貨幣符號微調 */
+.summary-total .currency {
+  font-size: 1.2rem;
+  margin-right: 5px;
+  vertical-align: super;
+}
+
+/* 5. 底部動作按鈕空間優化 */
+.summary-total::after {
+  content: "實際金額以最終出庫測量為準";
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 15px;
+  font-weight: 400;
+}
+
+/* 6. 試算詳情卡片 (各別商品) 同步優化 */
+.result-detail-card {
+  border: 1.5px solid var(--border-main);
+  border-left: 5px solid var(--p-success); /* 使用成功綠標註商品詳情 */
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  margin-bottom: 15px;
+}
+
+.result-detail-card h3 {
+  background-color: var(--p-primary-bg);
+  color: var(--p-primary);
+  font-size: 0.95rem;
+  padding: 12px 20px;
+  font-weight: 800;
+}
+/* --- [修正版：試算結果費用總結 - 高對比旗艦化] --- */
+
+/* 1. 總結卡片容器 */
+.result-summary-card {
+  background: #ffffff;
+  border: 2.5px solid var(--p-primary-light); /* 強化邊框存在感 */
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-top: 30px;
+  animation: appSlideUp 0.6s var(--ease-ios);
+}
+
+/* 2. [關鍵修正] 標題區塊：確保文字絕對為白色 */
+.result-summary-card h3 {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
+  color: #ffffff !important; /* 強制白色，防止被全局藍色字體覆蓋 */
+  text-align: center;
+  padding: 20px;
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-bottom: none;
+}
+
+/* 確保標題內的 emoji 或圖示不會變色 */
+.result-summary-card h3 i,
+.result-summary-card h3 span {
+  color: #ffffff !important;
+}
+
+/* 3. 明細列：使用虛線收據感，文字顏色深灰 */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1.5px dashed var(--border-light);
+  font-size: 1rem;
+  color: var(--text-body) !important;
+}
+
+.summary-row span:first-child {
+  font-weight: 700;
+  color: var(--text-sub) !important;
+}
+
+/* 4. [重點美化] 最終金額總計區：淺灰漸層背景 + 品牌藍大字 */
+.summary-total {
+  padding: 35px 24px;
+  text-align: right;
+  /* 使用極淺的灰色到白色的漸層，襯托藍色大字 */
+  background: linear-gradient(to right, #f8f9fa, #ffffff);
+  border-top: 2px solid var(--p-primary-light);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.summary-total small {
+  font-size: 0.9rem;
+  color: var(--p-primary);
+  font-weight: 800;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 最終價格：品牌藍 + 質感投影 */
+.summary-total .total-amount {
+  font-size: 2.8rem; /* 字體再加大 */
+  font-weight: 900;
+  color: var(--p-primary) !important; /* 確保呈現品牌藍 */
+  font-family: "Monaco", "Consolas", monospace;
+  line-height: 1;
+  text-shadow: 0 4px 12px rgba(26, 115, 232, 0.15);
+}
+
+/* 貨幣符號微調，讓它浮在上方 */
+.summary-total .currency {
+  font-size: 1.4rem;
+  margin-right: 4px;
+  font-weight: 700;
+  vertical-align: 20px;
+}
+
+/* 底部提示文字 */
+.summary-total::after {
+  content: "※ 最終運費以倉庫實際出庫數據為準";
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 20px;
+  background: var(--bg-app);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* 5. 針對個別商品詳情卡片的顏色修正 */
+.result-detail-card {
+  border: 1.5px solid var(--border-light);
+  border-left: 6px solid var(--p-success); /* 綠色條代表單項結果 */
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  margin-bottom: 18px;
+}
+
+.result-detail-card h3 {
+  background-color: var(--p-primary-bg) !important;
+  color: var(--p-primary) !important; /* 商品詳情標題用淺藍底深藍字 */
+  font-size: 1rem;
+  padding: 14px 20px;
+}
+/* --- [RWD 修復：解決手機版長寬高溢出] --- */
+
+/* 1. 調整並排容器的結構 */
+.input-group-3 {
+  display: grid;
+  /* 使用 minmax(0, 1fr) 確保欄位在空間不足時能自動縮小，不會硬撐開 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px; /* 稍微縮小間距，為欄位騰出更多空間 */
+  width: 100%;
+}
+
+/* 2. 針對手機版 (480px 以下) 的精細化調校：防止文字裁切 */
+@media (max-width: 480px) {
+  /* 極大化輸入框內部的可用空間 */
+  .calculator-wrapper .form-control,
+  .calculator-wrapper input {
+    /* 縮減內距：左側縮小到 8px，右側留 20px 給單位，確保三位數數字不被裁切 */
+    padding: 12px 20px 12px 8px !important;
+    font-size: 0.88rem !important;
+    height: 46px !important;
+    min-width: 0 !important; /* 允許欄位縮小 */
+    text-overflow: clip; /* 防止文字省略點出現 */
+  }
+
+  /* 單位標籤 (cm/kg) 優化：縮小並絕對定位到右側，不佔用數字輸入空間 */
+  .input-wrap .unit {
+    position: absolute;
+    right: 4px !important;
+    top: 50%;
+    transform: translateY(-50%) scale(0.8);
+    font-size: 10px !important;
+    color: var(--text-sub) !important;
+    pointer-events: none; /* 防止遮擋點擊 */
+    background: transparent !important;
+  }
+
+  /* 縮小卡片內距，為輸入框爭取更多橫向空間 */
+  .shopping-list .item-group {
+    padding: 15px 10px !important;
+  }
+}
+
+/* 3. 確保 JavaScript 的隱藏指令優先度 (保險機制) */
+#item-list [style*="display: none"] {
+  display: none !important;
+}
+
+/* 4. 體積輸入框 (CBM) 專屬樣式，單欄顯示不裁切 */
+.cbm-input .form-control {
+  text-align: center !important;
+  padding-right: 40px !important;
+  font-family: "Monaco", monospace;
+}
+
+/* 3. 確保所有輸入容器不超過父層寬度 */
+.input-wrap {
+  width: 100%;
+  position: relative;
+  overflow: hidden; /* 防止內部元素溢出 */
+}
+
+/* 4. 針對 "配送目的地" 下拉選單在手機上的優化，防止撐破 */
+@media (max-width: 800px) {
+  #deliveryLocation {
+    font-size: 0.95rem !important;
+    padding-right: 35px !important; /* 縮小自定義箭頭的預留空間 */
+  }
+}
+/* --- [RWD 終極修復：解決手機版輸入框裁切與溢出] --- */
+
+/* 1. 調整並排容器：確保在極窄螢幕下仍能平分空間 */
+.input-group-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important; /* 縮小間距，爭取更多內部寬度 */
+  width: 100% !important;
+}
+
+/* 2. 商品項目卡片：在手機上釋放更多橫向空間 */
+@media (max-width: 800px) {
+  .shopping-list .item-group {
+    padding: 15px 10px !important; /* 縮小卡片內距，讓輸入框變寬 */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* 3. 針對小螢幕手機 (如 iPhone SE/Mini) 的精細微調 */
+@media (max-width: 480px) {
+  /* 解決文字裁切核心：極大化輸入框內部的可用空間 */
+  .calculator-wrapper .form-control,
+  .calculator-wrapper input {
+    /* 縮減左右內距，特別是右邊要留一點空間給單位，左邊縮到最小 */
+    padding: 12px 18px 12px 6px !important;
+    font-size: 0.85rem !important; /* 稍微縮小字體防止溢出 */
+    text-align: left;
+    height: 44px !important; /* 統一高度，增加點擊便利性 */
+    min-width: 0 !important; /* 允許縮小到比內容窄 */
+  }
+
+  /* 單位標籤 (cm/kg) 優化：縮小並靠邊，避免蓋住數字 */
+  .input-wrap .unit {
+    right: 4px !important;
+    bottom: 50%;
+    transform: translateY(50%) scale(0.8); /* 縮小單位字體 */
+    font-size: 10px !important;
+    color: var(--text-sub) !important;
+    pointer-events: none; /* 確保不影響點擊輸入框 */
+  }
+
+  /* 測量方式切換按鈕 (Segmented Control) 窄化處理 */
+  .calc-method-toggle span {
+    font-size: 0.8rem !important;
+    padding: 6px 2px !important;
+  }
+
+  /* 商品標題列優化 */
+  .item-header {
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid var(--border-light);
+    margin-bottom: 15px;
+  }
+}
+
+/* 4. 體積輸入框 (CBM) 在單獨顯示時的優化 */
+.cbm-input .input-wrap {
+  width: 100%;
+}
+.cbm-input input {
+  text-align: center !important; /* 體積單一框居中更美觀 */
+  padding-right: 35px !important;
+}
+
+/* 5. 保護機制：防止內容強行撐開容器 */
+.input-wrap {
+  position: relative !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  overflow: hidden; /* 這是防止裁切溢出的最後一道防線 */
+}
+/* --- [收費標準：手機端響應式多色卡片] --- */
+
+@media (max-width: 600px) {
+  /* 1. 將表格結構轉為區塊卡片 */
+  .rate-table,
+  .rate-table tbody,
+  .rate-table tr,
+  .rate-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* 隱藏原始表頭，改用卡片佈局 */
+  .rate-table thead {
+    display: none;
+  }
+
+  /* 2. 每一行 (TR) 轉為獨立卡片樣式 */
+  .rate-table tbody tr {
+    margin-bottom: 20px;
+    background-color: #ffffff;
+    border: 1.5px solid var(--border-light);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s;
+  }
+
+  /* 3. 卡片細部欄位排版：模擬手機 App 資訊頁 */
+  .rate-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+  }
+
+  /* 利用 data-label 在手機端顯示標題 */
+  .rate-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--text-sub);
+    font-size: 0.85rem;
+  }
+
+  /* 第一個欄位 (類別名稱) 設為標頭質感 */
+  .rate-table td:first-child {
+    background-color: rgba(255, 255, 255, 0.5);
+    border-bottom: 1.5px solid rgba(0, 0, 0, 0.05);
+    padding: 15px 16px;
+  }
+
+  .rate-table td:first-child strong {
+    font-size: 1.1rem;
+    color: var(--text-main);
+  }
+
+  .rate-table td:last-child {
+    border-bottom: none;
+  }
+
+  /* 4. [核心需求] 針對不同類別進行「不突兀」的顏色區分 */
+
+  /* 類別 1：一般家具 - 清爽藍 (品牌主色) */
+  .rate-table tbody tr:nth-child(4n + 1) {
+    border-left: 6px solid var(--p-primary);
+    background: linear-gradient(
+      135deg,
+      rgba(26, 115, 232, 0.03) 0%,
+      #ffffff 100%
+    );
+  }
+  .rate-table tbody tr:nth-child(4n + 1) td:first-child strong {
+    color: var(--p-primary);
+  }
+
+  /* 類別 2：特殊家具 A - 柔和綠 (成功/安全感) */
+  .rate-table tbody tr:nth-child(4n + 2) {
+    border-left: 6px solid var(--p-success);
+    background: linear-gradient(
+      135deg,
+      rgba(0, 181, 120, 0.03) 0%,
+      #ffffff 100%
+    );
+  }
+  .rate-table tbody tr:nth-child(4n + 2) td:first-child strong {
+    color: var(--p-success);
+  }
+
+  /* 類別 3：特殊家具 B - 暖心橘 (警告/注意) */
+  .rate-table tbody tr:nth-child(4n + 3) {
+    border-left: 6px solid var(--p-warning);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 144, 0, 0.03) 0%,
+      #ffffff 100%
+    );
+  }
+  .rate-table tbody tr:nth-child(4n + 3) td:first-child strong {
+    color: var(--p-warning);
+  }
+
+  /* 類別 4：特殊家具 C - 科技紫 (高級/重型) */
+  .rate-table tbody tr:nth-child(4n + 4) {
+    border-left: 6px solid #8b5cf6;
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.03) 0%,
+      #ffffff 100%
+    );
+  }
+  .rate-table tbody tr:nth-child(4n + 4) td:first-child strong {
+    color: #8b5cf6;
+  }
+
+  /* 數值欄位強調：重量與材積費率 */
+  .rate-table td[data-label*="費率"] {
+    font-family: "Monaco", monospace;
+    font-weight: 800;
+    color: var(--text-main);
+    font-size: 1rem;
+  }
 }

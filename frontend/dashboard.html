@@ -35,36 +35,40 @@
   <body class="dashboard-theme">
     <div class="app-layout-wrapper">
       <header class="dashboard-header">
-        <div class="header-left">
-          <img src="assets/logo.png" alt="Logo" class="header-logo-sm" />
-          <h1>會員中心</h1>
-        </div>
-        <div class="header-right-actions">
-          <div class="notification-wrapper">
-            <div id="btn-notification" class="notif-trigger">
-              <i class="fas fa-bell"></i>
-              <span
-                id="notification-badge"
-                class="notification-badge"
-                style="display: none"
-                >0</span
-              >
-            </div>
-            <div
-              id="notification-dropdown"
-              class="notification-dropdown"
-              style="display: none"
-            >
-              <div class="dropdown-header">
-                <span>通知中心</span>
-                <button id="btn-read-all" class="btn-text">全部已讀</button>
-              </div>
-              <div id="notification-list" class="dropdown-body">
-                <div class="empty-state">載入中...</div>
-              </div>
-            </div>
+        <div class="header-container">
+          <div class="header-left">
+            <img src="assets/logo.png" alt="Logo" class="header-logo-sm" />
+            <h1>會員中心</h1>
           </div>
-          <nav class="main-nav header-nav-right"></nav>
+
+          <div class="header-right-actions">
+            <div class="notification-wrapper">
+              <div id="btn-notification" class="notif-trigger">
+                <i class="fas fa-bell"></i>
+                <span
+                  id="notification-badge"
+                  class="notification-badge"
+                  style="display: none"
+                  >0</span
+                >
+              </div>
+              <div
+                id="notification-dropdown"
+                class="notification-dropdown"
+                style="display: none"
+              >
+                <div class="dropdown-header">
+                  <span>通知中心</span>
+                  <button id="btn-read-all" class="btn-text">全部已讀</button>
+                </div>
+                <div id="notification-list" class="dropdown-body">
+                  <div class="empty-state">載入中...</div>
+                </div>
+              </div>
+            </div>
+
+            <nav class="main-nav header-nav-right"></nav>
+          </div>
         </div>
       </header>
 

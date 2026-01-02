@@ -290,18 +290,10 @@
 
 /* 5. 底部懸浮欄 (首頁版) */
 .sticky-footer-bar {
-  position: fixed;
+  position: relative;
   bottom: 0;
   left: 0;
   width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  border-top: 1px solid #ddd;
-  padding: 10px 20px;
-  z-index: 100;
-  display: flex;
-  justify-content: center;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
 }
 .footer-content {
   width: 100%;
@@ -321,7 +313,7 @@
     grid-template-columns: 1fr;
   }
   .sticky-footer-bar {
-    bottom: var(--mobile-nav-height);
+    bottom: auto;
   }
 }
 /* frontend/css/client-index.css - 在檔案最下方加入 */

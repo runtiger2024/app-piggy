@@ -178,7 +178,7 @@ function renderRemoteAreaOptions() {
     if (fee === "0") return;
     const areas = window.REMOTE_AREAS[fee];
     if (Array.isArray(areas) && areas.length > 0) {
-      html += `<optgroup label="加收 $${fee}">`;
+      html += `<optgroup label="每CMB加收詳細詢問客服 $${fee}">`;
       areas.forEach(
         (area) => (html += `<option value="${fee}">${area}</option>`)
       );
@@ -408,7 +408,7 @@ function setupEventListeners() {
         const opt = delivSelect.options[delivSelect.selectedIndex];
         nameEl.textContent = opt.text;
         const fee = parseInt(delivSelect.value);
-        feeEl.textContent = fee > 0 ? `(加收 $${fee})` : "(免加價)";
+        feeEl.textContent = fee > 0 ? `(請跟客服確認 $${fee})` : "(免加價)";
       } else {
         infoBox.style.display = "none";
       }

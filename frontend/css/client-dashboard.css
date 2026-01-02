@@ -769,3 +769,55 @@
   font-size: 16px;
   color: #e74a3b;
 }
+/* --- 通知鈴鐺優化 --- */
+.notif-trigger {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  background: var(--p-primary-light);
+  color: var(--p-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.notif-trigger:hover {
+  background: var(--p-primary);
+  color: #fff;
+}
+
+/* 紅點數字 */
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--p-danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+}
+
+/* 通知下拉選單手機版優化 */
+@media (max-width: 768px) {
+  .notification-dropdown {
+    position: fixed !important;
+    top: var(--header-h) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 92% !important;
+    max-width: 400px;
+    margin-top: 10px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-3);
+  }
+}
