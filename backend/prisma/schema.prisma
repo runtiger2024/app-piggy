@@ -1,4 +1,4 @@
-// backend/prisma/schema.prisma
+// backend/prisma/schema.prisma (V12.10 - 旗艦穩定版)
 
 generator client {
   provider = "prisma-client-js"
@@ -43,7 +43,7 @@ model User {
   wallet              Wallet?
   notifications       Notification[]
   
-  // [新增] 家具代採購關聯
+  // 家具代採購關聯
   furnitureOrders     FurnitureOrder[]
 }
 
@@ -77,6 +77,7 @@ model Package {
 
   @@index([userId])
   @@index([shipmentId])
+  @@index([trackingNumber])
 }
 
 // --- 3. 集運單資料模型 ---
@@ -120,6 +121,7 @@ model Shipment {
   packages              Package[]
 
   @@index([userId])
+  @@index([status])
 }
 
 // --- 4. 估價單 ---
@@ -144,13 +146,17 @@ model ActivityLog {
   @@index([action])
 }
 
-// --- 6. 系統設定 ---
+// --- 6. 系統設定 (已修正：補齊 group 與 type 欄位) ---
 model SystemSetting {
   key         String   @id
   value       Json
-  category    String?  // 建議加上分類，方便後台管理
+  category    String?  // 費率、公告、系統等大類
+  group       String?  // [新增] 對應 Controller 中的寫入
+  type        String?  // [新增] 對應 Controller 中的寫入 (如 number, string)
   description String?
   updatedAt   DateTime @updatedAt
+
+  @@index([category])
 }
 
 // --- 7. 常用收件人 ---
@@ -182,6 +188,7 @@ model Notification {
   createdAt   DateTime @default(now())
 
   @@index([userId])
+  @@index([isRead])
 }
 
 // --- 9. 電子錢包 ---
@@ -218,9 +225,10 @@ model Transaction {
   updatedAt         DateTime @updatedAt
 
   @@index([walletId])
+  @@index([status])
 }
 
-// --- 11. [新增] 家具代採購訂單模型 ---
+// --- 11. 家具代採購訂單模型 ---
 model FurnitureOrder {
   id             String   @id @default(cuid())
   userId         String
@@ -232,17 +240,17 @@ model FurnitureOrder {
   quantity       Int
   priceRMB       Float
   
-  // 計算結果與當時費率 (重要：保留當時計算依據)
+  // 計算結果與當時費率
   serviceFeeRMB  Float    
   exchangeRate   Float    
   serviceFeeRate Float    
-  totalAmountTWD Int      // 最終台幣金額，採整數存檔
+  totalAmountTWD Int      
   
   // 狀態與備註
-  status         String   @default("PENDING") // PENDING, APPROVED, PAID, SHIPPED, COMPLETED, CANCELLED
+  status         String   @default("PENDING") 
   note           String?  @db.Text
   adminRemark    String?  @db.Text
-  invoiceUrl     String?  // 採購憑證或發票圖檔
+  invoiceUrl     String?  
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

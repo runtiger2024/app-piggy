@@ -1,4 +1,4 @@
-// backend/controllers/calculatorController.js (V12.9 - 終極旗艦無省略版：隨機人氣倍增 + 22,999 底標)
+// backend/controllers/calculatorController.js (V13.0 - 終極旗艦無省略版：隨機人氣累加穩定化)
 
 const prisma = require("../config/db.js");
 const ratesManager = require("../utils/ratesManager.js");
@@ -59,19 +59,16 @@ const getCalculatorConfig = async (req, res) => {
     const randomIncrement = Math.floor(Math.random() * 5) + 1;
     let nextValue = currentDbValue + randomIncrement;
 
-    // 3. 異步更新回資料庫 (不阻塞後續費率讀取，提升效能)
-    prisma.systemSetting
-      .upsert({
-        where: { key: "total_usage" },
-        update: { value: nextValue.toString() },
-        create: {
-          key: "total_usage",
-          value: nextValue.toString(),
-          group: "system",
-          type: "number",
-        },
-      })
-      .catch((err) => console.error("[Stats Error] 隨機累加失敗:", err));
+    // 3. [關鍵優化] 使用 await 確保寫入完成，且修正欄位名稱以符合 Schema (移除 group/type)
+    await prisma.systemSetting.upsert({
+      where: { key: "total_usage" },
+      update: { value: nextValue.toString() },
+      create: {
+        key: "total_usage",
+        value: nextValue.toString(),
+        category: "system",
+      },
+    });
 
     // --- [保留原有費率與設定讀取邏輯] ---
     // 1. 取得費率 (透過 ratesManager 封裝好的邏輯)
@@ -85,14 +82,14 @@ const getCalculatorConfig = async (req, res) => {
       "announcement",
       "warehouse_info",
       "furniture_config",
-      "total_usage", // 同步抓取統計 Key
+      "total_usage", // 同步抓取最新累加後的統計 Key
     ];
 
     const settingsList = await prisma.systemSetting.findMany({
       where: { key: { in: keysToFetch } },
     });
 
-    // 3. 轉換為 Key-Value 物件並解析 JSON 內容 (嚴格保留您原有的 try-catch 與 forEach 邏輯)
+    // 3. 轉換為 Key-Value 物件並解析 JSON 內容 (嚴格保留原始邏輯)
     const settingsMap = {};
     settingsList.forEach((item) => {
       try {
@@ -113,10 +110,10 @@ const getCalculatorConfig = async (req, res) => {
       rates.procurement = DEFAULT_CONFIG.furnitureConfig;
     }
 
-    // 5. [核心顯示修正] 計算最終顯示人數：底標 22999 + 最新累計值
+    // 5. [核心顯示修正] 計算最終顯示人數：底標 22999 + 最新DB累計值
     const displayUsageCount = DEFAULT_CONFIG.baselineUsage + nextValue;
 
-    // 6. 組合最終回傳物件 (完全對應前端 index.html 需求)
+    // 6. 組合最終回傳物件 (完全對應 index.html 需求)
     const responseData = {
       success: true,
       usageCount: displayUsageCount,
@@ -266,7 +263,7 @@ const calculateSeaFreight = async (req, res) => {
       initialSeaFreightCost += itemFinalCost;
       totalShipmentVolume += totalItemVolume;
 
-      // [保留完整物件映射] 確保前端接收到原始代碼中所有 19 個欄位
+      // [100% 保留完整物件映射] 確保前端接收到原始代碼中所有 19 個欄位
       allItemsData.push({
         id: index + 1,
         name,

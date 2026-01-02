@@ -17,65 +17,218 @@
     />
 
     <style>
-      /* 針對代採購頁面的局部動態樣式優化 */
-      .calculation-box {
-        background: var(--p-primary-bg);
-        border: 1px solid var(--p-primary-light);
-        border-radius: var(--radius-md);
-        padding: 20px;
-        margin-top: 15px;
-        box-shadow: var(--shadow-inner);
+      /* --- 代採購頁面旗艦級深度優化 --- */
+
+      /* 1. 表單網格佈局優化 */
+      .form-row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
       }
+
+      /* 2. 強化計算區塊的層次感 */
+      .calculation-box {
+        background: linear-gradient(
+          135deg,
+          #ffffff 0%,
+          var(--p-primary-bg) 100%
+        ) !important;
+        border: 2px solid var(--p-primary-light) !important;
+        border-radius: var(--radius-md);
+        padding: 25px !important;
+        box-shadow: var(--shadow-2) !important;
+        position: relative;
+        overflow: hidden;
+        margin-top: 15px;
+      }
+
+      /* 背景裝飾符號 */
+      .calculation-box::before {
+        content: "¥";
+        position: absolute;
+        right: -10px;
+        bottom: -20px;
+        font-size: 8rem;
+        color: rgba(26, 115, 232, 0.05);
+        font-weight: 900;
+        pointer-events: none;
+      }
+
       .calc-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 10px;
+        align-items: center; /* 確保垂直居中 */
+        margin-bottom: 12px;
         font-size: 0.95rem;
         color: var(--text-body);
+        position: relative;
+        z-index: 1;
       }
+
+      /* 總計金額區塊 */
       .calc-row.total {
-        border-top: 1.5px dashed var(--border-main);
-        padding-top: 15px;
-        margin-top: 10px;
-        font-weight: 800;
-        color: var(--p-danger);
-        font-size: 1.25rem;
+        border-top: 2px dashed var(--p-primary-light) !important;
+        padding-top: 20px !important;
+        margin-top: 15px !important;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
       }
+
+      .calc-row.total span:first-child {
+        font-size: 0.85rem;
+        color: var(--p-primary);
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+
+      #display-total-twd {
+        font-size: 2.4rem !important;
+        color: var(--p-primary) !important;
+        font-family: "Monaco", "Consolas", monospace;
+        font-weight: 900;
+        text-shadow: 0 4px 12px rgba(26, 115, 232, 0.15);
+      }
+
+      /* 3. [修正重點] 資訊標籤 RWD 優化 */
       .rate-info-pill {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         color: var(--p-primary);
         background: var(--p-primary-light);
-        padding: 6px 12px;
+        padding: 8px 16px;
         border-radius: var(--radius-full);
         display: inline-flex;
+        flex-wrap: wrap; /* 允許手機版自動換行 */
         align-items: center;
-        gap: 6px;
-        margin-bottom: 15px;
-        font-weight: 600;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-weight: 700;
+        border: 1px solid rgba(26, 115, 232, 0.1);
+        line-height: 1.4;
       }
-      /* 強化輸入框標籤 */
-      .forecast-form-grid .form-group label {
+
+      .form-group label {
         color: var(--text-main);
         font-size: 0.9rem;
+        font-weight: 700;
         margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .form-group label i {
+        color: var(--p-primary);
+      }
+
+      /* 4. 歷史紀錄表格響應式卡片化 */
+      @media (max-width: 800px) {
+        .form-row-2 {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+
+        /* 針對手機版匯率標籤的特殊調整 */
+        .rate-info-pill {
+          display: flex;
+          border-radius: var(--radius-md);
+          padding: 12px;
+          justify-content: center;
+          text-align: center;
+        }
+
+        .rate-sep {
+          display: none;
+        } /* 手機版隱藏分隔線，利用換行區隔 */
+
+        .app-table thead {
+          display: none;
+        }
+        .app-table tr {
+          display: block;
+          margin-bottom: 16px;
+          background: #fff;
+          border-radius: var(--radius-md);
+          border: 1.5px solid var(--border-light);
+          padding: 12px;
+          box-shadow: var(--shadow-1);
+        }
+        .app-table td {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 5px !important;
+          border-bottom: 1px solid var(--border-light);
+          text-align: right;
+        }
+        .app-table td:last-child {
+          border-bottom: none;
+        }
+        .app-table td::before {
+          content: attr(data-label);
+          font-weight: 800;
+          color: var(--text-sub);
+          font-size: 0.8rem;
+          text-align: left;
+        }
+        /* 彈窗動畫 */
+        .animate-pop-in {
+          animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes popIn {
+          from {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        /* 手機版費率 Pill 換行優化 */
+        @media (max-width: 800px) {
+          .rate-info-pill {
+            display: flex !important;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 12px !important;
+            line-height: 1.8;
+          }
+
+          .rate-item-min {
+            flex-basis: 100%; /* 強制佔滿一行 */
+            text-align: center;
+            border-top: 1px solid rgba(26, 115, 232, 0.1);
+            margin-top: 8px;
+            padding-top: 5px;
+          }
+
+          .rate-sep {
+            display: none;
+          } /* 換行後隱藏原始分隔線 */
+        }
       }
     </style>
   </head>
 
-  <body class="dashboard-theme">
+  <body class="shopping-theme">
     <div class="app-layout-wrapper">
       <header class="site-header">
-        <div class="header-left">
+        <div class="header-container">
           <a href="index.html" class="logo-link">
-            <img src="assets/logo.png" alt="Logo" class="header-logo-img" />
+            <img
+              src="assets/logo.png"
+              alt="小跑豬集運"
+              class="header-logo-img"
+            />
             <span class="logo-text">
-              傢俱代採購
-              <small>小跑豬傢俱帶採服務</small>
+              小跑豬
+              <small>家具代採購服務</small>
             </span>
           </a>
-        </div>
-        <div class="header-right-actions">
-          <nav class="main-nav header-nav-right"></nav>
+          <nav class="header-nav main-nav"></nav>
         </div>
       </header>
 
@@ -91,41 +244,54 @@
             <h3><i class="fas fa-couch"></i> 申請代採購服務</h3>
           </div>
           <div class="card-body">
-            <p class="text-sub mb-20" style="font-size: 0.85rem">
-              當您無法直接支付人民幣給工廠時，由我們為您代付貨款，並提供具備正式品項的台灣發票。
+            <p
+              class="text-sub mb-20"
+              style="font-size: 0.88rem; line-height: 1.6"
+            >
+              當您無法直接支付人民幣給工廠時，由我們為您代付貨款，並提供具備正式品項的台灣發票，讓您的會計核銷無憂。
             </p>
 
             <div id="procurement-rate-display" class="rate-info-pill">
-              <i class="fas fa-info-circle"></i> 當前匯率：載入中... |
-              服務費率：載入中...
+              <i class="fas fa-info-circle"></i>
+              <span class="rate-item">當前匯率：載入中...</span>
+              <span class="rate-sep">|</span>
+              <span class="rate-item">服務費率：載入中...</span>
             </div>
 
             <form id="furniture-form" class="forecast-form-grid">
-              <div class="form-group full">
-                <label class="required">傢俱工廠名稱</label>
-                <input
-                  type="text"
-                  id="factoryName"
-                  class="form-control"
-                  placeholder="請輸入工廠全名或代號"
-                  required
-                />
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="required"
+                    ><i class="fas fa-industry"></i> 傢俱工廠名稱</label
+                  >
+                  <input
+                    type="text"
+                    id="factoryName"
+                    class="form-control"
+                    placeholder="請輸入工廠全名或代號"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="required"
+                    ><i class="fas fa-tag"></i> 代採購商品品名</label
+                  >
+                  <input
+                    type="text"
+                    id="productName"
+                    class="form-control"
+                    placeholder="例：實木沙發、餐桌"
+                    required
+                  />
+                </div>
               </div>
 
-              <div class="form-group full">
-                <label class="required">代採購商品品名</label>
-                <input
-                  type="text"
-                  id="productName"
-                  class="form-control"
-                  placeholder="例：北歐風實木沙發、大理石餐桌"
-                  required
-                />
-              </div>
-
-              <div class="flex-between" style="gap: 15px; width: 100%">
-                <div class="form-group" style="flex: 1">
-                  <label class="required">數量</label>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="required"
+                    ><i class="fas fa-layer-group"></i> 數量</label
+                  >
                   <input
                     type="number"
                     id="quantity"
@@ -135,8 +301,10 @@
                     required
                   />
                 </div>
-                <div class="form-group" style="flex: 2">
-                  <label class="required">人民幣單價 (RMB)</label>
+                <div class="form-group">
+                  <label class="required"
+                    ><i class="fas fa-yen-sign"></i> 人民幣單價 (RMB)</label
+                  >
                   <input
                     type="number"
                     id="priceRMB"
@@ -154,15 +322,15 @@
                     <span>商品總額 (RMB):</span>
                     <span
                       id="display-subtotal-rmb"
-                      style="font-family: 'Monaco', monospace"
+                      style="font-family: 'Monaco', monospace; font-weight: 700"
                       >¥ 0.00</span
                     >
                   </div>
                   <div class="calc-row">
-                    <span>服務費 (含品項發票):</span>
+                    <span>服務費 (含 5% 品項發票):</span>
                     <span
                       id="display-service-fee"
-                      style="font-family: 'Monaco', monospace"
+                      style="font-family: 'Monaco', monospace; font-weight: 700"
                       >¥ 0.00</span
                     >
                   </div>
@@ -171,28 +339,31 @@
                     <span id="display-total-twd">$ 0</span>
                   </div>
                   <div class="text-center mt-10">
-                    <small class="text-sub" style="font-size: 11px"
-                      >* 實際匯率與總額以管理員審核結果為準</small
+                    <small
+                      class="text-sub"
+                      style="font-size: 11px; opacity: 0.8"
                     >
+                      * 實際支付總額以管理員審核結果為準
+                    </small>
                   </div>
                 </div>
               </div>
 
               <div class="form-group full">
-                <label>備註需求</label>
+                <label><i class="fas fa-comment-dots"></i> 備註需求</label>
                 <textarea
                   id="note"
                   class="form-control"
                   rows="3"
-                  placeholder="如有特定規格、顏色或聯繫方式請註明..."
+                  placeholder="如有特定規格、顏色或工廠聯繫方式請在此註明..."
                 ></textarea>
               </div>
 
               <div class="form-group full" style="margin-top: 10px">
                 <button
                   type="submit"
-                  class="btn btn-primary animate-slide-up"
-                  style="width: 100%; height: 50px"
+                  class="btn btn-checkout btn-full animate-slide-up"
+                  style="height: 56px"
                 >
                   <i class="fas fa-paper-plane"></i> 提交代採購申請
                 </button>
@@ -206,7 +377,7 @@
             <h3><i class="fas fa-history"></i> 我的申請紀錄</h3>
           </div>
           <div class="card-body" style="padding: 0">
-            <div class="app-table-container">
+            <div class="app-table-container" style="border: none">
               <table class="app-table">
                 <thead>
                   <tr>
@@ -219,12 +390,12 @@
                 </thead>
                 <tbody id="furniture-history-body">
                   <tr>
-                    <td colspan="5" class="text-center" style="padding: 40px">
+                    <td colspan="5" class="text-center" style="padding: 60px">
                       <div
                         class="spinner-apple"
-                        style="margin: 0 auto 10px"
+                        style="margin: 0 auto 15px"
                       ></div>
-                      <p class="text-sub">正在同步紀錄中...</p>
+                      <p class="text-sub fw-600">正在同步雲端紀錄...</p>
                     </td>
                   </tr>
                 </tbody>
@@ -245,9 +416,8 @@
     <script src="js/dashboard-furniture.js" defer></script>
 
     <script>
-      // 頁面載入完成後的小細節處理
       document.addEventListener("DOMContentLoaded", () => {
-        // 確保 Wrapper 陰影在桌面版正常顯示
+        // RWD 桌面版優化
         if (window.innerWidth > 800) {
           document
             .querySelector(".app-layout-wrapper")
