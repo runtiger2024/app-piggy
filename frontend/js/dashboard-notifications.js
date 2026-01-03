@@ -1,5 +1,5 @@
 // frontend/js/dashboard-notifications.js
-// V2026.1.7 - 旗艦版通知邏輯：修正鈴鐺穩定性、紅藍狀態精確切換、強化跳轉引導
+// V2026.1.8 - 穩定修復版：統一 Badge ID、強化錯誤隔離、對齊後端路由
 
 (function () {
   /**
@@ -47,14 +47,19 @@
    * 開啟選單邏輯
    */
   async function openNotifDropdown(btn, dropdown) {
+    if (!dropdown || !btn) return;
     dropdown.style.display = "block";
+
     // 開啟時：強制切換為藍色狀態 (is-active)，移除紅色狀態 (has-new)
     btn.classList.add("is-active");
     btn.classList.remove("has-new");
 
-    // 隱藏紅點數字，因為用戶已在查看
-    const badge = document.getElementById("notification-badge");
-    if (badge) badge.style.display = "none";
+    // 隱藏所有紅點標籤
+    const badges = ["notification-badge", "notif-badge"];
+    badges.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
+    });
 
     await loadNotifications();
   }
@@ -63,9 +68,11 @@
    * 關閉選單邏輯
    */
   function closeNotifDropdown(btn, dropdown) {
+    if (!dropdown) return;
     dropdown.style.display = "none";
+
     // 關閉時：移除藍色狀態
-    btn.classList.remove("is-active");
+    if (btn) btn.classList.remove("is-active");
 
     // 關閉後重新檢查一次未讀數，若仍有未讀則恢復紅色
     checkUnreadCount();
@@ -90,38 +97,30 @@
       }
 
       const data = await res.json();
-      const badge = document.getElementById("notif-badge");
-      if (badge && data.count !== undefined) {
-        badge.textContent = data.count;
-        badge.style.display = data.count > 0 ? "block" : "none";
+
+      // 統一更新頁面上所有可能的 Badge ID
+      const badges = ["notification-badge", "notif-badge"];
+      badges.forEach((id) => {
+        const badge = document.getElementById(id);
+        if (badge && data.count !== undefined) {
+          badge.textContent = data.count > 99 ? "99+" : data.count;
+          badge.style.display = data.count > 0 ? "flex" : "none";
+        }
+      });
+
+      // 更新鈴鐺按鈕外觀
+      const btnNotif = document.getElementById("btn-notification");
+      const dropdown = document.getElementById("notification-dropdown");
+      if (btnNotif && dropdown && dropdown.style.display !== "block") {
+        if (data.count > 0) {
+          btnNotif.classList.add("has-new");
+        } else {
+          btnNotif.classList.remove("has-new");
+        }
       }
     } catch (e) {
       // 關鍵：攔截錯誤，不要讓它往外噴，以免中斷其他腳本執行
       console.error("通知功能載入失敗，已安全攔截：", e.message);
-    }
-  }
-
-  /**
-   * 更新鈴鐺紅點與外觀顏色
-   */
-  function updateBadge(count) {
-    const badge = document.getElementById("notification-badge");
-    const btnNotif = document.getElementById("btn-notification");
-    const dropdown = document.getElementById("notification-dropdown");
-
-    if (!badge || !btnNotif) return;
-
-    if (count > 0) {
-      badge.textContent = count > 99 ? "99+" : count;
-
-      // 只有當選單沒打開時，才顯示紅點與紅色鈴鐺
-      if (dropdown.style.display !== "block") {
-        badge.style.display = "flex";
-        btnNotif.classList.add("has-new");
-      }
-    } else {
-      badge.style.display = "none";
-      btnNotif.classList.remove("has-new");
     }
   }
 
@@ -158,6 +157,7 @@
    */
   function renderNotifications(list) {
     const listEl = document.getElementById("notification-list");
+    if (!listEl) return;
     listEl.innerHTML = "";
 
     if (!list || list.length === 0) {
@@ -175,7 +175,6 @@
       let typeClass = "notif-type-system";
       const type = n.type ? n.type.toUpperCase() : "SYSTEM";
 
-      // 類型與圖示配色映射
       if (type.includes("WALLET")) {
         iconClass = "fas fa-wallet";
         typeClass = "notif-type-wallet";
@@ -189,7 +188,10 @@
 
       const itemDiv = document.createElement("div");
       itemDiv.className = `notification-item ${!n.isRead ? "unread" : ""}`;
-      itemDiv.onclick = () => handleNotificationClick(n);
+      itemDiv.onclick = (e) => {
+        e.stopPropagation();
+        handleNotificationClick(n);
+      };
 
       itemDiv.innerHTML = `
         <div class="notif-icon-circle ${typeClass}">
@@ -235,7 +237,9 @@
           method: "PUT",
           headers: { Authorization: `Bearer ${window.dashboardToken}` },
         });
-      } catch (e) {}
+      } catch (e) {
+        console.error("標記已讀失敗:", e);
+      }
     }
 
     // 關閉選單

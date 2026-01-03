@@ -367,28 +367,43 @@ function renderPackagesTable(dataToRender = null) {
       if (typeof window.updateCheckoutBar === "function")
         window.updateCheckoutBar();
     });
-    tr.querySelector(".btn-edit")?.addEventListener("click", (e) => {
-      // 1. 阻止事件冒泡 (關鍵防護)
-      e.stopPropagation();
+    tr.querySelector(".btn-edit")?.addEventListener("click", function (e) {
+      // 1. 強力隔離：防止事件傳到 document 或其他可能崩潰的全局監聽器
       e.preventDefault();
+      e.stopPropagation();
 
-      const normalizedStatus = (pkg.status || "")
-        .toString()
-        .toUpperCase()
-        .trim();
+      console.log("=== 修改按鈕點擊診斷開始 ===");
+      console.log("當前包裹資料:", pkg);
 
-      if (normalizedStatus === "ARRIVED") {
+      // 2. 狀態比對 (增加容錯處理)
+      const rawStatus = pkg.status || "";
+      const currentStatus = rawStatus.toString().toUpperCase().trim();
+      console.log("處理後狀態值:", `"${currentStatus}"`);
+
+      if (currentStatus === "ARRIVED") {
         const msg = "包裹已經入庫量完尺寸、重量，不予修改，如有問題請洽客服";
+        console.log("判定為已入庫，嘗試跳出通知...");
 
-        // 2. 即使通知功能報錯，這裡也能獨立運行
+        // 3. 檢查通知函式是否存在
         if (typeof window.showMessage === "function") {
+          console.log("呼叫 window.showMessage...");
           window.showMessage(msg, "error");
         } else {
+          console.error("錯誤：window.showMessage 函式不存在！");
+          console.log("改用系統 alert 備案...");
           alert(msg);
         }
+
+        console.log("=== 診斷結束：攔截成功 ===");
         return;
       }
-      openEditPackageModal(pkg);
+
+      console.log("狀態非 ARRIVED，開啟編輯視窗...");
+      if (typeof openEditPackageModal === "function") {
+        openEditPackageModal(pkg);
+      } else {
+        console.error("錯誤：找不到 openEditPackageModal 函式");
+      }
     });
     tr.querySelector(".btn-delete")?.addEventListener("click", () =>
       handleDeletePackage(pkg)

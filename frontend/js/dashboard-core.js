@@ -1,6 +1,6 @@
 // frontend/js/dashboard-core.js
-// 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件
-// V2026.1.11 - 旗艦穩定版：會員編號一體化(去前綴)、整合發票資訊與 DOM 安全檢查
+// 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件、通知系統
+// V2026.1.15 - 旗艦終極修復版：重構通知系統(Toast式)、會員編號一體化、整合發票資訊
 
 // --- [1. 全域變數與狀態管理] ---
 window.currentUser = null;
@@ -11,20 +11,60 @@ window.BANK_INFO_CACHE = null; // 暫存系統銀行資訊
 // --- [2. 基礎工具函式] ---
 
 /**
- * 顯示全域訊息提示 (Alert Box)
+ * 顯示全域訊息提示 (Toast 彈窗系統)
+ * 對接 CSS V41.0 的 #message-container 與 .toast-message
+ * @param {string} message - 訊息內容
+ * @param {string} type - 類型: success, error, info, warning
  */
-window.showMessage = function (message, type) {
-  const messageBox = document.getElementById("message-box");
-  if (!messageBox) return;
+window.showMessage = function (message, type = "info") {
+  const container = document.getElementById("message-container");
+  if (!container) {
+    console.error(
+      "找不到 message-container，請確保 HTML 末尾存在 <div id='message-container'></div>"
+    );
+    // 備案機制：若容器不存在則使用系統 alert
+    alert(message);
+    return;
+  }
 
-  messageBox.textContent = message;
-  // 對接 CSS: alert-success, alert-error, alert-info, alert-warning
-  messageBox.className = `alert alert-${type} animate-slide-up`;
-  messageBox.style.display = "block";
+  // 1. 建立 Toast 元素
+  const toast = document.createElement("div");
+  // 樣式類別對齊 CSS 定義
+  toast.className = `toast-message ${type}`;
 
-  setTimeout(() => {
-    messageBox.style.display = "none";
+  // 2. 根據類型決定 FontAwesome 圖示
+  let iconClass = "fa-info-circle";
+  if (type === "success") iconClass = "fa-check-circle";
+  if (type === "error") iconClass = "fa-exclamation-circle";
+  if (type === "warning") iconClass = "fa-exclamation-triangle";
+
+  toast.innerHTML = `
+    <i class="fas ${iconClass}"></i>
+    <div class="toast-text">${message}</div>
+  `;
+
+  // 3. 放入容器中顯示
+  container.appendChild(toast);
+
+  // 4. 自動消失邏輯 (3.5秒後開始淡出)
+  const timer = setTimeout(() => {
+    toast.classList.add("fade-out");
+    // 等待 CSS 消失動畫完成後移除 DOM
+    setTimeout(() => {
+      if (toast.parentNode === container) {
+        container.removeChild(toast);
+      }
+    }, 500);
   }, 3500);
+
+  // 點擊手動關閉
+  toast.onclick = () => {
+    clearTimeout(timer);
+    toast.classList.add("fade-out");
+    setTimeout(() => {
+      if (toast.parentNode === container) container.removeChild(toast);
+    }, 300);
+  };
 };
 
 /**
@@ -40,7 +80,8 @@ window.openImages = function (images) {
   if (images && Array.isArray(images) && images.length > 0) {
     images.forEach((imgUrl) => {
       const img = document.createElement("img");
-      img.src = `${API_BASE_URL}${imgUrl}`;
+      // 支援絕對路徑與相對路徑
+      img.src = imgUrl.startsWith("http") ? imgUrl : `${API_BASE_URL}${imgUrl}`;
       img.alt = "預覽圖";
       img.style.cssText =
         "width:100%; object-fit:cover; border-radius:8px; cursor:zoom-in; border:1px solid #eee;";
@@ -86,8 +127,7 @@ window.loadUserProfile = async function () {
 };
 
 /**
- * [核心優化] 將使用者資料渲染至畫面上所有相關的 ID
- * 包含：會員編號(去前綴一體化)、基本個資、發票預設設定
+ * 將使用者資料渲染至畫面上所有相關的 ID
  */
 function syncProfileToUI(user) {
   // 1. 迎賓文字 (Dashboard Hero & Header)
@@ -107,12 +147,11 @@ function syncProfileToUI(user) {
     "edit-phone": user.phone || "",
     "edit-email": user.email,
     "edit-address": user.defaultAddress || user.address || "",
-    "edit-taxId": user.defaultTaxId || "", // 同步發票統編
-    "edit-invoiceTitle": user.defaultInvoiceTitle || "", // 同步發票抬頭
+    "edit-taxId": user.defaultTaxId || "",
+    "edit-invoiceTitle": user.defaultInvoiceTitle || "",
     "modal-user-name": user.name || "未設定姓名",
   };
 
-  // 遍歷映射並更新內容，支援 Input 與純文字標籤
   for (const [id, value] of Object.entries(mapping)) {
     const el = document.getElementById(id);
     if (el) {
@@ -124,8 +163,7 @@ function syncProfileToUI(user) {
     }
   }
 
-  // 3. [會員編號一體化] 顯示專屬會員標識碼：徹底移除 PIGGY- 前綴
-  // 同步更新 Hero 區塊與彈窗標頭中的編號
+  // 3. 會員編號顯示 (徹底移除 PIGGY- 前綴)
   const userIdElements = document.querySelectorAll(
     "#modal-user-id, #hero-user-id"
   );
@@ -133,7 +171,6 @@ function syncProfileToUI(user) {
     user.piggyId || (user.id ? user.id.slice(-6).toUpperCase() : "...");
 
   userIdElements.forEach((el) => {
-    // 移除 PIGGY- 前綴，直接顯示資料庫的 RP 號碼或原始 ID 後六碼
     el.textContent = finalMemberId;
   });
 }
@@ -155,7 +192,6 @@ window.loadSystemSettings = async function () {
         }
         if (data.remoteAreas) window.REMOTE_AREAS = data.remoteAreas;
 
-        // 儲存銀行資訊並通知相關 UI 更新
         if (data.bankInfo) {
           window.BANK_INFO_CACHE = data.bankInfo;
           if (typeof window.updateBankInfoDOM === "function") {
@@ -173,16 +209,12 @@ window.loadSystemSettings = async function () {
 
 /**
  * 初始化具備預覽與刪除功能的圖片上傳器
- * @param {string} inputId - 隱藏的 input[type="file"] ID
- * @param {string} containerId - 預覽容器 ID
- * @param {number} maxFiles - 最大限制張數
  */
 window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
   const mainInput = document.getElementById(inputId);
   const container = document.getElementById(containerId);
   if (!mainInput || !container) return;
 
-  // 使用 DataTransfer 對象模擬檔案清單操作，保留原始功能
   const dataTransfer = new DataTransfer();
 
   function render() {
@@ -203,7 +235,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
       removeBtn.onclick = (e) => {
         e.stopPropagation();
         dataTransfer.items.remove(index);
-        mainInput.files = dataTransfer.files; // 同步回原始 Input
+        mainInput.files = dataTransfer.files;
         render();
       };
 
@@ -212,7 +244,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
       container.appendChild(item);
     });
 
-    // 2. 若未達張數上限，則顯示帶有「相機圖示」的添加按鈕
+    // 2. 添加按鈕
     if (dataTransfer.files.length < maxFiles) {
       const addLabel = document.createElement("label");
       addLabel.className = "upload-add-btn";
@@ -243,9 +275,8 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
     }
   }
 
-  render(); // 初始渲染
+  render();
 
-  // 提供外部重置方法 (用於表單 reset)
   mainInput.resetUploader = () => {
     dataTransfer.items.clear();
     mainInput.value = "";
@@ -254,8 +285,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
 };
 
 /**
- * 全域導向詳情輔助 (用於通知系統跳轉至指定集運單)
- * 整合不同版本之命名慣例
+ * 全域導向詳情輔助
  */
 window.openShipmentDetails = function (id) {
   if (window.viewShipmentDetail) {
@@ -264,7 +294,6 @@ window.openShipmentDetails = function (id) {
     typeof window.openShipmentDetails === "function" &&
     window.openShipmentDetails !== window.openShipmentDetails
   ) {
-    // 避免無限遞迴，僅在 dashboard-main.js 中的函式存在時呼叫
     window.openShipmentDetails(id);
   }
 };

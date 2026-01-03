@@ -2964,3 +2964,130 @@
   position: relative;
   z-index: 10000;
 }
+/* --- [V41.0] 全域通知系統 (showMessage) 終極美化與層級修正 --- */
+
+/* 通知容器：確保在最頂層 */
+#message-container {
+  position: fixed;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11000 !important; /* 超過所有 Modal 和 Header */
+  width: 90%;
+  max-width: 400px;
+  pointer-events: none; /* 防止容器阻擋點擊，但內容要恢復 */
+}
+
+/* 單個通知條 */
+.toast-message {
+  pointer-events: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 5px solid #ccc;
+  animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* 成功狀態 */
+.toast-message.success {
+  border-left-color: #28a745;
+}
+.toast-message.success i {
+  color: #28a745;
+}
+
+/* 錯誤狀態 (包裹不予修改會用這個) */
+.toast-message.error {
+  border-left-color: #ff4d4f;
+  background: #fff1f0;
+}
+.toast-message.error i {
+  color: #ff4d4f;
+}
+
+.toast-message i {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.toast-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.4;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 關閉動畫 */
+.toast-message.fade-out {
+  animation: toastFadeOut 0.3s ease forwards;
+}
+
+@keyframes toastFadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.9);
+  }
+}
+/* --- [V41.0] 全域通知系統 CSS --- */
+#message-container {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11000 !important; /* 確保高於所有 Modal (2000+) 和 Header (1000) */
+  width: 90%;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.toast-message {
+  pointer-events: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 5px solid #ccc;
+  animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.toast-message.error {
+  border-left-color: #ff4d4f;
+  background: #fff1f0;
+}
+
+.toast-text {
+  font-size: 14px;
+  font-weight: 800;
+  color: #333;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

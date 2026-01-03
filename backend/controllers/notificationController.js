@@ -1,6 +1,26 @@
 // backend/controllers/notificationController.js
-
 const prisma = require("../config/db.js");
+
+/**
+ * @description 僅取得未讀通知總數
+ * @route GET /api/notifications/unread-count
+ */
+const getUnreadCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const count = await prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+
+    res.status(200).json({
+      success: true,
+      count,
+    });
+  } catch (error) {
+    console.error("取得未讀數失敗:", error);
+    res.status(500).json({ success: false, message: "伺服器錯誤" });
+  }
+};
 
 /**
  * @description 取得我的通知 (含未讀數量)
@@ -10,7 +30,6 @@ const getMyNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
     const { limit } = req.query;
-
     const take = limit ? parseInt(limit) : 20;
 
     const [notifications, unreadCount] = await prisma.$transaction([
@@ -45,7 +64,7 @@ const markAsRead = async (req, res) => {
     const { id } = req.params;
 
     await prisma.notification.updateMany({
-      where: { id, userId }, // 確保只能更新自己的通知
+      where: { id, userId },
       data: { isRead: true },
     });
 
@@ -62,7 +81,6 @@ const markAsRead = async (req, res) => {
 const markAllAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
-
     await prisma.notification.updateMany({
       where: { userId, isRead: false },
       data: { isRead: true },
@@ -75,6 +93,7 @@ const markAllAsRead = async (req, res) => {
 };
 
 module.exports = {
+  getUnreadCount, // <-- 確保匯出新函數
   getMyNotifications,
   markAsRead,
   markAllAsRead,
