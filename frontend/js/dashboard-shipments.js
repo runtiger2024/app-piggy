@@ -1,6 +1,7 @@
 // frontend/js/dashboard-shipments.js
-// V2025.Final.Transparent.UI - 前端費用透明化顯示邏輯適配 (含傢俱類型顯示修復 & 圖片路徑修復)
+// V2025.Final.Transparent.UI - 前端費用透明化顯示邏輯適配 (含傢俱類型顯示修復 & 圖片 path 修復)
 // [Update] 修正合併打包結算條顯隱控制邏輯
+// [Optimization] 整合銀行轉帳彈窗詳細資訊、一鍵複製與垃圾郵件提醒
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
@@ -345,7 +346,7 @@ window.handleCreateShipmentSubmit = async function (e) {
   fd.append("phone", document.getElementById("ship-phone").value);
   fd.append(
     "shippingAddress",
-    (document.getElementById("ship-area-search").value || "") +
+    (document.getElementById("ship-area-search")?.value || "") +
       " " +
       document.getElementById("ship-street-address").value
   );
@@ -398,18 +399,35 @@ window.handleCreateShipmentSubmit = async function (e) {
       if (paymentMethod === "WALLET") {
         alert("訂單建立成功！費用已從錢包扣除，系統將自動安排出貨。");
       } else {
+        // [優化植入] 銀行資訊顯示邏輯
         if (window.BANK_INFO_CACHE) {
-          const bName = document.getElementById("bank-name");
+          // 支援兩種 ID 命名的顯示 (對應您的不同 HTML 版本)
+          const bName =
+            document.getElementById("bank-name-display") ||
+            document.getElementById("bank-name");
           if (bName) bName.textContent = window.BANK_INFO_CACHE.bankName;
-          const bBranch = document.getElementById("bank-branch");
-          if (bBranch) bBranch.textContent = window.BANK_INFO_CACHE.branch;
-          const bAcc = document.getElementById("bank-account");
+
+          const bAcc =
+            document.getElementById("bank-account-display") ||
+            document.getElementById("bank-account");
           if (bAcc) bAcc.textContent = window.BANK_INFO_CACHE.account;
-          const bHolder = document.getElementById("bank-holder");
+
+          const bHolder =
+            document.getElementById("bank-holder-display") ||
+            document.getElementById("bank-holder");
           if (bHolder) bHolder.textContent = window.BANK_INFO_CACHE.holder;
+
+          const bBranch = document.getElementById("bank-branch");
+          if (bBranch)
+            bBranch.textContent = window.BANK_INFO_CACHE.branch || "";
         }
+
+        // 顯示彈窗
         const bankModal = document.getElementById("bank-info-modal");
         if (bankModal) bankModal.style.display = "flex";
+
+        // 垃圾郵件提醒
+        console.log("訂單郵件已發送，提醒用戶檢查垃圾郵件");
       }
       window.loadMyShipments();
       window.loadMyPackages();
@@ -746,3 +764,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// [新增全域輔助函式] 一鍵複製邏輯
+window.copyText = function (elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const text = el.innerText.trim();
+  if (!text || text === "--") return;
+
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      // 取得按鈕並改變狀態反饋
+      const btn = event.target;
+      const originalText = btn.innerText;
+      btn.innerText = "已複製!";
+      btn.style.backgroundColor = "#28a745";
+      btn.style.color = "#fff";
+
+      setTimeout(() => {
+        btn.innerText = originalText;
+        btn.style.backgroundColor = "";
+        btn.style.color = "";
+      }, 2000);
+    })
+    .catch((err) => {
+      alert("複製失敗，請手動選取文字");
+    });
+};

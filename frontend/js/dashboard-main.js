@@ -1,5 +1,6 @@
 // frontend/js/dashboard-main.js
 // V2026.1.14 - 旗艦終極穩定版：100% 還原核心邏輯、整合發票欄位、修復全域控制項、安全檢查與分頁自動滾動
+// [優化更新]：新增銀行資訊一鍵複製與引導上傳功能
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!window.dashboardToken) {
@@ -46,6 +47,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+/**
+ * --- 全域優化新增：一鍵複製與導向功能 ---
+ */
+// 支援銀行資訊彈窗的複製功能
+window.copyText = function (elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const text = el.innerText.trim();
+  if (!text || text === "--") return;
+
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      const btn = event.target;
+      const originalText = btn.innerText;
+      btn.innerText = "已複製!";
+      btn.style.backgroundColor = "#28a745";
+      btn.style.color = "#fff";
+
+      setTimeout(() => {
+        btn.innerText = originalText;
+        btn.style.backgroundColor = "";
+        btn.style.color = "";
+      }, 2000);
+    })
+    .catch((err) => {
+      console.warn("複製失敗:", err);
+      alert("複製失敗，請手動複製");
+    });
+};
+
+// 銀行彈窗專用的引導上傳按鈕邏輯
+window.openUploadFromBankModal = function () {
+  const bModal = document.getElementById("bank-info-modal");
+  if (bModal) bModal.style.display = "none";
+  if (window.lastCreatedShipmentId) {
+    window.openUploadProof(window.lastCreatedShipmentId);
+  } else {
+    if (window.loadMyShipments) window.loadMyShipments();
+    alert("請在下方列表點擊「上傳憑證」");
+  }
+};
 
 /**
  * --- 全域 Modal 控制函式 (修復 ReferenceError) ---
@@ -318,12 +362,22 @@ function bindGlobalButtons() {
   const btnCopyBank = document.getElementById("btn-copy-bank-info");
   if (btnCopyBank) {
     btnCopyBank.addEventListener("click", () => {
+      // 支援多種 ID 抓取以維持穩定
       const bName =
-        document.getElementById("bank-name")?.innerText.trim() || "";
+        (
+          document.getElementById("bank-name-display") ||
+          document.getElementById("bank-name")
+        )?.innerText.trim() || "";
       const bAcc =
-        document.getElementById("bank-account")?.innerText.trim() || "";
+        (
+          document.getElementById("bank-account-display") ||
+          document.getElementById("bank-account")
+        )?.innerText.trim() || "";
       const bHolder =
-        document.getElementById("bank-holder")?.innerText.trim() || "";
+        (
+          document.getElementById("bank-holder-display") ||
+          document.getElementById("bank-holder")
+        )?.innerText.trim() || "";
       const text = `【匯款資訊】\n銀行：${bName}\n帳號：${bAcc}\n戶名：${bHolder}`;
 
       navigator.clipboard
@@ -336,13 +390,8 @@ function bindGlobalButtons() {
   const btnUploadNow = document.getElementById("btn-upload-now");
   if (btnUploadNow) {
     btnUploadNow.addEventListener("click", () => {
-      const bModal = document.getElementById("bank-info-modal");
-      if (bModal) bModal.style.display = "none";
-      if (window.lastCreatedShipmentId) {
-        window.openUploadProof(window.lastCreatedShipmentId);
-      } else {
-        if (window.loadMyShipments) window.loadMyShipments();
-      }
+      // 呼叫引導上傳邏輯
+      window.openUploadFromBankModal();
     });
   }
 

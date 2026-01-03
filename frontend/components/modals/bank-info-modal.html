@@ -1,0 +1,137 @@
+<div id="bank-info-modal" class="modal-overlay" style="display: none">
+  <div class="modal-content" style="max-width: 450px">
+    <div
+      class="modal-header"
+      style="border-bottom: 1px solid #eee; padding-bottom: 10px"
+    >
+      <h3><i class="fas fa-university"></i> 訂單已建立！請完成轉帳</h3>
+    </div>
+    <div class="modal-body" style="padding: 20px 0">
+      <div
+        class="alert alert-info"
+        style="
+          background: #e3f2fd;
+          color: #0d47a1;
+          padding: 10px;
+          border-radius: 5px;
+          font-size: 13px;
+          margin-bottom: 15px;
+        "
+      >
+        <i class="fas fa-envelope-open-text"></i>
+        訂單通知信已同步發送，若沒看到請檢查<strong>「垃圾郵件」</strong>匣。
+      </div>
+
+      <div
+        style="
+          background: #f8f9fa;
+          padding: 15px;
+          border-radius: 8px;
+          border: 1px solid #dee2e6;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+          "
+        >
+          <span style="font-size: 14px; color: #666">銀行名稱</span>
+          <div>
+            <strong id="bank-name-display" style="margin-right: 10px"
+              >--</strong
+            >
+            <button
+              type="button"
+              class="btn-copy"
+              onclick="copyText('bank-name-display')"
+            >
+              複製
+            </button>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+          "
+        >
+          <span style="font-size: 14px; color: #666">轉帳帳號</span>
+          <div>
+            <strong
+              id="bank-account-display"
+              style="margin-right: 10px; color: #d32f2f; font-family: monospace"
+              >--</strong
+            >
+            <button
+              type="button"
+              class="btn-copy"
+              onclick="copyText('bank-account-display')"
+            >
+              複製
+            </button>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <span style="font-size: 14px; color: #666">戶名</span>
+          <div>
+            <strong id="bank-holder-display" style="margin-right: 10px"
+              >--</strong
+            >
+            <button
+              type="button"
+              class="btn-copy"
+              onclick="copyText('bank-holder-display')"
+            >
+              複製
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal-footer"
+      style="
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+      "
+    >
+      <button
+        class="btn btn-secondary"
+        onclick="document.getElementById('bank-info-modal').style.display='none'"
+      >
+        稍後上傳
+      </button>
+      <button class="btn btn-primary" onclick="openUploadFromBankModal()">
+        <i class="fas fa-upload"></i> 立即上傳憑證
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .btn-copy {
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .btn-copy:hover {
+    background: #eee;
+  }
+</style>
