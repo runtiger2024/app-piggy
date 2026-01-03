@@ -1,5 +1,5 @@
 // backend/controllers/authController.js
-// V14 - 旗艦穩定版：會員編號(Member ID)與專屬識別碼一體化整合邏輯
+// V15 - 旗艦穩定修復版：解決註冊併發衝突、強化郵件報錯機制
 
 const prisma = require("../config/db.js");
 const bcrypt = require("bcryptjs");
@@ -7,8 +7,14 @@ const crypto = require("crypto");
 const generateToken = require("../utils/generateToken.js");
 const sgMail = require("@sendgrid/mail");
 
+// 設定 SendGrid API Key (若環境變數已設定)
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
 /**
- * 註冊使用者：包含 RP0000889 遞增編號邏輯 (唯一會員編號)
+ * 註冊使用者：包含 RP0000889 遞增編號邏輯
+ * [修復] 加入 while 迴圈與唯一性衝突重試邏輯，避免多人同時註冊時撞號。
  */
 const registerUser = async (req, res) => {
   try {
@@ -30,51 +36,72 @@ const registerUser = async (req, res) => {
         .json({ success: false, message: "這個 Email 已經被註冊了" });
     }
 
-    // --- [核心優化：生成唯一的遞增 RP 會員編號] ---
-    // 查找資料庫中最後一位以 RP 開頭的會員，確保編號連續性
-    const lastUser = await prisma.user.findFirst({
-      where: { piggyId: { startsWith: "RP" } },
-      orderBy: { piggyId: "desc" },
-    });
-
-    let nextPiggyId = "RP0000889"; // 定義起始號碼
-
-    if (lastUser && lastUser.piggyId) {
-      // 提取數字部分並遞增：例如 RP0000889 -> 889 -> 890
-      const currentNum = parseInt(lastUser.piggyId.replace("RP", ""), 10);
-      nextPiggyId = "RP" + String(currentNum + 1).padStart(7, "0");
-    }
-    // ------------------------------------------
-
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const newUser = await prisma.user.create({
-      data: {
-        email: lowerEmail,
-        passwordHash: passwordHash,
-        name: name,
-        piggyId: nextPiggyId, // 這是全系統唯一的會員編號/識別碼
+    let newUser;
+    let retryCount = 0;
+    const maxRetries = 5; // 最多重試 5 次，確保在高併發下也能成功生成編號
+
+    // --- [核心優化：帶有衝突重試的編號生成邏輯] ---
+    while (!newUser && retryCount < maxRetries) {
+      // 1. 查找資料庫中最後一位以 RP 開頭的會員
+      const lastUser = await prisma.user.findFirst({
+        where: { piggyId: { startsWith: "RP" } },
+        orderBy: { piggyId: "desc" },
+      });
+
+      let nextPiggyId = "RP0000889"; // 初始起始號碼
+
+      if (lastUser && lastUser.piggyId) {
+        // 提取數字部分並遞增：例如 RP0000889 -> 889 -> 890
+        const currentNum = parseInt(lastUser.piggyId.replace("RP", ""), 10);
+        nextPiggyId = "RP" + String(currentNum + 1).padStart(7, "0");
+      }
+
+      try {
+        // 嘗試建立使用者
+        newUser = await prisma.user.create({
+          data: {
+            email: lowerEmail,
+            passwordHash: passwordHash,
+            name: name,
+            piggyId: nextPiggyId,
+            permissions: [],
+          },
+        });
+      } catch (dbError) {
+        // P2002 是 Prisma 的唯一性約束衝突錯誤代碼 (Unique constraint violation)
+        if (dbError.code === "P2002") {
+          retryCount++;
+          console.warn(
+            `[註冊衝突] 編號 ${nextPiggyId} 已被佔用，進行第 ${retryCount} 次重試...`
+          );
+        } else {
+          // 如果是其他資料庫錯誤則直接拋出
+          throw dbError;
+        }
+      }
+    }
+
+    if (!newUser) {
+      return res
+        .status(500)
+        .json({ success: false, message: "伺服器繁忙，請稍後再試" });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "註冊成功！",
+      user: {
+        id: newUser.id,
+        piggyId: newUser.piggyId,
+        email: newUser.email,
+        name: newUser.name,
         permissions: [],
       },
+      token: generateToken(newUser.id),
     });
-
-    if (newUser) {
-      res.status(201).json({
-        success: true,
-        message: "註冊成功！",
-        user: {
-          id: newUser.id,
-          piggyId: newUser.piggyId, // 會員編號
-          email: newUser.email,
-          name: newUser.name,
-          permissions: [],
-        },
-        token: generateToken(newUser.id),
-      });
-    } else {
-      return res.status(400).json({ success: false, message: "註冊失敗" });
-    }
   } catch (error) {
     console.error("註冊時發生錯誤:", error);
     res.status(500).json({ success: false, message: "伺服器發生錯誤" });
@@ -105,13 +132,14 @@ const loginUser = async (req, res) => {
         message: "登入成功！",
         user: {
           id: user.id,
-          piggyId: user.piggyId, // 確保回傳會員編號
+          piggyId: user.piggyId,
           email: user.email,
           name: user.name,
           permissions: permissions,
           defaultTaxId: user.defaultTaxId,
           defaultInvoiceTitle: user.defaultInvoiceTitle,
         },
+        // 將權限塞入 Token 以減少後續 API 的 DB 查詢壓力
         token: generateToken(user.id, { permissions }),
       });
     } else {
@@ -136,7 +164,7 @@ const getMe = async (req, res) => {
         where: { id: user.id },
         select: {
           id: true,
-          piggyId: true, // 會員編號 (識別碼)
+          piggyId: true,
           email: true,
           name: true,
           permissions: true,
@@ -181,7 +209,7 @@ const updateMe = async (req, res) => {
       },
       select: {
         id: true,
-        piggyId: true, // 確保更新後仍回傳識別碼
+        piggyId: true,
         email: true,
         name: true,
         phone: true,
@@ -205,6 +233,7 @@ const updateMe = async (req, res) => {
 
 /**
  * 忘記密碼：發送重設郵件
+ * [修復] 強化郵件發送檢查，若未設定 API Key 則告知錯誤，避免使用者空等。
  */
 const forgotPassword = async (req, res) => {
   try {
@@ -213,6 +242,7 @@ const forgotPassword = async (req, res) => {
       where: { email: email.toLowerCase() },
     });
 
+    // 為了安全起見，即使 User 不存在也回傳「已發送」，防止惡意探測 Email 是否存在
     if (!user) {
       return res
         .status(200)
@@ -224,29 +254,43 @@ const forgotPassword = async (req, res) => {
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
-    const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
+    const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 分鐘有效
 
     await prisma.user.update({
       where: { id: user.id },
       data: { resetPasswordToken, resetPasswordExpire },
     });
 
-    if (process.env.SENDGRID_API_KEY) {
-      const resetUrl = `${
-        process.env.FRONTEND_URL || "http://localhost:3000"
-      }/reset-password.html?token=${resetToken}`;
-      const msg = {
-        to: user.email,
-        from: process.env.SENDER_EMAIL_ADDRESS || "noreply@runpiggy.com",
-        subject: "小跑豬集運 - 重設密碼請求",
-        html: `<h3>您已申請重設密碼</h3><p>請點擊以下連結重設您的密碼 (連結 10 分鐘內有效)：</p><a href="${resetUrl}" clicktracking=off>${resetUrl}</a><p>若您未申請此操作，請忽略此信。</p>`,
-      };
-      await sgMail.send(msg);
+    // 檢查是否有設定 API Key，這對新手除錯非常有幫助
+    if (!process.env.SENDGRID_API_KEY) {
+      console.error("❌ SendGrid API Key 未設定，無法寄信。");
+      return res
+        .status(500)
+        .json({ success: false, message: "伺服器郵件功能配置錯誤" });
     }
 
-    res.status(200).json({ success: true, message: "重設信件已發送" });
+    const resetUrl = `${
+      process.env.FRONTEND_URL || "http://localhost:3000"
+    }/reset-password.html?token=${resetToken}`;
+
+    const msg = {
+      to: user.email,
+      from: process.env.SENDER_EMAIL_ADDRESS || "noreply@runpiggy.com",
+      subject: "小跑豬集運 - 重設密碼請求",
+      html: `<h3>您已申請重設密碼</h3><p>請點擊以下連結重設您的密碼 (連結 10 分鐘內有效)：</p><a href="${resetUrl}" clicktracking=off>${resetUrl}</a><p>若您未申請此操作，請忽略此信。</p>`,
+    };
+
+    try {
+      await sgMail.send(msg);
+      res.status(200).json({ success: true, message: "重設信件已發送" });
+    } catch (mailError) {
+      console.error("郵件寄送失敗:", mailError);
+      res
+        .status(500)
+        .json({ success: false, message: "郵件服務暫時不可用，請稍後再試" });
+    }
   } catch (error) {
-    console.error("忘記密碼錯誤:", error);
+    console.error("忘記密碼邏輯錯誤:", error);
     res.status(500).json({ success: false, message: "無法發送 Email" });
   }
 };
@@ -263,6 +307,7 @@ const resetPassword = async (req, res) => {
       .createHash("sha256")
       .update(token)
       .digest("hex");
+
     const user = await prisma.user.findFirst({
       where: { resetPasswordToken, resetPasswordExpire: { gt: new Date() } },
     });

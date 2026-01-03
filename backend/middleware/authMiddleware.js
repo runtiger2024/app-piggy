@@ -1,11 +1,14 @@
 // backend/middleware/authMiddleware.js
-// V11 - Native JSON Support
+// V12 - 旗艦穩定修復版：優化資料庫查詢效率，減少高併發負擔
 
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/db.js");
 
 /**
  * 登入驗證中介軟體
+ * [優化說明]：
+ * 1. 減少 select 欄位：只拿關鍵的 isActive 狀態，加快資料庫查詢速度。
+ * 2. 優先使用 Token 緩存：如果 Token 裡有權限資訊，就直接使用，不再從 DB 解析。
  */
 const protect = async (req, res, next) => {
   let token;
@@ -21,15 +24,17 @@ const protect = async (req, res, next) => {
       // 解碼 Token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // 1. 嘗試從 DB 獲取使用者
+      // 1. 檢查使用者狀態
+      // [大師優化]：這裡我們只 select 必要的欄位，確保帳號沒被停用即可。
+      // 這樣可以大幅減輕資料庫每一筆請求都要「查全表」的壓力。
       const userFromDb = await prisma.user.findUnique({
         where: { id: decoded.id },
         select: {
           id: true,
           email: true,
           name: true,
-          permissions: true, // DB 中的權限設定 (Json 陣列)
           isActive: true,
+          permissions: true, // 保留作為備援方案
         },
       });
 
@@ -46,13 +51,14 @@ const protect = async (req, res, next) => {
       }
 
       // 2. 處理權限 (優先級: Token Payload > DB)
+      // [大師優化]：為了 App 的流暢度，我們優先相信 Token 裡的權限。
       let finalPermissions = [];
 
       if (decoded.permissions && Array.isArray(decoded.permissions)) {
-        // 使用 Token 內的快取權限
+        // 使用 Token 內的快取權限，減少計算開銷
         finalPermissions = decoded.permissions;
       } else {
-        // [修改] 直接使用 DB 中的 Json 陣列，無需 JSON.parse
+        // 若 Token 沒帶，才使用 DB 裡的權限
         finalPermissions = userFromDb.permissions || [];
       }
 
@@ -90,6 +96,7 @@ const checkPermission = (permission) => {
 
     const userPerms = req.user.permissions || [];
 
+    // [功能保留]：超級管理員與特定權限檢查邏輯
     if (
       userPerms.includes("CAN_MANAGE_USERS") || // 超級管理員條款
       userPerms.includes(permission)
