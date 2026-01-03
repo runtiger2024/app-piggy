@@ -8,6 +8,8 @@
     />
     <title>會員中心 | 小跑豬傢俱專線</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
+
+    <link rel="stylesheet" href="css/theme-client.css" />
     <link rel="stylesheet" href="css/modals-unified.css" />
 
     <script src="js/styleLoader.js"></script>
@@ -160,6 +162,7 @@
         border: 1px solid #eee;
       }
 
+      /* 結帳列優化：確保不擋到手機版導覽 */
       .checkout-bar {
         position: fixed;
         bottom: 25px;
@@ -203,11 +206,7 @@
         cursor: pointer;
       }
 
-      /* 圖片上傳區優化樣式 */
-      .upload-zone-wrapper {
-        position: relative;
-        width: 100%;
-      }
+      /* 圖片上傳區樣式 */
       .upload-zone {
         display: flex;
         flex-direction: column;
@@ -227,24 +226,14 @@
         border-color: #1a73e8;
         color: #1a73e8;
       }
-      .upload-zone i {
-        font-size: 2.2rem;
-        margin-bottom: 10px;
-      }
       .upload-input-hidden {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        border: 0;
+        display: none;
       }
 
+      /* 行動端適配：底部導覽與結帳列避位 */
       @media (max-width: 800px) {
         .checkout-bar {
-          bottom: 90px;
+          bottom: 85px; /* 墊高以避開底部導覽列 */
         }
         .hero-dashboard {
           flex-direction: column;
@@ -256,6 +245,9 @@
         }
         .quick-actions-grid {
           grid-template-columns: repeat(2, 1fr);
+        }
+        .dashboard-tabs-wrapper {
+          top: 60px;
         }
       }
     </style>
@@ -281,6 +273,9 @@
             />
             <span class="logo-text">小跑豬 <small>會 員 控 制 台</small></span>
           </a>
+
+          <nav class="header-nav main-nav"></nav>
+
           <div class="header-right-actions">
             <div class="notification-wrapper">
               <div id="btn-notification" class="notif-trigger">
@@ -417,7 +412,7 @@
                 class="fas fa-box-open"
                 style="color: #1a73e8; margin-right: 10px"
               ></i
-              >預報
+              >預報包裹
             </h3>
             <div style="display: flex; gap: 8px">
               <button
@@ -441,8 +436,8 @@
                 "
               >
                 <div class="form-group">
-                  <label class="required">物流單號</label
-                  ><input
+                  <label class="required">物流單號</label>
+                  <input
                     type="text"
                     id="trackingNumber"
                     class="form-control"
@@ -451,8 +446,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">商品名稱</label
-                  ><input
+                  <label class="required">商品名稱</label>
+                  <input
                     type="text"
                     id="productName"
                     class="form-control"
@@ -461,8 +456,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label>數量</label
-                  ><input
+                  <label>數量</label>
+                  <input
                     type="number"
                     id="quantity"
                     class="form-control"
@@ -496,17 +491,15 @@
                   />
                 </div>
               </div>
-
               <div class="form-group" style="margin-top: 15px">
-                <label>商品購買連結 (若無照片請提供連結)</label>
+                <label>商品購買連結</label>
                 <input
                   type="url"
                   id="productUrl"
                   class="form-control"
-                  placeholder="請貼上淘寶、京東等商品網址 https://..."
+                  placeholder="請貼上商品網址 https://..."
                 />
               </div>
-
               <div class="form-group" style="margin-top: 15px">
                 <label>備註</label>
                 <input
@@ -614,6 +607,21 @@
       </button>
     </div>
 
+    <nav id="mobile-bottom-nav" class="universal-bottom-nav">
+      <a href="index.html" class="nav-item">
+        <i class="fas fa-home"></i><span>首頁</span>
+      </a>
+      <a href="quote.html" class="nav-item">
+        <i class="fas fa-calculator"></i><span>試算</span>
+      </a>
+      <a href="furniture-procurement.html" class="nav-item">
+        <i class="fas fa-couch"></i><span>代採購</span>
+      </a>
+      <a href="dashboard.html" class="nav-item active">
+        <i class="fas fa-user"></i><span>會員</span>
+      </a>
+    </nav>
+
     <div id="modal-container-profile-edit"></div>
     <div id="modal-container-password-change"></div>
     <div id="modal-container-shipment-create"></div>
@@ -656,7 +664,7 @@
         }
       }
 
-      // [核心修復]：更新加載清單，移除無用的 upload-proof.html，補上二合一彈窗
+      // 載入所有 HTML 組件與彈窗
       Promise.all([
         loadHtml(
           "section-container-packages",
@@ -697,13 +705,12 @@
           "components/modals/package-details.html"
         ),
         loadHtml("edit-package-modal", "components/modals/edit-package.html"),
-        // 正確載入二合一彈窗
         loadHtml(
           "bank-info-modal-container",
           "components/modals/bank-info-modal.html"
         ),
       ]).then(() => {
-        // 防止 DOMContentLoaded 重複觸發
+        // 防止重複監聽
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
           if (type === "DOMContentLoaded") listener();
@@ -738,7 +745,7 @@
             await loadScript(src);
           }
 
-          // 初始化跳轉與捲動邏輯
+          // 初始化滑動與交互
           const btnQuickForecast =
             document.getElementById("btn-quick-forecast");
           if (btnQuickForecast) {
