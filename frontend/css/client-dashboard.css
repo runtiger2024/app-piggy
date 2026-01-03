@@ -176,3 +176,117 @@
     transform: rotate(10deg);
   }
 }
+/* --- [圖片上傳區優化] --- */
+.upload-zone-wrapper {
+  position: relative;
+  margin-top: 8px;
+}
+
+.upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 120px;
+  background-color: #f8fafc; /* 淺灰色背景 */
+  border: 2px dashed #cbd5e1; /* 虛線邊框 */
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #64748b;
+}
+
+.upload-zone:hover {
+  background-color: #f1f5f9;
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.upload-zone i {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.upload-zone span {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 隱藏原始 input */
+.upload-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+/* --- 圖片上傳區域優化 --- */
+.upload-zone-wrapper {
+  position: relative;
+  margin-top: 8px;
+}
+
+.upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 120px;
+  background-color: #f8fafc; /* 淺灰色背景 */
+  border: 2px dashed #cbd5e1; /* 虛線邊框 */
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #64748b;
+}
+
+.upload-zone:hover {
+  background-color: #f1f5f9;
+  border-color: #1a73e8; /* 懸停時變藍色 */
+  color: #1a73e8;
+}
+
+.upload-zone i {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.upload-zone span {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 隱藏原始的 input */
+.upload-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+/* 針對包裹編輯/預報的微調 */
+.modal-body .upload-zone {
+  height: 100px; /* 稍微縮小高度以適應表單 */
+  margin-bottom: 10px;
+}
+
+.upload-zone i {
+  color: #abb5c2;
+  font-size: 1.8rem;
+}
+
+/* 如果有預覽容器，確保它不影響上傳框 */
+.image-uploader-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}

@@ -186,7 +186,7 @@
         border: 1px solid #eee;
       }
 
-      /* 6. 合併打包結算條樣式 [NEW] */
+      /* 6. 合併打包結算條樣式 */
       .checkout-bar {
         position: fixed;
         bottom: 25px;
@@ -244,6 +244,49 @@
         font-weight: 900 !important;
         cursor: pointer;
         transition: 0.3s;
+      }
+
+      /* --- [NEW] 圖片上傳區域優化樣式 --- */
+      .upload-zone-wrapper {
+        position: relative;
+        margin-top: 8px;
+      }
+      .upload-zone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 120px;
+        background-color: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #64748b;
+      }
+      .upload-zone:hover {
+        background-color: #f1f5f9;
+        border-color: #1a73e8;
+        color: #1a73e8;
+      }
+      .upload-zone i {
+        font-size: 2rem;
+        margin-bottom: 8px;
+      }
+      .upload-zone span {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .upload-input-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
       }
 
       @media (max-width: 800px) {
@@ -324,10 +367,9 @@
               "
             >
               <span class="user-id-badge" id="modal-user-id">ID: 載入中</span>
-              <span style="font-size: 0.85rem; opacity: 0.8"
-                ><i class="fas fa-envelope"></i>
-                <span id="user-email">...</span></span
-              >
+              <span style="font-size: 0.85rem; opacity: 0.8">
+                <i class="fas fa-envelope"></i> <span id="user-email">...</span>
+              </span>
             </div>
             <div style="margin-top: 15px; display: flex; gap: 12px">
               <button
@@ -476,8 +518,8 @@
                 "
               >
                 <div class="form-group">
-                  <label class="required">物流單號</label
-                  ><input
+                  <label class="required">物流單號</label>
+                  <input
                     type="text"
                     id="trackingNumber"
                     class="form-control"
@@ -486,8 +528,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">商品名稱</label
-                  ><input
+                  <label class="required">商品名稱</label>
+                  <input
                     type="text"
                     id="productName"
                     class="form-control"
@@ -496,8 +538,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label>數量</label
-                  ><input
+                  <label>數量</label>
+                  <input
                     type="number"
                     id="quantity"
                     class="form-control"
@@ -507,22 +549,28 @@
                 </div>
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>商品照片 (報關用)</label
-                ><input
-                  type="file"
-                  id="images"
-                  multiple
-                  accept="image/*"
-                  style="display: none"
-                />
-                <div
-                  id="forecast-uploader"
-                  class="image-uploader-container"
-                ></div>
+                <label>商品照片 (報關用)</label>
+                <div class="upload-zone-wrapper">
+                  <label
+                    for="images"
+                    class="upload-zone"
+                    id="forecast-uploader"
+                  >
+                    <i class="fas fa-camera"></i>
+                    <span>點擊上傳商品照片</span>
+                  </label>
+                  <input
+                    type="file"
+                    id="images"
+                    multiple
+                    accept="image/*"
+                    class="upload-input-hidden"
+                  />
+                </div>
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>商品購買連結 (照片與連結擇一)</label
-                ><input
+                <label>商品購買連結 (照片與連結擇一)</label>
+                <input
                   type="url"
                   id="productUrl"
                   class="form-control"
@@ -530,8 +578,8 @@
                 />
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>備註</label
-                ><input
+                <label>備註</label>
+                <input
                   type="text"
                   id="note"
                   class="form-control"
@@ -702,6 +750,7 @@
         }
       }
 
+      // 核心加載邏輯：補全所有需要的彈窗組件
       Promise.all([
         loadHtml(
           "section-container-packages",
@@ -742,6 +791,9 @@
           "components/modals/package-details.html"
         ),
         loadHtml("edit-package-modal", "components/modals/edit-package.html"),
+        /* 修復：補上打包後需要的匯款資訊與憑證上傳彈窗內容 */
+        loadHtml("bank-info-modal", "components/modals/bank-info-modal.html"),
+        loadHtml("upload-proof-modal", "components/modals/upload-proof.html"),
       ]).then(() => {
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
@@ -811,7 +863,6 @@
         })();
       });
     </script>
-    <div id="bank-info-modal-container"></div>
     <div id="message-container"></div>
   </body>
 </html>

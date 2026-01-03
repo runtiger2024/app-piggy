@@ -733,3 +733,30 @@ body {
 .btn-toggle-status.activate {
   background: #28a745;
 }
+/* --- 管理後台專用上傳區 --- */
+.admin-upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100px;
+  background-color: #f8f9fc;
+  border: 2px dashed #d1d3e2;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+  color: #858796;
+  transition: 0.2s;
+}
+
+.admin-upload-zone:hover {
+  border-color: #4e73df;
+  color: #4e73df;
+  background-color: #eaecf4;
+}
+
+.admin-upload-zone i {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+}

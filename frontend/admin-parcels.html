@@ -312,12 +312,16 @@
                 <label class="text-primary font-weight-bold small"
                   >🏭 倉庫實拍照片 (入庫照片)</label
                 >
+                <label for="modal-warehouseImages" class="admin-upload-zone">
+                  <i class="fas fa-camera"></i>
+                  <span class="small">點擊或拖拽照片至此處上傳</span>
+                </label>
                 <input
                   type="file"
                   id="modal-warehouseImages"
                   multiple
                   accept="image/*"
-                  class="form-control"
+                  class="upload-input-hidden"
                 />
                 <div
                   id="modal-warehouse-images-preview"
@@ -325,7 +329,7 @@
                     display: flex;
                     gap: 5px;
                     flex-wrap: wrap;
-                    margin-top: 5px;
+                    margin-top: 10px;
                   "
                 ></div>
               </div>

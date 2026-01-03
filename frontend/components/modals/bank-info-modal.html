@@ -3,13 +3,17 @@
   class="modal-overlay"
   style="display: none; z-index: 9999"
 >
-  <div class="modal-content" style="z-index: 10000; position: relative">
+  <div
+    class="modal-content"
+    style="z-index: 10000; position: relative; max-width: 500px; width: 95%"
+  >
     <div
       class="modal-header"
       style="border-bottom: 1px solid #eee; padding-bottom: 10px"
     >
       <h3><i class="fas fa-university"></i> 訂單已建立！請完成轉帳</h3>
     </div>
+
     <div class="modal-body" style="padding: 20px 0">
       <div
         class="alert alert-info"
@@ -32,6 +36,7 @@
           padding: 15px;
           border-radius: 8px;
           border: 1px solid #dee2e6;
+          margin-bottom: 20px;
         "
       >
         <div
@@ -102,7 +107,67 @@
           </div>
         </div>
       </div>
+
+      <div class="form-group">
+        <label
+          style="
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+            font-size: 14px;
+          "
+        >
+          <i class="fas fa-camera"></i> 立即上傳轉帳憑證 (選填)
+        </label>
+        <div class="upload-zone-wrapper">
+          <label
+            for="bank-transfer-proof"
+            class="upload-zone"
+            id="bank-proof-label"
+          >
+            <i class="fas fa-camera"></i>
+            <span>點擊選擇憑證照片</span>
+            <small style="display: block; margin-top: 4px; opacity: 0.7"
+              >支持 JPG, PNG 格式</small
+            >
+          </label>
+          <input
+            type="file"
+            id="bank-transfer-proof"
+            accept="image/*"
+            class="upload-input-hidden"
+            onchange="handleBankProofPreview(this)"
+          />
+        </div>
+
+        <div
+          id="bank-proof-preview-container"
+          style="display: none; margin-top: 15px; text-align: center"
+        >
+          <img
+            id="bank-proof-preview-img"
+            src=""
+            style="
+              max-width: 100%;
+              max-height: 200px;
+              border-radius: 8px;
+              border: 2px solid #e2e8f0;
+            "
+          />
+          <div style="margin-top: 8px">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger"
+              onclick="resetBankProofUpload()"
+              style="font-size: 11px; padding: 4px 12px"
+            >
+              <i class="fas fa-trash"></i> 刪除並重選
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+
     <div
       class="modal-footer"
       style="
@@ -119,14 +184,20 @@
       >
         稍後上傳
       </button>
-      <button class="btn btn-primary" onclick="openUploadFromBankModal()">
-        <i class="fas fa-upload"></i> 立即上傳憑證
+      <button
+        id="btn-bank-submit-proof"
+        class="btn btn-primary"
+        onclick="submitBankProof()"
+        disabled
+      >
+        <i class="fas fa-check-circle"></i> 確認提交憑證
       </button>
     </div>
   </div>
 </div>
 
 <style>
+  /* 原始複製按鈕樣式 */
   .btn-copy {
     background: #fff;
     border: 1px solid #ccc;
@@ -138,4 +209,130 @@
   .btn-copy:hover {
     background: #eee;
   }
+
+  /* 優化：現代化上傳區樣式 */
+  .upload-zone-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  .upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 140px;
+    background-color: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #64748b;
+  }
+  .upload-zone:hover {
+    background-color: #f1f5f9;
+    border-color: #1a73e8;
+    color: #1a73e8;
+  }
+  .upload-zone i {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+  }
+  .upload-zone span {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .upload-input-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
 </style>
+
+<script>
+  /**
+   * 圖片預覽處理邏輯
+   */
+  function handleBankProofPreview(input) {
+    const container = document.getElementById("bank-proof-preview-container");
+    const img = document.getElementById("bank-proof-preview-img");
+    const label = document.getElementById("bank-proof-label");
+    const submitBtn = document.getElementById("btn-bank-submit-proof");
+
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        img.src = e.target.result;
+        container.style.display = "block";
+        label.style.display = "none";
+        submitBtn.disabled = false; // 選中圖片後啟用提交按鈕
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  /**
+   * 重置上傳區域
+   */
+  function resetBankProofUpload() {
+    const input = document.getElementById("bank-transfer-proof");
+    const container = document.getElementById("bank-proof-preview-container");
+    const label = document.getElementById("bank-proof-label");
+    const submitBtn = document.getElementById("btn-bank-submit-proof");
+
+    input.value = "";
+    container.style.display = "none";
+    label.style.display = "flex";
+    submitBtn.disabled = true;
+  }
+
+  /**
+   * 提交憑證邏輯
+   */
+  async function submitBankProof() {
+    const shipmentId = window.lastCreatedShipmentId; // 抓取剛建立的單號
+    const fileInput = document.getElementById("bank-transfer-proof");
+    const file = fileInput.files[0];
+
+    if (!shipmentId) return alert("找不到對應訂單");
+    if (!file) return alert("請先選擇照片");
+
+    const btn = document.getElementById("btn-bank-submit-proof");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
+
+    const fd = new FormData();
+    fd.append("proof", file);
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/shipments/${shipmentId}/upload-proof`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${window.dashboardToken}` },
+          body: fd,
+        }
+      );
+
+      if (res.ok) {
+        alert("憑證上傳成功！管理員將儘速審核。");
+        document.getElementById("bank-info-modal").style.display = "none";
+        if (typeof window.loadMyShipments === "function")
+          window.loadMyShipments();
+      } else {
+        const data = await res.json();
+        alert(data.message || "上傳失敗");
+      }
+    } catch (err) {
+      alert("網路錯誤");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> 確認提交憑證';
+    }
+  }
+</script>

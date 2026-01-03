@@ -435,6 +435,9 @@ window.handleCreateShipmentSubmit = async function (e) {
 
           // 顯示銀行資訊彈窗
           bankModal.style.display = "flex";
+          // 重要：確保新彈窗開啟時上傳區域被重置
+          if (typeof window.resetBankProofUpload === "function")
+            window.resetBankProofUpload();
           console.log("銀行轉帳彈窗已開啟，請提醒用戶檢查垃圾郵件");
         }, 100);
       }
@@ -808,4 +811,119 @@ window.copyText = function (elementId) {
     .catch((err) => {
       alert("複製失敗，請手動選取文字");
     });
+};
+
+// ==========================================
+// [旗艦版新增] 銀行資訊彈窗內部的圖片預覽與上傳互動邏輯
+// ==========================================
+
+/**
+ * 處理銀行彈窗內的圖片預覽
+ */
+window.handleBankProofPreview = function (input) {
+  const container = document.getElementById("bank-proof-preview-container");
+  const img = document.getElementById("bank-proof-preview-img");
+  const label = document.getElementById("bank-proof-label");
+  const submitBtn = document.getElementById("btn-bank-submit-proof");
+
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target.result;
+      container.style.display = "block";
+      label.style.display = "none"; // 選中後隱藏灰色相機框
+      if (submitBtn) submitBtn.disabled = false; // 啟用提交按鈕
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+};
+
+/**
+ * 重置銀行彈窗內的上傳區域
+ */
+window.resetBankProofUpload = function () {
+  const input = document.getElementById("bank-transfer-proof");
+  const container = document.getElementById("bank-proof-preview-container");
+  const label = document.getElementById("bank-proof-label");
+  const submitBtn = document.getElementById("btn-bank-submit-proof");
+
+  if (input) input.value = "";
+  if (container) container.style.display = "none";
+  if (label) label.style.display = "flex";
+  if (submitBtn) submitBtn.disabled = true;
+};
+
+/**
+ * 在銀行彈窗內提交憑證
+ */
+window.submitBankProof = async function () {
+  const shipmentId = window.lastCreatedShipmentId;
+  const fileInput = document.getElementById("bank-transfer-proof");
+  const file = fileInput ? fileInput.files[0] : null;
+
+  if (!shipmentId || !file) return alert("資訊不完整，請先選擇照片");
+
+  const btn = document.getElementById("btn-bank-submit-proof");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
+  }
+
+  const fd = new FormData();
+  fd.append("proof", file);
+
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/shipments/${shipmentId}/upload-proof`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${window.dashboardToken}` },
+        body: fd,
+      }
+    );
+
+    if (res.ok) {
+      alert("憑證上傳成功！管理員將儘速審核。");
+      document.getElementById("bank-info-modal").style.display = "none";
+      window.loadMyShipments(); // 刷新列表狀態
+    } else {
+      const data = await res.json();
+      alert(data.message || "上傳失敗，請稍後再試");
+    }
+  } catch (err) {
+    alert("網路錯誤，上傳失敗");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-upload"></i> 確認提交憑證';
+    }
+  }
+};
+
+/**
+ * 列表中的「上傳憑證」按鈕觸發 (復用銀行彈窗)
+ */
+window.openUploadProof = function (id) {
+  window.lastCreatedShipmentId = id;
+  const bankModal = document.getElementById("bank-info-modal");
+  if (bankModal) {
+    bankModal.style.display = "flex";
+    window.resetBankProofUpload(); // 重置上傳區域
+
+    // 嘗試顯示緩存的匯款資訊
+    if (window.BANK_INFO_CACHE) {
+      const bName =
+        document.getElementById("bank-name-display") ||
+        document.getElementById("bank-name");
+      const bAcc =
+        document.getElementById("bank-account-display") ||
+        document.getElementById("bank-account");
+      const bHolder =
+        document.getElementById("bank-holder-display") ||
+        document.getElementById("bank-holder");
+      if (bName) bName.textContent = window.BANK_INFO_CACHE.bankName || "--";
+      if (bAcc) bAcc.textContent = window.BANK_INFO_CACHE.account || "--";
+      if (bHolder) bHolder.textContent = window.BANK_INFO_CACHE.holder || "--";
+    }
+  }
 };

@@ -56,13 +56,19 @@
       </div>
       <div class="form-group">
         <label class="required">轉帳憑證截圖</label>
-        <input
-          type="file"
-          id="dep-proof"
-          accept="image/*"
-          class="form-control"
-          required
-        />
+        <div class="upload-zone-wrapper">
+          <label for="dep-proof" class="upload-zone">
+            <i class="fas fa-camera"></i>
+            <span>點擊上傳憑證照片</span>
+          </label>
+          <input
+            type="file"
+            id="dep-proof"
+            accept="image/*"
+            class="upload-input-hidden"
+            required
+          />
+        </div>
       </div>
       <button type="submit" class="btn btn-primary">提交申請</button>
     </form>
