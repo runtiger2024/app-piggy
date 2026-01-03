@@ -1,127 +1,153 @@
-// 這是 frontend/js/auth.js (已修復 API_BASE_URL)
+// frontend/js/auth.js (V16.1 - 旗艦穩定版)
 
 document.addEventListener("DOMContentLoaded", () => {
-  // --- 1. 獲取元素 ---
   const loginForm = document.getElementById("login-form");
   const registerForm = document.getElementById("register-form");
   const loginTab = document.getElementById("tab-login");
   const registerTab = document.getElementById("tab-register");
   const messageBox = document.getElementById("message-box");
 
-  // --- 2. 頁籤切換邏輯 ---
-  // (參考 public/customer.html)
-  loginTab.addEventListener("click", () => {
-    loginTab.classList.add("active");
-    registerTab.classList.remove("active");
-    loginForm.style.display = "block";
-    registerForm.style.display = "none";
-    showMessage("", "clear"); // 清除訊息
-  });
-
-  registerTab.addEventListener("click", () => {
-    loginTab.classList.remove("active");
-    registerTab.classList.add("active");
-    loginForm.style.display = "none";
-    registerForm.style.display = "block";
-    showMessage("", "clear"); // 清除訊息
-  });
-
-  // --- 3. 登入表單提交 (呼叫 /api/auth/login) ---
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault(); // 防止頁面跳轉
+  // --- 1. 頁籤切換邏輯 ---
+  const switchTab = (activeTab, inactiveTab, showForm, hideForm) => {
+    activeTab.classList.add("active");
+    inactiveTab.classList.remove("active");
+    showForm.style.display = "block";
+    hideForm.style.display = "none";
     showMessage("", "clear");
+  };
 
-    const email = document.getElementById("login-email").value;
-    const password = document.getElementById("login-password").value;
+  if (loginTab)
+    loginTab.addEventListener("click", () =>
+      switchTab(loginTab, registerTab, loginForm, registerForm)
+    );
+  if (registerTab)
+    registerTab.addEventListener("click", () =>
+      switchTab(registerTab, loginTab, registerForm, loginForm)
+    );
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+  // --- 2. 登入表單提交 ---
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showMessage("正在登入中...", "info");
 
-      const data = await response.json();
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
 
-      if (!response.ok) {
-        // 登入失敗 (例如 401 密碼錯誤)
-        throw new Error(data.message || "登入失敗");
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "登入失敗");
+
+        // [關鍵優化]：將身分資料領全，包含專屬 PiggyID 與權限
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userName", data.user.name || data.user.email);
+        localStorage.setItem("piggyId", data.user.piggyId); // 儲存會員編號 (RPXXXXXXX)
+        localStorage.setItem(
+          "permissions",
+          JSON.stringify(data.user.permissions || [])
+        );
+
+        showMessage("登入成功！正在跳轉...", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1500);
+      } catch (error) {
+        showMessage(error.message, "error");
       }
+    });
+  }
 
-      // 登入成功！
-      showMessage("登入成功！正在跳轉至會員中心...", "success");
+  // --- 3. 註冊表單提交 ---
+  if (registerForm) {
+    registerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("reg-name").value.trim();
+      const email = document.getElementById("reg-email").value.trim();
+      const password = document.getElementById("reg-password").value;
 
-      // (關鍵) 將 Token 存入瀏覽器的 localStorage
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userName", data.user.name || data.user.email); // 儲存使用者名稱
+      // [大師級初步驗證]：攔截無效格式
+      if (!name) return showMessage("請輸入姓名", "error");
+      if (!validateEmail(email))
+        return showMessage("Email 格式不正確", "error");
+      if (password.length < 6)
+        return showMessage("密碼至少需要 6 個字元", "error");
 
-      // 2 秒後跳轉到 dashboard.html
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 2000);
-    } catch (error) {
-      console.error("登入錯誤:", error);
-      showMessage(error.message, "error");
-    }
-  });
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password }),
+        });
 
-  // --- 4. 註冊表單提交 (呼叫 /api/auth/register) ---
-  registerForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    showMessage("", "clear");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "註冊失敗");
 
-    const name = document.getElementById("reg-name").value;
-    const email = document.getElementById("reg-email").value;
-    const password = document.getElementById("reg-password").value;
+        // 註冊成功後自動儲存身分資料
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userName", data.user.name || data.user.email);
+        localStorage.setItem("piggyId", data.user.piggyId);
 
-    if (password.length < 6) {
-      showMessage("密碼長度至少需要 6 個字元", "error");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // 註冊失敗 (例如 400 Email 已存在)
-        throw new Error(data.message || "註冊失敗");
+        showMessage("註冊成功！即將跳轉會員中心...", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 2000);
+      } catch (error) {
+        showMessage(error.message, "error");
       }
+    });
+  }
 
-      // 註冊成功！
-      showMessage("註冊成功！正在自動登入並跳轉...", "success");
+  // --- 4. 工具函數 ---
+  function validateEmail(email) {
+    return String(email)
+      .toLowerCase()
+      .match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+  }
 
-      // (關鍵) 將 Token 存入瀏覽器的 localStorage
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userName", data.user.name || data.user.email);
-
-      // 2 秒後跳轉到 dashboard.html
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 2000);
-    } catch (error) {
-      console.error("註冊錯誤:", error);
-      showMessage(error.message, "error");
-    }
-  });
-
-  // --- 5. 訊息顯示工具 ---
   function showMessage(message, type) {
+    if (!messageBox) return;
     messageBox.textContent = message;
-
-    if (type === "error") {
-      messageBox.className = "alert alert-error";
-      messageBox.style.display = "block";
-    } else if (type === "success") {
-      messageBox.className = "alert alert-success";
-      messageBox.style.display = "block";
-    } else {
-      messageBox.style.display = "none";
-    }
+    messageBox.className = `alert alert-${type}`;
+    messageBox.style.display = message ? "block" : "none";
   }
 });
+
+/**
+ * [大師新增]：登出功能 (清空口袋所有鑰匙)
+ */
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+/**
+ * [Apple 審核強制要求]：帳號註銷功能 (呼叫後端 deleteMe)
+ */
+async function deleteAccount() {
+  const confirmText =
+    "警告：註銷帳號將清除所有個人資料且不可恢復！確定要繼續嗎？";
+  if (!confirm(confirmText)) return;
+
+  const token = localStorage.getItem("token");
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/delete-me`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.ok) {
+      alert("帳號已成功註銷，個資已清除。");
+      logout();
+    } else {
+      alert("註銷失敗，請聯繫小跑豬客服協助。");
+    }
+  } catch (err) {
+    console.error("註銷過程出錯:", err);
+  }
+}
