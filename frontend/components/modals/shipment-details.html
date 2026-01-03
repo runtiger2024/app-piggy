@@ -1,0 +1,238 @@
+<div class="modal-content modal-lg animate-pop-in" style="background: #fdfdfe">
+  <div class="modal-header" style="box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02)">
+    <h3 class="d-flex align-center">
+      <div
+        style="
+          width: 8px;
+          height: 24px;
+          background: var(--p-primary);
+          border-radius: 4px;
+          margin-right: 12px;
+        "
+      ></div>
+      <i
+        class="fas fa-file-invoice"
+        style="margin-right: 10px; color: var(--p-primary)"
+      ></i>
+      <span>集運單詳細報告</span>
+    </h3>
+    <div class="text-right">
+      <div
+        class="text-sub"
+        style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px"
+      >
+        Shipment ID
+      </div>
+      <div class="fw-800 text-primary" style="font-size: 1.1rem">
+        #<span id="sd-id">--</span>
+      </div>
+    </div>
+    <button
+      class="modal-close"
+      onclick="document.getElementById('shipment-details-modal').style.display='none'"
+    >
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <div class="modal-body" style="padding: 25px">
+    <div
+      id="sd-timeline"
+      class="timeline-container"
+      style="
+        background: #fff;
+        border-radius: var(--radius-md);
+        padding: 30px 20px;
+        box-shadow: var(--shadow-1);
+        margin-bottom: 30px;
+        border: 1px solid var(--border-light);
+      "
+    ></div>
+
+    <div class="grid-2 gap-20 mb-4">
+      <div class="info-card-mini">
+        <div class="label"><i class="fas fa-tag"></i> 當前狀態</div>
+        <div id="sd-status" class="value text-primary">--</div>
+      </div>
+      <div class="info-card-mini">
+        <div class="label"><i class="far fa-clock"></i> 處理時間</div>
+        <div id="sd-date" class="value">--</div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="section-title">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>配送資訊</span>
+      </div>
+      <div class="section-body info-grid">
+        <div class="info-row">
+          <span class="info-label">收件人</span>
+          <span id="sd-name" class="info-value">--</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">聯繫電話</span>
+          <span id="sd-phone" class="info-value">--</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">配送地址</span>
+          <span id="sd-address" class="info-value">--</span>
+        </div>
+        <div class="info-row-highlight">
+          <span class="info-label">物流追蹤碼 (TW)</span>
+          <div class="d-flex align-center">
+            <span id="sd-trackingTW" class="fw-800">尚未產生</span>
+            <i
+              class="far fa-copy ml-2 text-sub"
+              style="cursor: pointer"
+              onclick="copyText('sd-trackingTW')"
+            ></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="section-title">
+        <i class="fas fa-coins"></i>
+        <span>費用報告單</span>
+      </div>
+      <div id="sd-fee-breakdown" class="receipt-style">
+        <div class="text-center p-4 text-sub">資料載入中...</div>
+      </div>
+    </div>
+
+    <div id="sd-proof-container" class="detail-section mb-0">
+      <div class="section-title">
+        <i class="fas fa-shield-alt"></i>
+        <span>支付安全與憑證</span>
+      </div>
+      <div id="sd-proof-images" class="proof-upload-area"></div>
+    </div>
+  </div>
+
+  <div class="modal-footer" style="background: #f8fafc">
+    <button
+      class="btn btn-secondary px-5"
+      onclick="document.getElementById('shipment-details-modal').style.display='none'"
+      style="border-radius: var(--radius-full)"
+    >
+      關閉詳情
+    </button>
+  </div>
+</div>
+
+<style>
+  /* 旗艦版層次感專用 CSS */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .info-card-mini {
+    background: #fff;
+    border: 1px solid var(--border-light);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+  }
+  .info-card-mini .label {
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-bottom: 5px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .info-card-mini .value {
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+
+  .detail-section {
+    margin-bottom: 25px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .section-title {
+    background: var(--p-primary-bg);
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--p-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .section-body {
+    padding: 20px;
+    background: #fff;
+  }
+
+  .info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    background: #fff;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    border-bottom: 1px dashed #f0f0f0;
+    padding-bottom: 8px;
+  }
+  .info-row-highlight {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #f0f7ff;
+    border-radius: 8px;
+    margin-top: 5px;
+  }
+  .info-label {
+    color: var(--text-sub);
+    font-weight: 600;
+  }
+  .info-value {
+    color: var(--text-main);
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .receipt-style {
+    background: #fff;
+    padding: 20px;
+  }
+
+  .proof-upload-area {
+    background: #fafafa;
+    border: 2px dashed #eee;
+    margin: 20px;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  @media (max-width: 600px) {
+    .grid-2 {
+      grid-template-columns: 1fr;
+    }
+    .info-card-mini .value {
+      font-size: 1rem;
+    }
+    .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .info-value {
+      text-align: left;
+    }
+  }
+</style>

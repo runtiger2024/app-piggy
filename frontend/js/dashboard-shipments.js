@@ -4,6 +4,7 @@
 // [Optimization] 整合銀行轉帳彈窗詳細資訊、一鍵複製與垃圾郵件提醒
 // [Fixed] 解決選擇銀行轉帳提交後無動作、畫面變霧面之問題
 // [Critical Fix] 修正上傳憑證 API 路徑、方法與欄位名稱，解決 404 錯誤
+// [Stability Update] 修復訂單詳情載入安全檢查，增加錯誤追蹤日誌
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
@@ -134,9 +135,10 @@ window.recalculateShipmentTotal = async function () {
   const remoteInfo = document.getElementById("ship-remote-area-info");
   const selectedOption = locationSelect.options[locationSelect.selectedIndex];
   if (rate > 0 && selectedOption) {
-    document.getElementById("ship-selected-area-name").textContent =
-      selectedOption.text;
-    document.getElementById("ship-selected-area-fee").textContent = `$${rate}`;
+    const nameDisplay = document.getElementById("ship-selected-area-name");
+    const feeDisplay = document.getElementById("ship-selected-area-fee");
+    if (nameDisplay) nameDisplay.textContent = selectedOption.text;
+    if (feeDisplay) feeDisplay.textContent = `$${rate}`;
     if (remoteInfo) remoteInfo.style.display = "block";
   } else {
     if (remoteInfo) remoteInfo.style.display = "none";
@@ -563,7 +565,7 @@ window.loadMyShipments = async function () {
   }
 };
 
-// --- 7. 查看訂單詳情 ---
+// --- 7. 查看訂單詳情 (修復與優化版) ---
 window.openShipmentDetails = async function (id) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/shipments/${id}`, {
@@ -573,30 +575,38 @@ window.openShipmentDetails = async function (id) {
     if (!data.success) throw new Error(data.message);
 
     const s = data.shipment;
+
+    // 安全設置訂單 ID
     const idEl = document.getElementById("sd-id");
     if (idEl) idEl.textContent = s.id.slice(-8).toUpperCase();
 
+    // 處理時間軸或狀態顯示
     const timelineContainer = document.getElementById("sd-timeline");
     if (timelineContainer) {
       renderTimeline(timelineContainer, s.status);
     } else {
       const statusEl = document.getElementById("sd-status");
-      if (statusEl)
-        statusEl.textContent = window.SHIPMENT_STATUS_MAP[s.status] || s.status;
+      if (statusEl) {
+        const statusMap = window.SHIPMENT_STATUS_MAP || {};
+        statusEl.textContent = statusMap[s.status] || s.status;
+      }
     }
 
-    const statusEl = document.getElementById("sd-status");
-    if (statusEl) {
+    // 處理詳細狀態區 (含退回原因)
+    const statusBox = document.getElementById("sd-status");
+    if (statusBox) {
       if (s.status === "RETURNED") {
-        statusEl.innerHTML = `<span class="status-badge status-CANCELLED">訂單已退回</span>
+        statusBox.innerHTML = `<span class="status-badge status-CANCELLED">訂單已退回</span>
           <div style="background:#fff1f0; border:1px solid #ffa39e; padding:8px; border-radius:4px; margin-top:5px; font-size:13px; color:#c0392b;">
               <strong>退回原因：</strong> ${s.returnReason || "未說明"}
           </div>`;
       } else {
-        statusEl.textContent = window.SHIPMENT_STATUS_MAP[s.status] || s.status;
+        const statusMap = window.SHIPMENT_STATUS_MAP || {};
+        statusBox.textContent = statusMap[s.status] || s.status;
       }
     }
 
+    // 處理日期資訊
     let dateHtml = `<div><strong>建立日期:</strong> <span>${new Date(
       s.createdAt
     ).toLocaleString()}</span></div>`;
@@ -610,13 +620,21 @@ window.openShipmentDetails = async function (id) {
     const dateBox = document.getElementById("sd-date");
     if (dateBox) dateBox.innerHTML = dateHtml;
 
+    // 台灣單號
     const trackEl = document.getElementById("sd-trackingTW");
     if (trackEl) trackEl.textContent = s.trackingNumberTW || "尚未產生";
 
-    document.getElementById("sd-name").textContent = s.recipientName;
-    document.getElementById("sd-phone").textContent = s.phone;
-    document.getElementById("sd-address").textContent = s.shippingAddress;
+    // [關鍵修復] 收件人資訊增加安全檢查
+    const nameEl = document.getElementById("sd-name");
+    if (nameEl) nameEl.textContent = s.recipientName || "--";
 
+    const phoneEl = document.getElementById("sd-phone");
+    if (phoneEl) phoneEl.textContent = s.phone || "--";
+
+    const addrEl = document.getElementById("sd-address");
+    if (addrEl) addrEl.textContent = s.shippingAddress || "--";
+
+    // 費用細節
     const breakdown = document.getElementById("sd-fee-breakdown");
     if (breakdown) {
       breakdown.innerHTML = `
@@ -631,6 +649,7 @@ window.openShipmentDetails = async function (id) {
       `;
     }
 
+    // 憑證預覽
     const gallery = document.getElementById("sd-proof-images");
     if (gallery) {
       gallery.innerHTML = "";
@@ -654,10 +673,18 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
+    // 顯示 Modal
     const detailModal = document.getElementById("shipment-details-modal");
-    if (detailModal) detailModal.style.display = "flex";
+    if (detailModal) {
+      detailModal.style.display = "flex";
+    } else {
+      console.warn(
+        "找不到 ID 為 shipment-details-modal 的元素，詳情彈窗無法開啟。"
+      );
+    }
   } catch (e) {
-    alert("無法載入詳情");
+    console.error("載入集運詳情發生異常:", e); // 新增日誌輸出
+    alert("無法載入詳情，請檢查網路連線或聯繫客服。");
   }
 };
 

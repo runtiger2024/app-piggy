@@ -102,3 +102,185 @@
     transform: scale(1) translateY(0);
   }
 }
+/* --- [集運單詳情專用旗艦樣式表] --- */
+
+/* 1. 彈窗尺寸微調：針對詳情頁增加寬度適配 */
+#shipment-details-modal .modal-content {
+  max-width: 700px;
+  border: 1px solid rgba(26, 115, 232, 0.1);
+}
+
+/* 2. 動態時間軸 (Timeline) 樣式核心 */
+.timeline-container {
+  padding: 20px 0;
+  margin-bottom: 30px;
+}
+
+.timeline-step {
+  position: relative;
+  z-index: 1;
+}
+
+/* 時間軸線條基礎 */
+.timeline-container::before {
+  content: "";
+  position: absolute;
+  top: 35px; /* 配合圖示位置 */
+  left: 40px;
+  right: 40px;
+  height: 4px;
+  background: #f1f5f9;
+  z-index: 0;
+  border-radius: var(--radius-full);
+}
+
+/* 3. 資訊展示區塊 (Info Block) */
+.info-card {
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: var(--transition);
+}
+
+.info-card:hover {
+  box-shadow: var(--shadow-2);
+  border-color: var(--p-primary-light);
+}
+
+.info-card h4 {
+  color: var(--p-primary);
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 4. 費用明細表格 (Fee Breakdown Table) */
+#sd-fee-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+#sd-fee-breakdown th {
+  text-align: left;
+  color: var(--text-sub);
+  font-weight: 600;
+  padding: 10px;
+  border-bottom: 2px solid var(--border-light);
+}
+
+#sd-fee-breakdown td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* 費用總計大字樣式 */
+.sd-total-row {
+  margin-top: 15px;
+  padding: 15px;
+  background: var(--p-primary-bg);
+  border-radius: var(--radius-sm);
+  text-align: right;
+}
+
+.sd-total-row strong {
+  font-size: 1.4rem;
+  color: var(--p-primary);
+  font-family: "Monaco", monospace;
+}
+
+/* 5. 狀態標籤 (Status Badges) */
+/* 延續 theme-client.css 的狀態配色 */
+.status-badge {
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-PENDING_PAYMENT {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffe7ba;
+}
+.status-PROCESSING {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #bae7ff;
+}
+.status-SHIPPED {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+.status-CANCELLED {
+  background: #fff1f0;
+  color: #f5222d;
+  border: 1px solid #ffa39e;
+}
+
+/* 6. 付款憑證預覽圖 (Proof Image) */
+.proof-img-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid #eee;
+  cursor: zoom-in;
+  transition: 0.3s;
+}
+
+.proof-img-wrapper:hover {
+  transform: scale(1.05);
+  border-color: var(--p-primary);
+  box-shadow: var(--shadow-3);
+}
+
+.proof-img-wrapper img {
+  max-width: 150px;
+  height: auto;
+  display: block;
+}
+
+/* 錢包支付特殊文字框 */
+.wallet-pay-banner {
+  background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
+  border: 1px solid var(--p-primary-light);
+  color: var(--p-primary);
+  padding: 15px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-pay-banner i {
+  font-size: 1.8rem;
+}
+
+/* 7. 行動端優化 (RWD) */
+@media (max-width: 600px) {
+  #shipment-details-modal .modal-content {
+    padding: 15px;
+    width: 100%;
+  }
+
+  .sd-grid-2 {
+    grid-template-columns: 1fr !important; /* 強制變為單欄 */
+  }
+
+  .timeline-container {
+    overflow-x: auto; /* 手機版若太擠可左右滑動 */
+    justify-content: flex-start !important;
+    padding-bottom: 30px;
+  }
+}
