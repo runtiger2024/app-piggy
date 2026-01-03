@@ -3,25 +3,6 @@
  * 適用於：會員登入、註冊、管理員登入頁面
  * ============================================================ */
 
-:root {
-  /* 核心品牌色 - 參考自 theme-client.css */
-  --p-primary: #1a73e8;
-  --p-primary-hover: #1557b0;
-  --p-primary-light: #e8f0fe;
-  --p-accent: #ff5000;
-  --text-main: #1c1c1e;
-  --text-body: #3a3a3c;
-  --text-sub: #8e8e93;
-  --bg-app: #f2f5f8;
-  --bg-card: #ffffff;
-  --bg-input: #f7f8fa;
-  --border-main: #e5e5ea;
-  --radius-md: 14px;
-  --radius-lg: 24px;
-  --shadow-auth: 0 10px 30px rgba(0, 0, 0, 0.08);
-  --ease-ios: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 /* 基礎重置 */
 * {
   box-sizing: border-box;
