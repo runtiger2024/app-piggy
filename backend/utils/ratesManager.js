@@ -1,9 +1,11 @@
 // backend/utils/ratesManager.js
-// V2025.Final.Rates - 費率管理器 (含標準化查找邏輯)
+// V2025.Final.Rates - 費率管理器 (大師優化：記憶體快取版)
 
 const prisma = require("../config/db.js");
 
-// 預設的空結構 (不包含具體金額，強制依賴資料庫)
+// 1. [大師新增]：建立記憶體快取，讓伺服器「背下」費率
+let cachedRates = null;
+
 const DEFAULT_RATES_STRUCTURE = {
   categories: {
     general: {
@@ -14,7 +16,7 @@ const DEFAULT_RATES_STRUCTURE = {
     },
   },
   constants: {
-    VOLUME_DIVISOR: 28317, // 國際標準
+    VOLUME_DIVISOR: 28317,
     CBM_TO_CAI_FACTOR: 35.3,
     MINIMUM_CHARGE: 0,
     OVERSIZED_LIMIT: 300,
@@ -25,78 +27,67 @@ const DEFAULT_RATES_STRUCTURE = {
 };
 
 /**
- * 從資料庫讀取運費設定
- * @returns {Promise<Object>} 包含 categories 和 constants 的設定物件
+ * 從資料庫讀取運費設定 (含快取邏輯)
  */
 const getRates = async () => {
   try {
-    // 嘗試從 SystemSetting 資料表讀取
+    // [優化]：如果腦袋裡已經有背好的費率，就直接吐出來，不用查資料庫
+    if (cachedRates) {
+      return cachedRates;
+    }
+
     const setting = await prisma.systemSetting.findUnique({
       where: { key: "rates_config" },
     });
 
     if (setting && setting.value) {
-      // Prisma 的 Json 欄位通常直接回傳物件
-      return typeof setting.value === "string"
-        ? JSON.parse(setting.value)
-        : setting.value;
+      const value =
+        typeof setting.value === "string"
+          ? JSON.parse(setting.value)
+          : setting.value;
+
+      // [優化]：查到後，先背下來 (存入快取)
+      cachedRates = value;
+      return cachedRates;
     }
 
-    console.warn("⚠️ 警告：資料庫中找不到 rates_config，將使用空白預設值");
+    console.warn("⚠️ 警告：資料庫中找不到 rates_config，使用預設值");
     return DEFAULT_RATES_STRUCTURE;
   } catch (error) {
-    console.error("讀取運費設定失敗 (將使用空白預設值):", error.message);
-    // 發生錯誤時回傳空結構，避免計算出錯誤費用
+    console.error("讀取運費設定失敗:", error.message);
     return DEFAULT_RATES_STRUCTURE;
   }
 };
 
 /**
- * [關鍵修復] 根據類型名稱查找費率 (含 Fallback 機制)
- * @param {Object} rates 完整的費率設定物件 (由 getRates 取得)
- * @param {String} typeInput 包裹類型字串 (如 "Special Furniture A")
- * @returns {Object} { weightRate, volumeRate }
+ * [大師新增]：清除快取的功能
+ * 當管理員在後台改了運費，必須呼叫這個，否則伺服器會一直用舊的「記憶」
  */
+const clearCache = () => {
+  console.log("♻️ [RatesManager] 快取已清除，下次請求將讀取最新資料庫設定");
+  cachedRates = null;
+};
+
 const getCategoryRate = (rates, typeInput) => {
   const CATEGORIES = rates.categories || {};
-
-  // 1. 標準化輸入：轉小寫、移除前後空白
   const normalizedType = (typeInput || "general").trim().toLowerCase();
 
-  // 2. 嘗試直接查找
-  if (CATEGORIES[normalizedType]) {
-    return CATEGORIES[normalizedType];
-  }
+  if (CATEGORIES[normalizedType]) return CATEGORIES[normalizedType];
+  if (CATEGORIES[typeInput]) return CATEGORIES[typeInput];
 
-  // 3. 嘗試查找原始輸入 (容錯)
-  if (CATEGORIES[typeInput]) {
-    return CATEGORIES[typeInput];
-  }
-
-  // 4. [Fallback] 找不到時，強制回退使用 'general'，並記錄警告
-  // 避免回傳 {0,0} 導致運費變 0
-  console.warn(
-    `⚠️ [RatesManager] 未知的包裹類型: '${typeInput}'，已降級使用 'general' 費率。`
-  );
-
+  console.warn(`⚠️ [RatesManager] 未知類型: '${typeInput}'，降級使用 general`);
   return CATEGORIES["general"] || { weightRate: 0, volumeRate: 0 };
 };
 
-/**
- * 驗證費率結構是否合法 (用於更新設定時)
- * @param {Object} rates
- */
 const validateRates = (rates) => {
-  if (!rates || !rates.categories || !rates.constants) {
-    return false;
-  }
-  if (typeof rates.constants.MINIMUM_CHARGE === "undefined") return false;
-  return true;
+  if (!rates || !rates.categories || !rates.constants) return false;
+  return typeof rates.constants.MINIMUM_CHARGE !== "undefined";
 };
 
 module.exports = {
   getRates,
   getCategoryRate,
   validateRates,
+  clearCache, // 記得匯出
   DEFAULT_RATES: DEFAULT_RATES_STRUCTURE,
 };
