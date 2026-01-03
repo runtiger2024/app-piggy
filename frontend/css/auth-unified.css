@@ -1,0 +1,228 @@
+/* ============================================================
+ * 小跑豬身分驗證統一樣式表 - V2025 旗艦版
+ * 適用於：會員登入、註冊、管理員登入頁面
+ * ============================================================ */
+
+:root {
+  /* 核心品牌色 - 參考自 theme-client.css */
+  --p-primary: #1a73e8;
+  --p-primary-hover: #1557b0;
+  --p-primary-light: #e8f0fe;
+  --p-accent: #ff5000;
+  --text-main: #1c1c1e;
+  --text-body: #3a3a3c;
+  --text-sub: #8e8e93;
+  --bg-app: #f2f5f8;
+  --bg-card: #ffffff;
+  --bg-input: #f7f8fa;
+  --border-main: #e5e5ea;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --shadow-auth: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --ease-ios: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 基礎重置 */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Microsoft JhengHei", sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* 登入容器 - 參考 admin-login.html 的 500px 限制 */
+.container {
+  width: 95%;
+  max-width: 450px;
+  background: var(--bg-card);
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-auth);
+  animation: authFadeIn 0.6s var(--ease-ios);
+}
+
+@keyframes authFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Logo 樣式 */
+.header-logo {
+  height: 60px;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+  margin-bottom: 30px;
+  letter-spacing: -0.5px;
+}
+
+/* 頁籤切換 (適用於會員登入) */
+.auth-tabs {
+  display: flex;
+  background: var(--bg-input);
+  padding: 5px;
+  border-radius: var(--radius-md);
+  margin-bottom: 25px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.tab-btn.active {
+  background: var(--bg-card);
+  color: var(--p-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 表單群組 */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.form-group input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid transparent;
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  transition: all 0.3s;
+}
+
+.form-group input:focus {
+  background-color: #fff;
+  border-color: var(--p-primary);
+  box-shadow: 0 0 0 4px var(--p-primary-light);
+  outline: none;
+}
+
+/* 按鈕系統 - 參考 theme-client.css 旗艦級樣式 */
+.btn {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s var(--ease-ios);
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(26, 115, 232, 0.25);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(26, 115, 232, 0.35);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text-body);
+  text-decoration: none;
+}
+
+/* 提示訊息框 */
+.alert {
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.alert-error {
+  background: #fff2f0;
+  color: #ff3b30;
+  border: 1px solid #ffccc7;
+}
+
+.alert-success {
+  background: #f6ffed;
+  color: #389e0d;
+  border: 1px solid #b7eb8f;
+}
+
+/* 其他連結 */
+.auth-footer-links {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.85rem;
+}
+
+.auth-footer-links a {
+  color: var(--text-sub);
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.auth-footer-links a:hover {
+  color: var(--p-primary);
+}
+
+/* 響應式微調 */
+@media (max-width: 480px) {
+  .container {
+    padding: 30px 20px;
+    border-radius: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
