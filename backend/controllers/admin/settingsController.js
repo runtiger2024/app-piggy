@@ -1,4 +1,5 @@
 // backend/controllers/admin/settingsController.js
+// V16 - 旗艦極限穩定版
 
 const prisma = require("../../config/db.js");
 const createLog = require("../../utils/createLog.js");
@@ -13,8 +14,9 @@ const getSystemSettings = async (req, res) => {
     const settings = {};
 
     settingsList.forEach((item) => {
-      let val = item.value;
-      // 敏感資訊遮罩處理 (例如發票金鑰)
+      let val = item.value; // Prisma 的 Json 欄位已經是 JavaScript 物件
+
+      // 敏感資訊遮罩處理
       if (item.key === "invoice_config" && val && val.hashKey) {
         val = { ...val, hashKey: "********" };
       }
@@ -29,7 +31,7 @@ const getSystemSettings = async (req, res) => {
 };
 
 /**
- * 更新或新增系統設定 (支援匯率、服務費標籤設定)
+ * 更新或新增系統設定
  */
 const updateSystemSetting = async (req, res) => {
   try {
@@ -46,12 +48,10 @@ const updateSystemSetting = async (req, res) => {
       });
       if (oldSetting && oldSetting.value && oldSetting.value.hashKey) {
         value.hashKey = oldSetting.value.hashKey;
-      } else {
-        value.hashKey = "";
       }
     }
 
-    // 使用 upsert 處理新增或修改
+    // [大師級重點]：直接將 value 物件存入，Prisma 會自動處理為 DB 的 Json
     await prisma.systemSetting.upsert({
       where: { key },
       update: { value: value, ...(description && { description }) },
@@ -62,10 +62,11 @@ const updateSystemSetting = async (req, res) => {
       req.user.id,
       "UPDATE_SYSTEM_SETTING",
       "SYSTEM",
-      `更新設定: ${key}`
+      `更新系統設定: ${key}`,
+      req.user.email
     );
 
-    res.status(200).json({ success: true, message: `設定 ${key} 已更新` });
+    res.status(200).json({ success: true, message: `設定 ${key} 已成功儲存` });
   } catch (error) {
     console.error(`更新設定 ${req.params.key} 失敗:`, error);
     res.status(500).json({ success: false, message: "伺服器錯誤" });
@@ -73,7 +74,7 @@ const updateSystemSetting = async (req, res) => {
 };
 
 /**
- * [V2025] 測試 Email 發送功能
+ * 測試 Email 發送功能
  */
 const sendTestEmail = async (req, res) => {
   try {
@@ -81,18 +82,16 @@ const sendTestEmail = async (req, res) => {
     if (!user.email)
       return res
         .status(400)
-        .json({ success: false, message: "您沒有設定 Email" });
+        .json({ success: false, message: "管理員帳號未設定 Email" });
 
     const mockShipment = {
       id: "TEST-SHIPMENT-" + Date.now(),
-      recipientName: "測試收件人",
-      phone: "0900000000",
+      recipientName: "測試管理員",
       totalCost: 1000,
-      shippingAddress: "測試地址",
-      note: "這是來自後台的測試郵件",
     };
+
     const mockCustomer = {
-      name: user.name || "Admin",
+      name: "系統測試人員",
       email: user.email,
     };
 
@@ -100,7 +99,7 @@ const sendTestEmail = async (req, res) => {
 
     res.json({
       success: true,
-      message: `測試信件已發送至管理員信箱清單`,
+      message: `測試郵件已發送至管理員配置名單中`,
     });
   } catch (e) {
     res.status(500).json({ success: false, message: "發送失敗: " + e.message });
