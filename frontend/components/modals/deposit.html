@@ -1,52 +1,55 @@
 <div id="deposit-modal" class="modal-overlay" style="display: none">
   <div class="modal-content">
     <button class="modal-close">&times;</button>
+
     <h3>💰 申請錢包儲值</h3>
-    <div id="deposit-bank-info"></div>
+
+    <div id="deposit-bank-info">
+      <i class="fas fa-info-circle"></i> 載入官方匯款帳號中...
+    </div>
+
     <form id="deposit-form">
-      <div class="form-group">
-        <label class="required">儲值金額 (NT$)</label>
+      <div class="form-group deposit-amount-group">
+        <label class="required">儲值金額 (TWD)</label>
         <input
           type="number"
           id="dep-amount"
           class="form-control"
+          placeholder="0"
           min="100"
           required
         />
       </div>
 
-      <div
-        class="form-group"
-        style="
-          background: #f0f7ff;
-          padding: 10px;
-          border-radius: 5px;
-          border: 1px solid #cce5ff;
-        "
-      >
-        <label style="color: #0056b3; font-weight: bold; font-size: 13px"
-          >發票資訊 (B2B請填寫)</label
+      <div class="b2b-invoice-card">
+        <label
+          ><i class="fas fa-file-invoice"></i> 公司發票資訊 (B2B 請填寫)</label
         >
-        <div style="display: flex; gap: 10px; margin-top: 5px">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 5px;
+          "
+        >
           <input
             type="text"
             id="dep-taxId"
             class="form-control"
             placeholder="統一編號"
-            style="font-size: 13px"
           />
           <input
             type="text"
             id="dep-invoiceTitle"
             class="form-control"
             placeholder="公司抬頭"
-            style="font-size: 13px"
           />
         </div>
       </div>
 
       <div class="form-group">
-        <label>備註 / 轉帳末五碼</label>
+        <label>轉帳末五碼 / 備註</label>
         <input
           type="text"
           id="dep-note"
@@ -54,12 +57,13 @@
           placeholder="例: 末五碼 12345"
         />
       </div>
+
       <div class="form-group">
         <label class="required">轉帳憑證截圖</label>
         <div class="upload-zone-wrapper">
-          <label for="dep-proof" class="upload-zone">
-            <i class="fas fa-camera"></i>
-            <span>點擊上傳憑證照片</span>
+          <label for="dep-proof" class="deposit-upload-zone">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>點擊或拖放照片至此</span>
           </label>
           <input
             type="file"
@@ -70,7 +74,8 @@
           />
         </div>
       </div>
-      <button type="submit" class="btn btn-primary">提交申請</button>
+
+      <button type="submit" class="btn btn-primary">確認提交儲值申請</button>
     </form>
   </div>
 </div>

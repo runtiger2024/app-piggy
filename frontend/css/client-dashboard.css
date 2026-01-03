@@ -290,3 +290,1020 @@
   gap: 8px;
   margin-top: 10px;
 }
+/* --- [包裹管理分頁：操作列旗艦化優化] --- */
+
+/* 1. 操作區整體佈局 */
+.package-actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 15px 5px;
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* 確保手機端自動換行 */
+}
+
+/* 2. 預報按鈕組 - 提升點擊感與層次 */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-width: 300px;
+}
+
+.btn-action {
+  flex: 1;
+  height: 48px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+}
+
+/* 單件預報：品牌藍漸層 */
+.btn-action.primary {
+  background: linear-gradient(135deg, var(--p-primary) 0%, #0052cc 100%);
+  color: #fff;
+  box-shadow: 0 6px 15px rgba(26, 115, 232, 0.25);
+}
+
+/* 批次預報：優雅深藍/灰漸層 */
+.btn-action.secondary {
+  background: linear-gradient(135deg, #475569 0%, #1e293b 100%);
+  color: #fff;
+  box-shadow: 0 6px 15px rgba(71, 85, 105, 0.2);
+}
+
+.btn-action:hover {
+  transform: translateY(-3px) scale(1.02);
+  filter: brightness(1.1);
+}
+
+.btn-action:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.btn-action i {
+  font-size: 1.1rem;
+}
+
+/* 3. 搜尋與篩選群組 - 現代化輸入框設計 */
+.filter-search-group {
+  display: flex;
+  gap: 10px;
+  flex: 1.5;
+  min-width: 320px;
+  justify-content: flex-end;
+}
+
+/* 搜尋框包裝 */
+.search-box {
+  position: relative;
+  flex: 2;
+}
+
+.search-box i {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--p-primary);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+#pkg-search-input {
+  width: 100%;
+  height: 48px;
+  background-color: #f1f5f9;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 0 15px 0 42px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  transition: all 0.3s ease;
+}
+
+#pkg-search-input:focus {
+  background-color: #fff;
+  border-color: var(--p-primary);
+  box-shadow: 0 0 0 4px var(--p-primary-light);
+}
+
+/* 狀態篩選下拉選單 */
+.filter-select {
+  flex: 1;
+  height: 48px;
+  background-color: #f1f5f9;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 0 15px;
+  font-weight: 700;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.filter-select:focus {
+  border-color: var(--p-primary);
+  background-color: #fff;
+}
+
+/* --- [響應式適配] --- */
+@media (max-width: 800px) {
+  .package-actions-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  .action-buttons,
+  .filter-search-group {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* 手機端讓按鈕文字更精簡 */
+  .btn-action span {
+    font-size: 0.88rem;
+  }
+}
+/* --- [集運訂單分頁：訂單列表旗艦化優化] --- */
+
+/* 1. 容器與表格基礎 */
+.order-style {
+  background: transparent;
+  padding: 5px;
+  margin-top: 10px;
+}
+
+.order-style table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 12px; /* 營造行與行之間的間距，產生卡片感 */
+  background: transparent;
+}
+
+/* 2. 表頭樣式：輕量化、專業感 */
+.order-style th {
+  padding: 12px 15px;
+  color: var(--text-sub);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: none;
+  text-align: left;
+}
+
+/* 3. 訂單行 (TR) 卡片化設計 */
+.order-style tbody tr {
+  background: #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.order-style tbody tr:hover {
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 0 8px 25px rgba(26, 115, 232, 0.1);
+}
+
+.order-style td {
+  padding: 20px 15px;
+  border: none;
+  vertical-align: middle;
+}
+
+/* 圓角處理：確保卡片邊緣平滑 */
+.order-style td:first-child {
+  border-radius: 16px 0 0 16px;
+  border-left: 5px solid transparent; /* 預留給狀態條 */
+}
+.order-style td:last-child {
+  border-radius: 0 16px 16px 0;
+}
+
+/* 4. 訂單號碼與文字優化 */
+.order-id {
+  font-family: "Monaco", "Consolas", monospace;
+  font-weight: 800;
+  color: var(--p-primary);
+  font-size: 1rem;
+}
+
+.recipient-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recipient-name {
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.order-details-summary {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+}
+
+/* 5. 金額區塊：高亮度品牌藍 */
+.order-amount {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--p-primary);
+  font-family: "Monaco", monospace;
+}
+
+.order-amount::before {
+  content: "NT$";
+  font-size: 0.75rem;
+  margin-right: 4px;
+  vertical-align: baseline;
+}
+
+/* 6. 狀態標籤 (Status Badges) 強化版 */
+.order-status {
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  display: inline-block;
+}
+
+/* 待付款 (Warning) */
+.status-unpaid {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid rgba(250, 140, 22, 0.2);
+}
+
+/* 已付款/處理中 (Primary) */
+.status-processing {
+  background: var(--p-primary-light);
+  color: var(--p-primary);
+}
+
+/* 已發貨 (Success) */
+.status-shipped {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+/* 已完成 (Success Green) */
+.status-completed {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+/* 7. 操作按鈕優化 */
+.btn-order-action {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #f1f5f9;
+  color: var(--text-body);
+  transition: 0.2s;
+}
+
+.btn-order-action:hover {
+  background: var(--p-primary);
+  color: #fff;
+}
+
+/* --- [響應式：手機端自動轉為卡片佈局] --- */
+@media (max-width: 800px) {
+  .order-style table,
+  .order-style thead,
+  .order-style tbody,
+  .order-style tr,
+  .order-style td {
+    display: block;
+    width: 100%;
+  }
+
+  .order-style thead {
+    display: none; /* 手機端隱藏表頭 */
+  }
+
+  .order-style tbody tr {
+    margin-bottom: 15px;
+    padding: 15px;
+    position: relative;
+  }
+
+  .order-style td {
+    padding: 10px 0;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f8fafc;
+  }
+
+  .order-style td:last-child {
+    border-bottom: none;
+    padding-top: 15px;
+    justify-content: flex-end; /* 按鈕靠右 */
+  }
+
+  /* 在手機端利用 content 注入標籤內容 */
+  .order-style td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--text-sub);
+    font-size: 0.85rem;
+  }
+}
+/* --- [集運訂單列表：手機版極致優化] --- */
+
+@media (max-width: 800px) {
+  /* 1. 隱藏原生表頭 */
+  .order-style table thead {
+    display: none;
+  }
+
+  /* 2. 移除表格間距，改用自定義卡片間距 */
+  .order-style table {
+    border-spacing: 0;
+    display: block;
+  }
+
+  /* 3. 將每一行 (TR) 轉化為獨立卡片 */
+  .order-style tbody tr.shipment-row-card {
+    display: block;
+    background: #ffffff;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f0f2f5;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 卡片左側藍條裝飾 */
+  .order-style tbody tr.shipment-row-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: var(--p-primary);
+  }
+
+  /* 4. 調整每一格 (TD) 的排版 */
+  .order-style td {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0 !important;
+    border-bottom: 1px dashed #edf2f7 !important;
+    text-align: right;
+    width: 100% !important;
+  }
+
+  /* 5. 透過 data-label 顯示標題 */
+  .order-style td::before {
+    content: attr(data-label);
+    font-weight: 800;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    text-align: left;
+  }
+
+  /* 6. 特殊欄位視覺加強 */
+  .order-id-highlight {
+    color: var(--p-primary);
+    font-weight: 900;
+    font-family: "Monaco", monospace;
+    font-size: 1.05rem;
+  }
+
+  .order-price-tag {
+    color: #e53e3e !important;
+    font-weight: 900;
+    font-size: 1.2rem;
+    font-family: "Monaco", monospace;
+  }
+
+  .order-actions-wrap {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* 最後一格不需要底線 */
+  .order-style td:last-child {
+    border-bottom: none !important;
+    padding-top: 15px !important;
+  }
+
+  /* 收件詳情盒 */
+  .ship-info-box {
+    text-align: right;
+  }
+  .ship-user-name {
+    font-weight: 800;
+    color: #1e293b;
+  }
+  .ship-pkg-count {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  /* 審核中標籤 */
+  .proof-pending-tag {
+    background: #fff7e6;
+    color: #d97706;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid #ffedd5;
+  }
+}
+
+/* 狀態標籤基礎樣式補強 (手機與電腦通用) */
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-block;
+}
+/* --- [錢包與帳務中心：旗艦級視覺重構] --- */
+
+/* 1. 餘額卡片 - 採用深色專業漸層 */
+.wallet-balance-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 24px;
+  padding: 40px 20px;
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+  margin-bottom: 25px;
+}
+
+.wallet-balance-card::after {
+  content: "\f51e"; /* FontAwesome Coins */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  font-size: 8rem;
+  color: rgba(255, 255, 255, 0.03);
+}
+
+.balance-label {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.balance-amount-large {
+  font-size: 3rem;
+  font-weight: 900;
+  font-family: "Monaco", monospace;
+  color: #f8fafc;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.balance-amount-large::before {
+  content: "$";
+  font-size: 1.5rem;
+  vertical-align: super;
+  margin-right: 5px;
+  color: #22c55e;
+}
+
+/* 2. 儲值申請彈窗優化 */
+#deposit-modal .modal-content {
+  border-radius: 28px;
+  padding: 0; /* 內部間距由 body 控制 */
+  overflow: hidden;
+}
+
+#deposit-modal h3 {
+  background: #f8fafc;
+  margin: 0;
+  padding: 25px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+#deposit-form {
+  padding: 25px;
+}
+
+/* B2B 發票區塊強化 */
+.b2b-invoice-section {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  margin: 20px 0;
+}
+
+.b2b-invoice-section label {
+  color: var(--p-primary) !important;
+  font-size: 0.85rem !important;
+  margin-bottom: 12px !important;
+}
+
+/* 3. 交易紀錄列表優化 */
+.transaction-style table {
+  border-spacing: 0 8px;
+  border-collapse: separate;
+}
+
+.transaction-style tr {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: 0.2s;
+}
+
+.transaction-style td {
+  padding: 16px 12px !important;
+  background: white;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.transaction-style td:first-child {
+  border-left: 1px solid #f1f5f9;
+  border-radius: 12px 0 0 12px;
+}
+.transaction-style td:last-child {
+  border-right: 1px solid #f1f5f9;
+  border-radius: 0 12px 12px 0;
+}
+
+/* 交易類型與金額顏色 */
+.tx-amount-in {
+  color: #22c55e !important;
+  font-weight: 800;
+} /* 存入為綠 */
+.tx-amount-out {
+  color: #ef4444 !important;
+  font-weight: 800;
+} /* 支出為紅 */
+
+.tx-type-tag {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f1f5f9;
+}
+
+/* --- [響應式：手機版帳務卡片化] --- */
+@media (max-width: 800px) {
+  .transaction-style thead {
+    display: none;
+  }
+  .transaction-style tr {
+    display: block;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+  }
+  .transaction-style td {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0 !important;
+    border: none !important;
+  }
+  .transaction-style td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+}
+/* --- [深度優化：錢包儲值彈窗旗艦版] --- */
+
+/* 1. 彈窗主體強化：增加深度陰影與柔和圓角 */
+#deposit-modal .modal-content {
+  max-width: 500px;
+  border-radius: 30px;
+  border: none;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  padding: 0; /* 內部間距改由各區塊自定義 */
+  background: #ffffff;
+  overflow: hidden;
+}
+
+/* 2. 頂部標題區：深色漸層顯專業感 */
+#deposit-modal h3 {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  color: #ffffff;
+  margin: 0;
+  padding: 24px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* 3. 匯款資訊預覽區 (假設動態載入至 #deposit-bank-info) */
+#deposit-bank-info {
+  margin: 20px 25px 0;
+  padding: 15px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+/* 4. 表單內部佈局優化 */
+#deposit-form {
+  padding: 25px;
+}
+
+/* 5. 金額輸入區：強化視覺焦點 */
+.deposit-amount-group {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.deposit-amount-group label {
+  display: block;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+#dep-amount {
+  font-size: 2rem !important;
+  font-weight: 900 !important;
+  color: #1a73e8 !important;
+  text-align: center !important;
+  height: 70px !important;
+  border-radius: 18px !important;
+  background-color: #f1f5f9 !important;
+  border: 2px solid transparent !important;
+  transition: all 0.3s ease !important;
+}
+
+#dep-amount:focus {
+  background-color: #ffffff !important;
+  border-color: #1a73e8 !important;
+  box-shadow: 0 10px 20px rgba(26, 115, 232, 0.1) !important;
+}
+
+/* 6. B2B 發票區塊：使用「浮動卡片」效果隔離 */
+.b2b-invoice-card {
+  background: #f0f7ff !important;
+  padding: 20px !important;
+  border-radius: 20px !important;
+  border: 1px solid #dbeafe !important;
+  margin-bottom: 20px;
+  transition: transform 0.2s ease;
+}
+
+.b2b-invoice-card:hover {
+  transform: translateY(-2px);
+}
+
+.b2b-invoice-card label {
+  color: #1e40af !important;
+  font-size: 0.85rem !important;
+  margin-bottom: 12px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.b2b-invoice-card label::before {
+  content: "\f570"; /* FontAwesome Invoice icon */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+}
+
+/* 7. 上傳區塊專屬美化 */
+.deposit-upload-zone {
+  height: 120px !important;
+  background-color: #f8fafc !important;
+  border: 2px dashed #cbd5e1 !important;
+  border-radius: 18px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.deposit-upload-zone:hover {
+  background-color: #eff6ff !important;
+  border-color: #1a73e8 !important;
+  color: #1a73e8 !important;
+}
+
+.deposit-upload-zone i {
+  font-size: 1.8rem;
+  color: #94a3b8;
+}
+
+/* 8. 提交按鈕：旗艦級質感 */
+#deposit-modal .btn-primary {
+  width: 100%;
+  height: 56px;
+  border-radius: 18px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  box-shadow: 0 8px 20px rgba(26, 115, 232, 0.3);
+  border: none;
+  margin-top: 10px;
+}
+
+#deposit-modal .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(26, 115, 232, 0.4);
+}
+/* --- [深度優化：錢包儲值彈窗專屬 CSS] --- */
+
+/* 1. 彈窗主體：深度陰影與柔和圓角 */
+#deposit-modal .modal-content {
+  max-width: 500px;
+  border-radius: 30px;
+  border: none;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  padding: 0; /* 內部間距由區塊自訂 */
+  background: #ffffff;
+  overflow: hidden;
+  animation: modalSpring 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. 頂部標題區：深藍漸層與品牌質感 */
+#deposit-modal h3 {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  color: #ffffff;
+  margin: 0;
+  padding: 24px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* 3. 匯款資訊區：虛線邊框與淺灰底色 */
+#deposit-bank-info {
+  margin: 20px 25px 0;
+  padding: 15px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+/* 4. 金額輸入區：極大化視覺焦點 */
+.deposit-amount-group {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.deposit-amount-group label {
+  display: block;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+#dep-amount {
+  font-size: 2.2rem !important; /* 加大金額字體 */
+  font-weight: 900 !important;
+  color: #1a73e8 !important;
+  text-align: center !important;
+  height: 75px !important;
+  border-radius: 18px !important;
+  background-color: #f1f5f9 !important;
+  border: 2px solid transparent !important;
+  transition: all 0.3s ease !important;
+  font-family: "Monaco", monospace;
+}
+
+#dep-amount:focus {
+  background-color: #ffffff !important;
+  border-color: #1a73e8 !important;
+  box-shadow: 0 10px 20px rgba(26, 115, 232, 0.1) !important;
+}
+
+/* 5. B2B 發票區塊：卡片式隔離設計 */
+.b2b-invoice-card {
+  background: #f0f7ff !important; /* 淺藍背景區隔 */
+  padding: 20px !important;
+  border-radius: 20px !important;
+  border: 1px solid #dbeafe !important;
+  margin-bottom: 20px;
+  transition: transform 0.2s ease;
+}
+
+.b2b-invoice-card label {
+  color: #1e40af !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 6. 上傳區域：雲端感視覺與引導 */
+.deposit-upload-zone {
+  height: 130px !important;
+  background-color: #f8fafc !important;
+  border: 2px dashed #cbd5e1 !important;
+  border-radius: 20px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #64748b;
+}
+
+.deposit-upload-zone:hover {
+  background-color: #eff6ff !important;
+  border-color: #1a73e8 !important;
+  color: #1a73e8 !important;
+}
+
+.deposit-upload-zone i {
+  font-size: 2rem;
+  color: #94a3b8;
+  transition: transform 0.3s ease;
+}
+
+.deposit-upload-zone:hover i {
+  transform: translateY(-5px);
+  color: #1a73e8;
+}
+
+/* 7. 提交按鈕：深邃漸層與擴散陰影 */
+#deposit-modal .btn-primary {
+  width: 100%;
+  height: 58px;
+  border-radius: 18px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
+  box-shadow: 0 8px 20px rgba(26, 115, 232, 0.3);
+  border: none;
+  margin-top: 10px;
+  letter-spacing: 1px;
+}
+
+#deposit-modal .btn-primary:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 25px rgba(26, 115, 232, 0.4);
+}
+
+/* 彈窗出現動畫 */
+@keyframes modalSpring {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+/* --- [深度優化修正：確保錢包儲值彈窗可捲動] --- */
+
+#deposit-modal .modal-content {
+  max-width: 500px;
+  width: 95%; /* 確保手機版左右有間隙 */
+  max-height: 90vh; /* 限制最高為螢幕高度的 90% */
+  border-radius: 30px;
+  border: none;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  padding: 0;
+  background: #ffffff;
+  position: relative;
+  /* 關鍵修正：允許垂直捲動，並處理圓角溢出 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSpring 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 為了讓頂部標題在捲動時固定（選配，若不需要固定可刪除此段） */
+#deposit-modal h3 {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  color: #ffffff !important;
+  margin: 0;
+  padding: 24px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 1px;
+  position: sticky; /* 固定標題 */
+  top: 0;
+  z-index: 10;
+}
+
+/* 針對捲動條進行美化，使其不佔空間 */
+#deposit-modal .modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+#deposit-modal .modal-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* 其餘樣式維持不變... */
+#deposit-bank-info {
+  margin: 20px 25px 0;
+  padding: 15px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+#deposit-form {
+  padding: 25px;
+}
+
+.deposit-amount-group {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+#dep-amount {
+  font-size: 2.2rem !important;
+  font-weight: 900 !important;
+  color: #1a73e8 !important;
+  text-align: center !important;
+  height: 75px !important;
+  border-radius: 18px !important;
+  background-color: #f1f5f9 !important;
+  border: 2px solid transparent !important;
+}
+
+.b2b-invoice-card {
+  background: #f0f7ff !important;
+  padding: 20px !important;
+  border-radius: 20px !important;
+  border: 1px solid #dbeafe !important;
+  margin-bottom: 20px;
+}
+
+.deposit-upload-zone {
+  height: 130px !important;
+  background-color: #f8fafc !important;
+  border: 2px dashed #cbd5e1 !important;
+  border-radius: 20px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+#deposit-modal .btn-primary {
+  width: 100%;
+  height: 58px;
+  border-radius: 18px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
+  margin-top: 10px;
+}

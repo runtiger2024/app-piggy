@@ -3,6 +3,7 @@
 // [Update] 修正合併打包結算條顯隱控制邏輯
 // [Optimization] 整合銀行轉帳彈窗詳細資訊、一鍵複製與垃圾郵件提醒
 // [Fixed] 解決選擇銀行轉帳提交後無動作、畫面變霧面之問題
+// [Critical Fix] 修正上傳憑證 API 路徑、方法與欄位名稱，解決 404 錯誤
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
@@ -854,7 +855,8 @@ window.resetBankProofUpload = function () {
 };
 
 /**
- * 在銀行彈窗內提交憑證
+ * [核心修復] 在銀行彈窗內提交憑證
+ * 修正點：API 路徑改為 /payment，方法改為 PUT，欄位改為 paymentProof
  */
 window.submitBankProof = async function () {
   const shipmentId = window.lastCreatedShipmentId;
@@ -870,13 +872,15 @@ window.submitBankProof = async function () {
   }
 
   const fd = new FormData();
-  fd.append("proof", file);
+  // 必須與後端 upload.single("paymentProof") 一致
+  fd.append("paymentProof", file);
 
   try {
+    // 路徑改為 /api/shipments/:id/payment，方法改為 PUT
     const res = await fetch(
-      `${API_BASE_URL}/api/shipments/${shipmentId}/upload-proof`,
+      `${API_BASE_URL}/api/shipments/${shipmentId}/payment`,
       {
-        method: "POST",
+        method: "PUT",
         headers: { Authorization: `Bearer ${window.dashboardToken}` },
         body: fd,
       }
