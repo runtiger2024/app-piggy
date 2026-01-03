@@ -16,13 +16,11 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <style>
-      /* --- Dashboard 旗艦版整合樣式 (修正置中、位移與自動捲動) --- */
-
+      /* --- Dashboard 旗艦版整合樣式 --- */
       .dashboard-theme {
         background-color: #f4f7fa;
       }
 
-      /* 1. 高級 Hero 迎賓卡片 */
       .hero-dashboard {
         background: linear-gradient(135deg, #1a73e8 0%, #003a8c 100%);
         border-radius: 24px;
@@ -61,11 +59,9 @@
         border-radius: 50px;
         font-size: 0.85rem;
         font-weight: 700;
-        letter-spacing: 0.5px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
       }
 
-      /* 2. 錢包整合樣式 */
       .wallet-summary-box {
         background: rgba(255, 255, 255, 0.12);
         backdrop-filter: blur(10px);
@@ -75,7 +71,6 @@
         text-align: right;
         min-width: 220px;
         cursor: pointer;
-        transition: transform 0.3s ease;
       }
 
       .ws-amount {
@@ -84,7 +79,6 @@
         font-family: "Monaco", monospace;
       }
 
-      /* 3. 分頁標籤容器：黏性定位與樣式優化 */
       .dashboard-tabs-wrapper {
         position: sticky;
         top: 70px;
@@ -100,7 +94,6 @@
         padding: 5px;
         border-radius: 16px;
         gap: 5px;
-        border-bottom: none !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
       }
 
@@ -114,11 +107,9 @@
         border: none;
         background: transparent;
         color: #475569;
-        transition: all 0.3s ease;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
         gap: 4px;
       }
 
@@ -126,23 +117,6 @@
         background: #ffffff;
         color: #1a73e8;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      }
-
-      /* 4. 表格與內容展示卡片區塊 */
-      .app-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 0 auto;
-      }
-
-      .app-table th {
-        background: #f8fafc;
-        color: #64748b;
-        font-weight: 800;
-        padding: 15px 10px;
-        text-align: center;
-        border-bottom: 2px solid #edf2f7;
-        font-size: 14px;
       }
 
       .dashboard-main-card {
@@ -154,7 +128,6 @@
         margin-bottom: 25px;
       }
 
-      /* 5. 快捷操作與狀態列 */
       .quick-actions-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -186,7 +159,6 @@
         border: 1px solid #eee;
       }
 
-      /* 6. 合併打包結算條樣式 */
       .checkout-bar {
         position: fixed;
         bottom: 25px;
@@ -203,8 +175,7 @@
         align-items: center;
         z-index: 2100;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        animation: slideUpUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        animation: slideUpUp 0.5s ease;
       }
 
       @keyframes slideUpUp {
@@ -218,19 +189,6 @@
         }
       }
 
-      .checkout-info {
-        color: white;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .checkout-info .highlight {
-        color: #ffc107;
-        font-size: 1.5rem;
-      }
-
       .btn-checkout-active {
         background: linear-gradient(
           135deg,
@@ -238,18 +196,16 @@
           #1e7e34 100%
         ) !important;
         color: white !important;
-        border: none !important;
         padding: 12px 28px !important;
         border-radius: 14px !important;
         font-weight: 900 !important;
         cursor: pointer;
-        transition: 0.3s;
       }
 
-      /* --- [NEW] 圖片上傳區域優化樣式 --- */
+      /* 圖片上傳區優化樣式 */
       .upload-zone-wrapper {
         position: relative;
-        margin-top: 8px;
+        width: 100%;
       }
       .upload-zone {
         display: flex;
@@ -257,7 +213,7 @@
         align-items: center;
         justify-content: center;
         width: 100%;
-        height: 120px;
+        height: 140px;
         background-color: #f8fafc;
         border: 2px dashed #cbd5e1;
         border-radius: 12px;
@@ -271,12 +227,8 @@
         color: #1a73e8;
       }
       .upload-zone i {
-        font-size: 2rem;
-        margin-bottom: 8px;
-      }
-      .upload-zone span {
-        font-size: 13px;
-        font-weight: 500;
+        font-size: 2.2rem;
+        margin-bottom: 10px;
       }
       .upload-input-hidden {
         position: absolute;
@@ -349,7 +301,6 @@
                 </div>
               </div>
             </div>
-            <nav class="main-nav header-nav-right"></nav>
           </div>
         </div>
       </header>
@@ -367,24 +318,23 @@
               "
             >
               <span class="user-id-badge" id="modal-user-id">ID: 載入中</span>
-              <span style="font-size: 0.85rem; opacity: 0.8">
-                <i class="fas fa-envelope"></i> <span id="user-email">...</span>
-              </span>
-            </div>
-            <div style="margin-top: 15px; display: flex; gap: 12px">
-              <button
-                id="btn-edit-profile"
-                class="btn btn-mini"
-                style="
-                  background: rgba(255, 255, 255, 0.15);
-                  border: 1px solid rgba(255, 255, 255, 0.3);
-                  color: #fff;
-                  padding: 6px 15px;
-                "
+              <span style="font-size: 0.85rem; opacity: 0.8"
+                ><i class="fas fa-envelope"></i>
+                <span id="user-email">...</span></span
               >
-                <i class="fas fa-user-cog"></i> 帳號設定
-              </button>
             </div>
+            <button
+              id="btn-edit-profile"
+              class="btn btn-mini"
+              style="
+                background: rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: #fff;
+                padding: 6px 15px;
+              "
+            >
+              <i class="fas fa-user-cog"></i> 帳號設定
+            </button>
           </div>
           <div id="btn-quick-wallet" class="wallet-summary-box">
             <div class="ws-label">可用餘額 (TWD)</div>
@@ -398,10 +348,7 @@
           </div>
         </section>
 
-        <section
-          class="live-status-bar animate-slide-up"
-          style="animation-delay: 0.1s"
-        >
+        <section class="live-status-bar animate-slide-up">
           <div class="status-node">
             <span class="sn-count" id="count-pending">0</span
             ><span class="sn-label">待入庫</span>
@@ -420,10 +367,7 @@
           </div>
         </section>
 
-        <section
-          class="quick-actions-grid animate-slide-up"
-          style="animation-delay: 0.15s"
-        >
+        <section class="quick-actions-grid animate-slide-up">
           <div class="action-tile" id="btn-quick-forecast">
             <div class="tile-icon"><i class="fas fa-box-open"></i></div>
             <span>預報包裹</span>
@@ -449,25 +393,13 @@
         </section>
 
         <div
-          id="draft-queue-container"
-          class="notice-card warning"
-          style="display: none"
-        >
-          <div class="notice-content">
-            <h4><i class="fas fa-clock"></i> 待處理的試算包裹</h4>
-            <ul id="draft-queue-list"></ul>
-          </div>
-        </div>
-
-        <div
           class="section-card forecast-section animate-slide-up"
           style="
-            animation-delay: 0.2s;
-            margin-bottom: 25px;
             background: #fff;
             border-radius: 24px;
             padding: 25px;
             box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
           "
         >
           <div
@@ -479,7 +411,7 @@
               margin-bottom: 20px;
             "
           >
-            <h3 style="margin: 0; font-weight: 800; color: #1e293b">
+            <h3 style="margin: 0; font-weight: 800">
               <i
                 class="fas fa-box-open"
                 style="color: #1a73e8; margin-right: 10px"
@@ -490,26 +422,16 @@
               <button
                 id="btn-claim-package"
                 class="btn btn-sm btn-outline-primary"
-                style="width: auto; font-size: 12px"
               >
                 <i class="fas fa-search"></i> 認領無主件
               </button>
-              <button
-                id="btn-bulk-forecast"
-                class="btn btn-sm btn-secondary"
-                style="width: auto; font-size: 12px"
-              >
+              <button id="btn-bulk-forecast" class="btn btn-sm btn-secondary">
                 <i class="fas fa-file-excel"></i> 批量匯入
               </button>
             </div>
           </div>
           <div class="card-body">
-            <div
-              id="forecast-warning-box"
-              class="alert alert-error"
-              style="display: none; margin-bottom: 15px"
-            ></div>
-            <form id="forecast-form" class="forecast-form-grid">
+            <form id="forecast-form">
               <div
                 style="
                   display: grid;
@@ -518,8 +440,8 @@
                 "
               >
                 <div class="form-group">
-                  <label class="required">物流單號</label>
-                  <input
+                  <label class="required">物流單號</label
+                  ><input
                     type="text"
                     id="trackingNumber"
                     class="form-control"
@@ -528,8 +450,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">商品名稱</label>
-                  <input
+                  <label class="required">商品名稱</label
+                  ><input
                     type="text"
                     id="productName"
                     class="form-control"
@@ -538,8 +460,8 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label>數量</label>
-                  <input
+                  <label>數量</label
+                  ><input
                     type="number"
                     id="quantity"
                     class="form-control"
@@ -549,7 +471,12 @@
                 </div>
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>商品照片 (報關用)</label>
+                <label style="display: flex; justify-content: space-between">
+                  <span>商品照片 (報關用)</span>
+                  <span style="color: #e67e22; font-size: 12px"
+                    >*照片與連結擇一填寫</span
+                  >
+                </label>
                 <div class="upload-zone-wrapper">
                   <label
                     for="images"
@@ -557,7 +484,7 @@
                     id="forecast-uploader"
                   >
                     <i class="fas fa-camera"></i>
-                    <span>點擊上傳商品照片</span>
+                    <span>點擊上傳照片</span>
                   </label>
                   <input
                     type="file"
@@ -568,15 +495,17 @@
                   />
                 </div>
               </div>
+
               <div class="form-group" style="margin-top: 15px">
-                <label>商品購買連結 (照片與連結擇一)</label>
+                <label>商品購買連結 (若無照片請提供連結)</label>
                 <input
                   type="url"
                   id="productUrl"
                   class="form-control"
-                  placeholder="https://..."
+                  placeholder="請貼上淘寶、京東等商品網址 https://..."
                 />
               </div>
+
               <div class="form-group" style="margin-top: 15px">
                 <label>備註</label>
                 <input
@@ -596,7 +525,7 @@
                     font-weight: 800;
                   "
                 >
-                  <i class="fas fa-plus-circle"></i> 提交預報
+                  提交預報
                 </button>
               </div>
             </form>
@@ -650,51 +579,38 @@
               class="tab-content"
               style="display: none"
             >
-              <div id="section-container-unclaimed-area">
-                <div class="table-responsive">
-                  <table class="app-table">
-                    <thead>
-                      <tr>
-                        <th>入庫時間</th>
-                        <th>物流單號 (末5碼)</th>
-                        <th>商品名稱</th>
-                        <th>重量/資訊</th>
-                        <th>操作</th>
-                      </tr>
-                    </thead>
-                    <tbody id="unclaimed-table-body">
-                      <tr>
-                        <td colspan="5" class="text-center py-4">載入中...</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+              <div class="table-responsive">
+                <table class="app-table">
+                  <thead>
+                    <tr>
+                      <th>入庫時間</th>
+                      <th>物流單號</th>
+                      <th>商品名稱</th>
+                      <th>重量</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="unclaimed-table-body">
+                    <tr>
+                      <td colspan="5">載入中...</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </main>
         </div>
-
-        <div class="safe-area-spacer"></div>
       </div>
-      <div style="height: 100px"></div>
     </div>
-
-    <nav id="mobile-bottom-nav" class="universal-bottom-nav"></nav>
 
     <div id="checkout-bar" class="checkout-bar" style="display: none">
       <div class="checkout-info">
-        <i class="fas fa-shopping-basket" style="color: #ffc107"></i>
-        <span
-          >已選取
-          <span id="selected-pkg-count" class="highlight">0</span>
-          件待打包包裹</span
-        >
+        <i class="fas fa-shopping-basket" style="color: #ffc107"></i> 已選取
+        <span id="selected-pkg-count" class="highlight">0</span> 件包裹
       </div>
-      <div class="checkout-actions">
-        <button id="btn-create-shipment" class="btn-checkout-active">
-          <i class="fas fa-box-check"></i> 開始合併打包
-        </button>
-      </div>
+      <button id="btn-create-shipment" class="btn-checkout-active">
+        開始合併打包
+      </button>
     </div>
 
     <div id="modal-container-profile-edit"></div>
@@ -703,25 +619,13 @@
     <div id="modal-container-deposit"></div>
     <div id="modal-container-bulk-forecast"></div>
     <div id="modal-container-claim-package"></div>
-
-    <div
-      id="edit-package-modal"
-      class="modal-overlay"
-      style="display: none"
-    ></div>
-    <div
-      id="recipient-selector-modal"
-      class="modal-overlay"
-      style="display: none"
-    ></div>
-    <div id="bank-info-modal" class="modal-overlay" style="display: none"></div>
-    <div
-      id="upload-proof-modal"
-      class="modal-overlay"
-      style="display: none"
-    ></div>
     <div
       id="package-details-modal"
+      class="modal-overlay"
+      style="display: none"
+    ></div>
+    <div
+      id="edit-package-modal"
       class="modal-overlay"
       style="display: none"
     ></div>
@@ -735,6 +639,7 @@
       class="modal-overlay"
       style="display: none"
     ></div>
+    <div id="bank-info-modal-container"></div>
 
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script>
@@ -750,7 +655,7 @@
         }
       }
 
-      // 核心加載邏輯：補全所有需要的彈窗組件
+      // [核心修復]：更新加載清單，移除無用的 upload-proof.html，補上二合一彈窗
       Promise.all([
         loadHtml(
           "section-container-packages",
@@ -791,10 +696,13 @@
           "components/modals/package-details.html"
         ),
         loadHtml("edit-package-modal", "components/modals/edit-package.html"),
-        /* 修復：補上打包後需要的匯款資訊與憑證上傳彈窗內容 */
-        loadHtml("bank-info-modal", "components/modals/bank-info-modal.html"),
-        loadHtml("upload-proof-modal", "components/modals/upload-proof.html"),
+        // 正確載入二合一彈窗
+        loadHtml(
+          "bank-info-modal-container",
+          "components/modals/bank-info-modal.html"
+        ),
       ]).then(() => {
+        // 防止 DOMContentLoaded 重複觸發
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
           if (type === "DOMContentLoaded") listener();
@@ -829,37 +737,31 @@
             await loadScript(src);
           }
 
-          // [優化] 快速預報跳轉邏輯
+          // 初始化跳轉與捲動邏輯
           const btnQuickForecast =
             document.getElementById("btn-quick-forecast");
           if (btnQuickForecast) {
-            btnQuickForecast.onclick = () => {
+            btnQuickForecast.onclick = () =>
               document
                 .querySelector(".forecast-section")
                 .scrollIntoView({ behavior: "smooth", block: "center" });
-            };
           }
 
-          // [核心優化] 自動捲動功能補丁
           document.querySelectorAll(".tab-btn").forEach((btn) => {
             btn.addEventListener("click", () => {
               const wrapper = document.querySelector(".dashboard-tabs-wrapper");
               if (wrapper) {
                 const headerOffset = 80;
-                const elementPosition =
-                  wrapper.getBoundingClientRect().top + window.pageYOffset;
-                const offsetPosition = elementPosition - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+                window.scrollTo({
+                  top:
+                    wrapper.getBoundingClientRect().top +
+                    window.pageYOffset -
+                    headerOffset,
+                  behavior: "smooth",
+                });
               }
             });
           });
-
-          const unclaimedTile = document.getElementById(
-            "btn-claim-package-tile"
-          );
-          if (unclaimedTile)
-            unclaimedTile.onclick = () =>
-              document.getElementById("btn-claim-package")?.click();
         })();
       });
     </script>
