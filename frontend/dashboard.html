@@ -162,18 +162,18 @@
         border: 1px solid #eee;
       }
 
-      /* 新增：包裹清單結帳區 (取代原本的華麗浮動列) */
+      /* --- [核心修復] 靜態包裹結帳區樣式 (解決遮蔽問題) --- */
       .packages-checkout-zone {
         margin-top: 25px;
         padding: 25px;
         background: #fff;
         border: 2px solid #1a73e8;
         border-radius: 24px;
-        display: flex;
+        display: none; /* 由 JS 根據勾選數量動態顯示 */
         flex-direction: column;
         align-items: center;
         gap: 15px;
-        box-shadow: 0 8px 25px rgba(26, 115, 232, 0.1);
+        box-shadow: 0 8px 30px rgba(26, 115, 232, 0.15);
         text-align: center;
         animation: fadeIn 0.4s ease;
       }
@@ -186,7 +186,7 @@
 
       .checkout-summary-text strong {
         color: #1a73e8;
-        font-size: 1.5rem;
+        font-size: 1.6rem;
         margin: 0 5px;
       }
 
@@ -198,14 +198,14 @@
         color: white;
         border: none;
         border-radius: 16px;
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         font-weight: 900;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 10px;
-        box-shadow: 0 10px 20px rgba(40, 167, 69, 0.2);
+        box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
         transition: transform 0.2s, box-shadow 0.2s;
       }
 
@@ -266,7 +266,7 @@
         }
         .packages-checkout-zone {
           padding: 20px 15px;
-          margin-bottom: 30px; /* 留白給底部導覽 */
+          margin-bottom: 80px; /* 留白給手機版底部導覽列 */
         }
       }
     </style>
@@ -569,6 +569,19 @@
           <main class="dashboard-main-content">
             <div id="packages-section" class="tab-content active">
               <div id="section-container-packages"></div>
+
+              <div id="packages-checkout-zone" class="packages-checkout-zone">
+                <div class="checkout-summary-text">
+                  <i class="fas fa-shopping-basket"></i> 已選取
+                  <strong id="selected-pkg-count-simple">0</strong> 件包裹
+                </div>
+                <button
+                  id="btn-create-shipment-simple"
+                  class="btn-execute-merging"
+                >
+                  <i class="fas fa-shipping-fast"></i> 確認包裹並開始合併打包
+                </button>
+              </div>
             </div>
             <div
               id="shipments-section"
