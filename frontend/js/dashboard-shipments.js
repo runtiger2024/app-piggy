@@ -2,6 +2,7 @@
 // V2025.Final.Transparent.UI - 前端費用透明化顯示邏輯適配 (含傢俱類型顯示修復 & 圖片 path 修復)
 // [Update] 修正合併打包結算條顯隱控制邏輯
 // [Optimization] 整合銀行轉帳彈窗詳細資訊、一鍵複製與垃圾郵件提醒
+// [Fixed] 解決選擇銀行轉帳提交後無動作、畫面變霧面之問題
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
@@ -392,55 +393,66 @@ window.handleCreateShipmentSubmit = async function (e) {
 
     const data = await res.json();
     if (res.ok) {
+      // 1. 隱藏合併打包彈窗
       const modal = document.getElementById("create-shipment-modal");
       if (modal) modal.style.display = "none";
+
       window.lastCreatedShipmentId = data.shipment.id;
 
       if (paymentMethod === "WALLET") {
         alert("訂單建立成功！費用已從錢包扣除，系統將自動安排出貨。");
       } else {
-        // [優化植入] 銀行資訊顯示邏輯
-        if (window.BANK_INFO_CACHE) {
-          // 支援兩種 ID 命名的顯示 (對應您的不同 HTML 版本)
-          const bName =
-            document.getElementById("bank-name-display") ||
-            document.getElementById("bank-name");
-          if (bName) bName.textContent = window.BANK_INFO_CACHE.bankName;
+        // [重點修復]：處理銀行轉帳彈窗顯示邏輯，解決霧面無動作
+        setTimeout(() => {
+          const bankModal = document.getElementById("bank-info-modal");
+          if (!bankModal) {
+            console.error("找不到 bank-info-modal，請檢查組件是否正確載入");
+            alert("訂單已建立，請前往集運單列表查看匯款帳號並上傳憑證。");
+            return;
+          }
 
-          const bAcc =
-            document.getElementById("bank-account-display") ||
-            document.getElementById("bank-account");
-          if (bAcc) bAcc.textContent = window.BANK_INFO_CACHE.account;
+          if (window.BANK_INFO_CACHE) {
+            // 兼容多種 ID 命名的顯示
+            const bName =
+              document.getElementById("bank-name-display") ||
+              document.getElementById("bank-name");
+            const bAcc =
+              document.getElementById("bank-account-display") ||
+              document.getElementById("bank-account");
+            const bHolder =
+              document.getElementById("bank-holder-display") ||
+              document.getElementById("bank-holder");
+            const bBranch = document.getElementById("bank-branch");
 
-          const bHolder =
-            document.getElementById("bank-holder-display") ||
-            document.getElementById("bank-holder");
-          if (bHolder) bHolder.textContent = window.BANK_INFO_CACHE.holder;
+            if (bName)
+              bName.textContent = window.BANK_INFO_CACHE.bankName || "--";
+            if (bAcc) bAcc.textContent = window.BANK_INFO_CACHE.account || "--";
+            if (bHolder)
+              bHolder.textContent = window.BANK_INFO_CACHE.holder || "--";
+            if (bBranch)
+              bBranch.textContent = window.BANK_INFO_CACHE.branch || "";
+          }
 
-          const bBranch = document.getElementById("bank-branch");
-          if (bBranch)
-            bBranch.textContent = window.BANK_INFO_CACHE.branch || "";
-        }
-
-        // 顯示彈窗
-        const bankModal = document.getElementById("bank-info-modal");
-        if (bankModal) bankModal.style.display = "flex";
-
-        // 垃圾郵件提醒
-        console.log("訂單郵件已發送，提醒用戶檢查垃圾郵件");
+          // 顯示銀行資訊彈窗
+          bankModal.style.display = "flex";
+          console.log("銀行轉帳彈窗已開啟，請提醒用戶檢查垃圾郵件");
+        }, 100);
       }
+
+      // 2. 重新載入列表
       window.loadMyShipments();
       window.loadMyPackages();
       if (typeof window.loadWalletData === "function") window.loadWalletData();
 
+      // 3. 重置表單
       e.target.reset();
       window.updateCheckoutBar();
     } else {
       alert(data.message || "建立失敗");
     }
   } catch (err) {
-    alert("網路錯誤");
-    console.error(err);
+    alert("網路錯誤，提交失敗");
+    console.error("Submit Order Error:", err);
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -768,7 +780,12 @@ document.addEventListener("DOMContentLoaded", () => {
 // [新增全域輔助函式] 一鍵複製邏輯
 window.copyText = function (elementId) {
   const el = document.getElementById(elementId);
-  if (!el) return;
+  if (!el) {
+    // 容錯檢查：若找不到 ID，嘗試尋找帶有 -display 的 ID
+    const fallback = document.getElementById(elementId + "-display");
+    if (fallback) return window.copyText(elementId + "-display");
+    return;
+  }
   const text = el.innerText.trim();
   if (!text || text === "--") return;
 

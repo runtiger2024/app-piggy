@@ -1,6 +1,6 @@
 // frontend/js/dashboard-main.js
 // V2026.1.14 - 旗艦終極穩定版：100% 還原核心邏輯、整合發票欄位、修復全域控制項、安全檢查與分頁自動滾動
-// [優化更新]：新增銀行資訊一鍵複製與引導上傳功能
+// [修復更新]：解決銀行轉帳提交後無動作與霧面問題，強化 BANK_INFO_CACHE 載入機制
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!window.dashboardToken) {
@@ -9,8 +9,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 1. 初始載入核心數據
-  if (typeof window.loadSystemSettings === "function")
+  if (typeof window.loadSystemSettings === "function") {
     window.loadSystemSettings(); // 載入匯率、銀行等
+  } else {
+    // 強化載入邏輯：確保 BANK_INFO_CACHE 被正確填充
+    window.loadSystemSettings = async function () {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/settings/public`, {
+          headers: { Authorization: `Bearer ${window.dashboardToken}` },
+        });
+        const data = await res.json();
+        if (data.success && data.settings) {
+          window.BANK_INFO_CACHE =
+            data.settings.bank_info || data.settings.bank_config;
+          console.log("銀行資訊載入成功:", window.BANK_INFO_CACHE);
+        }
+      } catch (e) {
+        console.error("載入系統設定失敗", e);
+      }
+    };
+    window.loadSystemSettings();
+  }
+
   if (typeof window.loadUserProfile === "function") window.loadUserProfile(); // 載入個資
   if (typeof window.loadMyPackages === "function") window.loadMyPackages(); // 載入包裹
   if (typeof window.loadMyShipments === "function") window.loadMyShipments(); // 載入訂單
@@ -54,7 +74,12 @@ document.addEventListener("DOMContentLoaded", () => {
 // 支援銀行資訊彈窗的複製功能
 window.copyText = function (elementId) {
   const el = document.getElementById(elementId);
-  if (!el) return;
+  if (!el) {
+    // 容錯檢查：若找不到 ID，嘗試尋找帶有 -display 的 ID
+    const fallback = document.getElementById(elementId + "-display");
+    if (fallback) return window.copyText(elementId + "-display");
+    return;
+  }
   const text = el.innerText.trim();
   if (!text || text === "--") return;
 
@@ -160,7 +185,6 @@ function setupTabs() {
       if (section) section.style.display = "block";
 
       // 2. [新增實裝] 自動滾動至選單容器位置
-      // 使用平滑滾動對齊 dashboard-tabs-wrapper，並考慮 Header 遮擋
       const wrapper = document.querySelector(".dashboard-tabs-wrapper");
       if (wrapper) {
         const headerOffset = 80; // 配合 sticky top 高度
@@ -174,7 +198,7 @@ function setupTabs() {
         });
       }
 
-      // 3. 切換時執行對應的載入函式 (如: 重新整理列表)
+      // 3. 切換時執行對應的載入函式
       if (tab.loadFn && typeof tab.loadFn === "function") {
         tab.loadFn();
       }
@@ -207,7 +231,7 @@ function bindForms() {
       window.handleCreateShipmentSubmit
     );
 
-  // 個人資料更新表單 (支持新舊 ID 兼容，並整合發票欄位)
+  // 個人資料更新表單
   const profileForm =
     document.getElementById("profile-edit-form") ||
     document.getElementById("edit-profile-form");
@@ -340,7 +364,6 @@ function bindGlobalButtons() {
     btnChangePwd.addEventListener("click", window.openChangePasswordModal);
   }
 
-  // 錢包快速捷蹟點擊事件 (延續原有滾動邏輯)
   const btnQuickWallet = document.getElementById("btn-quick-wallet");
   if (btnQuickWallet) {
     btnQuickWallet.addEventListener("click", () => {
@@ -362,7 +385,6 @@ function bindGlobalButtons() {
   const btnCopyBank = document.getElementById("btn-copy-bank-info");
   if (btnCopyBank) {
     btnCopyBank.addEventListener("click", () => {
-      // 支援多種 ID 抓取以維持穩定
       const bName =
         (
           document.getElementById("bank-name-display") ||
@@ -390,7 +412,6 @@ function bindGlobalButtons() {
   const btnUploadNow = document.getElementById("btn-upload-now");
   if (btnUploadNow) {
     btnUploadNow.addEventListener("click", () => {
-      // 呼叫引導上傳邏輯
       window.openUploadFromBankModal();
     });
   }
@@ -401,7 +422,6 @@ function bindGlobalButtons() {
     });
   });
 
-  // 事件委派監聽關閉按鈕
   document.body.addEventListener("click", (e) => {
     if (
       e.target.classList.contains("modal-close") ||
