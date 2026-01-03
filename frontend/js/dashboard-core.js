@@ -1,6 +1,13 @@
-// frontend/js/dashboard-core.js
-// 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件、通知系統
-// V2026.1.15 - 旗艦終極修復版：重構通知系統(Toast式)、會員編號一體化、整合發票資訊
+/**
+ * dashboard-core.js
+ * 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件、通知系統
+ * V2026.1.15_Optimized - 旗艦終極優化版
+ * * 變更紀錄：
+ * 1. [效能優化]：重構 initImageUploader 渲染邏輯，使用 DocumentFragment 減少 DOM 操縱，解決點擊/上傳時的 Violation。
+ * 2. [整合修復]：syncProfileToUI 現在會同步資料至密碼表單的隱藏使用者名稱欄位 (cp-username-hidden)。
+ * 3. [邏輯修正]：修復 openShipmentDetails 的潛在遞迴錯誤。
+ * 4. [穩定性]：強化 Toast 訊息容器偵測機制。
+ */
 
 // --- [1. 全域變數與狀態管理] ---
 window.currentUser = null;
@@ -13,23 +20,17 @@ window.BANK_INFO_CACHE = null; // 暫存系統銀行資訊
 /**
  * 顯示全域訊息提示 (Toast 彈窗系統)
  * 對接 CSS V41.0 的 #message-container 與 .toast-message
- * @param {string} message - 訊息內容
- * @param {string} type - 類型: success, error, info, warning
  */
 window.showMessage = function (message, type = "info") {
   const container = document.getElementById("message-container");
   if (!container) {
-    console.error(
-      "找不到 message-container，請確保 HTML 末尾存在 <div id='message-container'></div>"
-    );
-    // 備案機制：若容器不存在則使用系統 alert
+    console.warn("找不到 message-container，將使用系統 alert。");
     alert(message);
     return;
   }
 
   // 1. 建立 Toast 元素
   const toast = document.createElement("div");
-  // 樣式類別對齊 CSS 定義
   toast.className = `toast-message ${type}`;
 
   // 2. 根據類型決定 FontAwesome 圖示
@@ -49,7 +50,6 @@ window.showMessage = function (message, type = "info") {
   // 4. 自動消失邏輯 (3.5秒後開始淡出)
   const timer = setTimeout(() => {
     toast.classList.add("fade-out");
-    // 等待 CSS 消失動畫完成後移除 DOM
     setTimeout(() => {
       if (toast.parentNode === container) {
         container.removeChild(toast);
@@ -69,7 +69,6 @@ window.showMessage = function (message, type = "info") {
 
 /**
  * 開啟圖片瀏覽大圖
- * @param {Array} images - 圖片路徑陣列
  */
 window.openImages = function (images) {
   const gallery = document.getElementById("images-gallery");
@@ -78,16 +77,17 @@ window.openImages = function (images) {
 
   gallery.innerHTML = "";
   if (images && Array.isArray(images) && images.length > 0) {
+    const fragment = document.createDocumentFragment();
     images.forEach((imgUrl) => {
       const img = document.createElement("img");
-      // 支援絕對路徑與相對路徑
       img.src = imgUrl.startsWith("http") ? imgUrl : `${API_BASE_URL}${imgUrl}`;
       img.alt = "預覽圖";
       img.style.cssText =
-        "width:100%; object-fit:cover; border-radius:8px; cursor:zoom-in; border:1px solid #eee;";
+        "width:100%; object-fit:cover; border-radius:8px; cursor:zoom-in; border:1px solid #eee; margin-bottom:10px;";
       img.onclick = () => window.open(img.src, "_blank");
-      gallery.appendChild(img);
+      fragment.appendChild(img);
     });
+    gallery.appendChild(fragment);
   } else {
     gallery.innerHTML = `<p style='grid-column:1/-1;text-align:center;color:#999;padding:20px;'>暫無照片紀錄</p>`;
   }
@@ -97,7 +97,7 @@ window.openImages = function (images) {
 // --- [3. 使用者與帳號資料同步] ---
 
 /**
- * 載入個人資料並同步更新所有 UI (Header & Modals)
+ * 載入個人資料並同步更新所有 UI
  */
 window.loadUserProfile = async function () {
   if (!window.dashboardToken) {
@@ -130,19 +130,17 @@ window.loadUserProfile = async function () {
  * 將使用者資料渲染至畫面上所有相關的 ID
  */
 function syncProfileToUI(user) {
-  // 1. 迎賓文字 (Dashboard Hero & Header)
+  // 1. 迎賓文字
   const welcomeEl = document.getElementById("welcome-message");
   if (welcomeEl) {
     welcomeEl.textContent = `${user.name || "親愛的會員"}，您好`;
   }
 
-  // 2. 建立資料與 DOM 的映射關係
+  // 2. 建立資料映射
   const mapping = {
     "user-email": user.email,
     "user-phone": user.phone || "(未填寫)",
     "user-address": user.defaultAddress || user.address || "(未填寫)",
-
-    // 同步到「帳號設定」彈窗表單
     "edit-name": user.name || "",
     "edit-phone": user.phone || "",
     "edit-email": user.email,
@@ -150,6 +148,8 @@ function syncProfileToUI(user) {
     "edit-taxId": user.defaultTaxId || "",
     "edit-invoiceTitle": user.defaultInvoiceTitle || "",
     "modal-user-name": user.name || "未設定姓名",
+    // 重要：同步到修改密碼表單的隱藏使用者名稱欄位，修復瀏覽器警告
+    "cp-username-hidden": user.email || user.piggyId || "",
   };
 
   for (const [id, value] of Object.entries(mapping)) {
@@ -163,7 +163,7 @@ function syncProfileToUI(user) {
     }
   }
 
-  // 3. 會員編號顯示 (徹底移除 PIGGY- 前綴)
+  // 3. 會員編號顯示 (一體化邏輯)
   const userIdElements = document.querySelectorAll(
     "#modal-user-id, #hero-user-id"
   );
@@ -177,9 +177,6 @@ function syncProfileToUI(user) {
 
 // --- [4. 系統配置與銀行資訊] ---
 
-/**
- * 載入最新費率、遠程地區、銀行帳戶資訊
- */
 window.loadSystemSettings = async function () {
   try {
     const res = await fetch(`${API_BASE_URL}/api/calculator/config`);
@@ -208,7 +205,8 @@ window.loadSystemSettings = async function () {
 // --- [5. 進階動態圖片上傳組件] ---
 
 /**
- * 初始化具備預覽與刪除功能的圖片上傳器
+ * 初始化圖片上傳器 (效能優化版)
+ * 使用 DocumentFragment 減少 Reflow 頻率，解決 Violation 警告
  */
 window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
   const mainInput = document.getElementById(inputId);
@@ -218,22 +216,26 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
   const dataTransfer = new DataTransfer();
 
   function render() {
+    // 效能優化：使用 fragment 一次性寫入 DOM
     container.innerHTML = "";
+    const fragment = document.createDocumentFragment();
 
-    // 1. 渲染已選擇的圖片預覽
+    // 1. 渲染預覽圖
     Array.from(dataTransfer.files).forEach((file, index) => {
       const item = document.createElement("div");
       item.className = "upload-item animate-pop-in";
 
       const img = document.createElement("img");
-      img.src = URL.createObjectURL(file);
-      img.onclick = () => window.open(img.src, "_blank");
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+      img.onclick = () => window.open(objectUrl, "_blank");
 
       const removeBtn = document.createElement("div");
       removeBtn.className = "remove-btn";
       removeBtn.innerHTML = "&times;";
       removeBtn.onclick = (e) => {
         e.stopPropagation();
+        URL.revokeObjectURL(objectUrl); // 釋放記憶體
         dataTransfer.items.remove(index);
         mainInput.files = dataTransfer.files;
         render();
@@ -241,7 +243,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
 
       item.appendChild(img);
       item.appendChild(removeBtn);
-      container.appendChild(item);
+      fragment.appendChild(item);
     });
 
     // 2. 添加按鈕
@@ -271,8 +273,10 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
       };
 
       addLabel.appendChild(tempInput);
-      container.appendChild(addLabel);
+      fragment.appendChild(addLabel);
     }
+
+    container.appendChild(fragment);
   }
 
   render();
@@ -285,15 +289,14 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
 };
 
 /**
- * 全域導向詳情輔助
+ * 全域導向詳情輔助 (修正遞迴錯誤)
  */
 window.openShipmentDetails = function (id) {
-  if (window.viewShipmentDetail) {
+  // 檢查 dashboard-shipments.js 是否已定義功能函式
+  if (typeof window.viewShipmentDetail === "function") {
     window.viewShipmentDetail(id);
-  } else if (
-    typeof window.openShipmentDetails === "function" &&
-    window.openShipmentDetails !== window.openShipmentDetails
-  ) {
-    window.openShipmentDetails(id);
+  } else {
+    // 若尚未定義，則提示用戶或載入數據
+    console.warn("詳情檢視功能尚未就緒。");
   }
 };

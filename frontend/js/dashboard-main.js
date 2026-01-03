@@ -1,6 +1,11 @@
-// frontend/js/dashboard-main.js
-// V2026.1.14 - 旗艦終極穩定版：100% 還原核心邏輯、整合發票欄位、修復全域控制項、安全檢查與分頁自動滾動
-// [修復更新]：解決銀行轉帳提交後無動作與霧面問題，強化 BANK_INFO_CACHE 載入機制
+/**
+ * dashboard-main.js
+ * V2026.1.14 - 旗艦終極穩定優化版
+ * * 變更紀錄：
+ * 1. [效能優化]：將 Tab 切換與數據載入邏輯分離，解決點擊 handler 造成的畫面卡頓（Violation）。
+ * 2. [相容性]：配合 V7.2 樣式系統與密碼表單隱藏欄位邏輯。
+ * 3. [修復]：修正 copyText 中的 event 參照問題，提升複製穩定度。
+ */
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!window.dashboardToken) {
@@ -10,9 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 1. 初始載入核心數據
   if (typeof window.loadSystemSettings === "function") {
-    window.loadSystemSettings(); // 載入匯率、銀行等
+    window.loadSystemSettings();
   } else {
-    // 強化載入邏輯：確保 BANK_INFO_CACHE 被正確填充
     window.loadSystemSettings = async function () {
       try {
         const res = await fetch(`${API_BASE_URL}/api/settings/public`, {
@@ -31,15 +35,15 @@ document.addEventListener("DOMContentLoaded", () => {
     window.loadSystemSettings();
   }
 
-  if (typeof window.loadUserProfile === "function") window.loadUserProfile(); // 載入個資
-  if (typeof window.loadMyPackages === "function") window.loadMyPackages(); // 載入包裹
-  if (typeof window.loadMyShipments === "function") window.loadMyShipments(); // 載入訂單
+  if (typeof window.loadUserProfile === "function") window.loadUserProfile();
+  if (typeof window.loadMyPackages === "function") window.loadMyPackages();
+  if (typeof window.loadMyShipments === "function") window.loadMyShipments();
 
   if (typeof window.updateGlobalWalletDisplay === "function") {
     window.updateGlobalWalletDisplay();
   }
 
-  // 2. Tab 切換邏輯
+  // 2. Tab 切換邏輯 (優化版)
   setupTabs();
 
   // 3. 表單提交事件綁定
@@ -48,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 4. 初始化圖片上傳器
   initUploaders();
 
-  // 5. 其他全域按鈕綁定 (含錢包捷徑)
+  // 5. 其他全域按鈕綁定
   bindGlobalButtons();
 
   // 6. 延遲執行草稿檢查
@@ -59,44 +63,45 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 500);
 
   // [事件委派] 全域監聽上傳憑證表單提交
-  // 解決 Modal 動態載入導致 addEventListener 失效的問題
   document.body.addEventListener("submit", function (e) {
     if (e.target && e.target.id === "upload-proof-form") {
-      console.log("偵測到上傳憑證表單提交，觸發處理函式...");
       window.handleUploadProofSubmit(e);
     }
   });
 });
 
 /**
- * --- 全域優化新增：一鍵複製與導向功能 ---
+ * --- 全域優化：一鍵複製與導向功能 ---
  */
-// 支援銀行資訊彈窗的複製功能
-window.copyText = function (elementId) {
+window.copyText = function (elementId, event) {
   const el = document.getElementById(elementId);
   if (!el) {
-    // 容錯檢查：若找不到 ID，嘗試尋找帶有 -display 的 ID
     const fallback = document.getElementById(elementId + "-display");
-    if (fallback) return window.copyText(elementId + "-display");
+    if (fallback) return window.copyText(elementId + "-display", event);
     return;
   }
   const text = el.innerText.trim();
   if (!text || text === "--") return;
 
+  // 取得點擊的按鈕元素
+  const btn = event ? event.target : null;
+
   navigator.clipboard
     .writeText(text)
     .then(() => {
-      const btn = event.target;
-      const originalText = btn.innerText;
-      btn.innerText = "已複製!";
-      btn.style.backgroundColor = "#28a745";
-      btn.style.color = "#fff";
-
-      setTimeout(() => {
-        btn.innerText = originalText;
-        btn.style.backgroundColor = "";
-        btn.style.color = "";
-      }, 2000);
+      if (btn) {
+        const originalText = btn.innerText;
+        btn.innerText = "已複製!";
+        btn.style.backgroundColor = "#28a745";
+        btn.style.color = "#fff";
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.backgroundColor = "";
+          btn.style.color = "";
+        }, 2000);
+      } else {
+        alert("✅ 已複製到剪貼簿");
+      }
     })
     .catch((err) => {
       console.warn("複製失敗:", err);
@@ -104,7 +109,6 @@ window.copyText = function (elementId) {
     });
 };
 
-// 銀行彈窗專用的引導上傳按鈕邏輯
 window.openUploadFromBankModal = function () {
   const bModal = document.getElementById("bank-info-modal");
   if (bModal) bModal.style.display = "none";
@@ -117,8 +121,7 @@ window.openUploadFromBankModal = function () {
 };
 
 /**
- * --- 全域 Modal 控制函式 (修復 ReferenceError) ---
- * 確保 HTML 中的 onclick="closeProfileModal()" 能被觸發
+ * --- 全域 Modal 控制函式 ---
  */
 window.closeProfileModal = function () {
   const modal =
@@ -128,15 +131,20 @@ window.closeProfileModal = function () {
 };
 
 window.openChangePasswordModal = function () {
-  // 為了流暢度，開啟密碼彈窗時先嘗試關閉個資彈窗
   window.closeProfileModal();
   const modal = document.getElementById("change-password-modal");
   if (modal) {
     const form = document.getElementById("change-password-form");
     if (form) form.reset();
+
+    // 自動帶入使用者名稱到隱藏欄位，符合瀏覽器安全要求
+    const hiddenUsername = document.getElementById("cp-username-hidden");
+    if (hiddenUsername && window.currentUser) {
+      hiddenUsername.value =
+        window.currentUser.email || window.currentUser.piggyId || "";
+    }
+
     modal.style.display = "flex";
-  } else {
-    console.warn("找不到 change-password-modal 組件");
   }
 };
 
@@ -145,7 +153,7 @@ window.closeChangePasswordModal = function () {
   if (modal) modal.style.display = "none";
 };
 
-// --- Tab 管理 (整合自動滾動功能) ---
+// --- Tab 管理 (修復點擊延遲 Violation) ---
 function setupTabs() {
   const tabs = [
     { id: "tab-packages", section: "packages-section" },
@@ -172,7 +180,7 @@ function setupTabs() {
     if (!btn) return;
 
     btn.addEventListener("click", () => {
-      // 1. 切換按鈕與內容顯示
+      // 1. 立即更新 UI (避免點擊感官延遲)
       document
         .querySelectorAll(".tab-btn")
         .forEach((b) => b.classList.remove("active"));
@@ -184,24 +192,25 @@ function setupTabs() {
       const section = document.getElementById(tab.section);
       if (section) section.style.display = "block";
 
-      // 2. [新增實裝] 自動滾動至選單容器位置
-      const wrapper = document.querySelector(".dashboard-tabs-wrapper");
-      if (wrapper) {
-        const headerOffset = 80; // 配合 sticky top 高度
-        const elementPosition =
-          wrapper.getBoundingClientRect().top + window.pageYOffset;
-        const offsetPosition = elementPosition - headerOffset;
+      // 2. 使用非同步處理重度負載，解決 Violation
+      setTimeout(() => {
+        // 自動捲動
+        const wrapper = document.querySelector(".dashboard-tabs-wrapper");
+        if (wrapper) {
+          const headerOffset = 80;
+          const elementPosition =
+            wrapper.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: elementPosition - headerOffset,
+            behavior: "smooth",
+          });
+        }
 
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: "smooth",
-        });
-      }
-
-      // 3. 切換時執行對應的載入函式
-      if (tab.loadFn && typeof tab.loadFn === "function") {
-        tab.loadFn();
-      }
+        // 執行載入數據
+        if (tab.loadFn && typeof tab.loadFn === "function") {
+          tab.loadFn();
+        }
+      }, 10);
     });
   });
 }
@@ -231,7 +240,6 @@ function bindForms() {
       window.handleCreateShipmentSubmit
     );
 
-  // 個人資料更新表單
   const profileForm =
     document.getElementById("profile-edit-form") ||
     document.getElementById("edit-profile-form");
@@ -255,7 +263,6 @@ function bindForms() {
           },
           body: JSON.stringify(data),
         });
-
         if (res.ok) {
           window.closeProfileModal();
           window.loadUserProfile();
@@ -337,20 +344,24 @@ function bindGlobalButtons() {
   if (btnEditProfile) {
     btnEditProfile.addEventListener("click", () => {
       if (window.currentUser) {
-        const nameInput = document.getElementById("edit-name");
-        const phoneInput = document.getElementById("edit-phone");
-        const addrInput = document.getElementById("edit-address");
-        const taxInput = document.getElementById("edit-taxId");
-        const titleInput = document.getElementById("edit-invoiceTitle");
-
-        if (nameInput) nameInput.value = window.currentUser.name || "";
-        if (phoneInput) phoneInput.value = window.currentUser.phone || "";
-        if (addrInput)
-          addrInput.value = window.currentUser.defaultAddress || "";
-        if (taxInput) taxInput.value = window.currentUser.defaultTaxId || "";
-        if (titleInput)
-          titleInput.value = window.currentUser.defaultInvoiceTitle || "";
-
+        const fields = [
+          "edit-name",
+          "edit-phone",
+          "edit-address",
+          "edit-taxId",
+          "edit-invoiceTitle",
+        ];
+        const dataKeys = [
+          "name",
+          "phone",
+          "defaultAddress",
+          "defaultTaxId",
+          "defaultInvoiceTitle",
+        ];
+        fields.forEach((id, idx) => {
+          const input = document.getElementById(id);
+          if (input) input.value = window.currentUser[dataKeys[idx]] || "";
+        });
         const modal =
           document.getElementById("profile-edit-modal") ||
           document.getElementById("edit-profile-modal");
@@ -360,20 +371,14 @@ function bindGlobalButtons() {
   }
 
   const btnChangePwd = document.getElementById("btn-change-password");
-  if (btnChangePwd) {
+  if (btnChangePwd)
     btnChangePwd.addEventListener("click", window.openChangePasswordModal);
-  }
 
   const btnQuickWallet = document.getElementById("btn-quick-wallet");
   if (btnQuickWallet) {
     btnQuickWallet.addEventListener("click", () => {
       const tabWallet = document.getElementById("tab-wallet");
       if (tabWallet) tabWallet.click();
-      setTimeout(() => {
-        const section = document.getElementById("wallet-section");
-        if (section)
-          section.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
     });
   }
 
@@ -384,7 +389,7 @@ function bindGlobalButtons() {
 
   const btnCopyBank = document.getElementById("btn-copy-bank-info");
   if (btnCopyBank) {
-    btnCopyBank.addEventListener("click", () => {
+    btnCopyBank.addEventListener("click", (e) => {
       const bName =
         (
           document.getElementById("bank-name-display") ||
@@ -401,20 +406,17 @@ function bindGlobalButtons() {
           document.getElementById("bank-holder")
         )?.innerText.trim() || "";
       const text = `【匯款資訊】\n銀行：${bName}\n帳號：${bAcc}\n戶名：${bHolder}`;
-
       navigator.clipboard
         .writeText(text)
-        .then(() => alert("✅ 匯款資訊已複製！"))
-        .catch(() => alert("複製失敗，請手動複製"));
+        .then(() => alert("✅ 匯款資訊已複製！"));
     });
   }
 
   const btnUploadNow = document.getElementById("btn-upload-now");
-  if (btnUploadNow) {
-    btnUploadNow.addEventListener("click", () => {
-      window.openUploadFromBankModal();
-    });
-  }
+  if (btnUploadNow)
+    btnUploadNow.addEventListener("click", () =>
+      window.openUploadFromBankModal()
+    );
 
   document.querySelectorAll(".modal-overlay").forEach((m) => {
     m.addEventListener("click", (e) => {
@@ -434,7 +436,7 @@ function bindGlobalButtons() {
 }
 
 /**
- * 預報草稿佇列檢查 (完整還原 V29.6 複雜邏輯)
+ * 預報草稿佇列檢查 (V29.6)
  */
 window.checkForecastDraftQueue = function (isAfterSubmit = false) {
   let queue = [];
@@ -461,32 +463,31 @@ window.checkForecastDraftQueue = function (isAfterSubmit = false) {
 
   if (container && listEl) {
     container.style.display = "flex";
-    listEl.innerHTML = "";
-    queue.forEach((item, idx) => {
-      const isNext = idx === 0;
-      const style = isNext ? "font-weight:bold; color:#d35400;" : "";
-      const icon = isNext
-        ? ' <i class="fas fa-arrow-left"></i> <span class="badge badge-warning" style="font-size:10px;">準備填入</span>'
-        : "";
-      listEl.innerHTML += `<li style="${style}">${item.name} (x${item.quantity}) ${icon}</li>`;
-    });
+    listEl.innerHTML = queue
+      .map((item, idx) => {
+        const isNext = idx === 0;
+        return `<li style="${
+          isNext ? "font-weight:bold; color:#d35400;" : ""
+        }">${item.name} (x${item.quantity}) ${
+          isNext
+            ? '<span class="badge badge-warning" style="font-size:10px;">準備填入</span>'
+            : ""
+        }</li>`;
+      })
+      .join("");
   }
 
   const current = queue[0];
   const nameInput = document.getElementById("productName");
-  const qtyInput = document.getElementById("quantity");
-  const noteInput = document.getElementById("note");
-
   if (nameInput && current) {
     const isFieldEmpty = !nameInput.value || nameInput.value.trim() === "";
-
     if (isAfterSubmit || isFieldEmpty || nameInput.value === current.name) {
       nameInput.value = current.name || "";
+      const qtyInput = document.getElementById("quantity");
       if (qtyInput) qtyInput.value = current.quantity || 1;
-
-      if (noteInput && (!noteInput.value || noteInput.value.includes("試算"))) {
+      const noteInput = document.getElementById("note");
+      if (noteInput && (!noteInput.value || noteInput.value.includes("試算")))
         noteInput.value = "來自試算帶入";
-      }
 
       let warnings = [];
       if (current.hasOversizedItem)
@@ -503,7 +504,6 @@ window.checkForecastDraftQueue = function (isAfterSubmit = false) {
           warningEl.style.display = "none";
         }
       }
-
       if (isAfterSubmit && window.showMessage) {
         window.scrollTo({ top: 0, behavior: "smooth" });
         window.showMessage(`已自動帶入下一筆：${current.name}`, "info");
@@ -513,7 +513,7 @@ window.checkForecastDraftQueue = function (isAfterSubmit = false) {
 };
 
 /**
- * 上傳憑證相關 (完整還原 V29.6 動態注入與統編連動邏輯)
+ * 上傳憑證相關 (發票統編優化版)
  */
 window.openUploadProof = function (id) {
   const proofIdInput = document.getElementById("upload-proof-id");
@@ -521,7 +521,6 @@ window.openUploadProof = function (id) {
 
   const modal = document.getElementById("upload-proof-modal");
   const form = document.getElementById("upload-proof-form");
-
   if (form) form.reset();
 
   const existingTaxInput = document.getElementById("proof-taxId");
@@ -530,24 +529,15 @@ window.openUploadProof = function (id) {
     if (fileGroup) {
       const taxDiv = document.createElement("div");
       taxDiv.className = "form-group";
-      taxDiv.style.background = "#e8f0fe";
-      taxDiv.style.padding = "10px";
-      taxDiv.style.borderRadius = "5px";
-      taxDiv.style.marginBottom = "10px";
+      taxDiv.style.cssText =
+        "background:#e8f0fe; padding:10px; border-radius:5px; margin-bottom:10px;";
       taxDiv.innerHTML = `
-            <label style="color:#1a73e8; font-size:13px; font-weight:bold;">
-                📝 發票資訊 (如需打統編請填寫)
-            </label>
-            <div style="display:flex; gap:10px; flex-wrap: wrap;">
-                <div style="flex:1;">
-                    <input type="text" id="proof-taxId" class="form-control" placeholder="統一編號 (8碼)" maxlength="8" style="font-size:13px;">
-                </div>
-                <div style="flex:1;">
-                    <input type="text" id="proof-invoiceTitle" class="form-control" placeholder="公司抬頭" style="font-size:13px;">
-                </div>
-            </div>
-            <small style="color:#666; font-size:11px;">※ 若填寫統編，公司抬頭為必填項目。</small>
-          `;
+        <label style="color:#1a73e8; font-size:13px; font-weight:bold;">📝 發票資訊 (如需打統編請填寫)</label>
+        <div style="display:flex; gap:10px; flex-wrap: wrap;">
+          <div style="flex:1;"><input type="text" id="proof-taxId" class="form-control" placeholder="統一編號 (8碼)" maxlength="8" style="font-size:13px;"></div>
+          <div style="flex:1;"><input type="text" id="proof-invoiceTitle" class="form-control" placeholder="公司抬頭" style="font-size:13px;"></div>
+        </div>
+        <small style="color:#666; font-size:11px;">※ 若填寫統編，公司抬頭為必填項目。</small>`;
       form.insertBefore(taxDiv, fileGroup);
     }
   }
@@ -555,74 +545,43 @@ window.openUploadProof = function (id) {
   setTimeout(() => {
     const taxInput = document.getElementById("proof-taxId");
     const titleInput = document.getElementById("proof-invoiceTitle");
-
     if (taxInput && titleInput) {
-      const validateTax = () => {
+      taxInput.oninput = () => {
         if (taxInput.value.trim().length > 0) {
           titleInput.setAttribute("required", "true");
           titleInput.style.border = "1px solid #d32f2f";
-          titleInput.placeholder = "公司抬頭 (必填)";
         } else {
           titleInput.removeAttribute("required");
           titleInput.style.border = "";
-          titleInput.placeholder = "公司抬頭";
         }
       };
-      taxInput.oninput = validateTax;
-      validateTax();
+      if (window.currentUser) {
+        taxInput.value = window.currentUser.defaultTaxId || "";
+        titleInput.value = window.currentUser.defaultInvoiceTitle || "";
+        taxInput.oninput();
+      }
     }
   }, 100);
 
-  if (window.currentUser) {
-    const tInput = document.getElementById("proof-taxId");
-    const titleInput = document.getElementById("proof-invoiceTitle");
-    if (tInput && window.currentUser.defaultTaxId) {
-      tInput.value = window.currentUser.defaultTaxId;
-    }
-    if (titleInput && window.currentUser.defaultInvoiceTitle) {
-      titleInput.value = window.currentUser.defaultInvoiceTitle;
-    }
-  }
-
   const infoBox = document.getElementById("upload-proof-bank-info");
   if (window.BANK_INFO_CACHE && infoBox) {
-    infoBox.innerHTML = `
-            <strong>請匯款至：</strong><br>
-            銀行：${window.BANK_INFO_CACHE.bankName}<br>
-            帳號：<span style="color:#d32f2f; font-weight:bold;">${window.BANK_INFO_CACHE.account}</span><br>
-            戶名：${window.BANK_INFO_CACHE.holder}
-        `;
+    infoBox.innerHTML = `<strong>請匯款至：</strong><br>銀行：${window.BANK_INFO_CACHE.bankName}<br>帳號：<span style="color:#d32f2f; font-weight:bold;">${window.BANK_INFO_CACHE.account}</span><br>戶名：${window.BANK_INFO_CACHE.holder}`;
   }
-
   if (modal) modal.style.display = "flex";
 };
 
-/**
- * 上傳憑證提交 (完整還原文字與檔案順序修正邏輯)
- */
 window.handleUploadProofSubmit = async function (e) {
   e.preventDefault();
   const btn = e.target.querySelector("button");
-
-  const idInput = document.getElementById("upload-proof-id");
-  const fileInput = document.getElementById("proof-file");
-  if (!idInput || !fileInput) return;
-
-  const id = idInput.value;
-  const file = fileInput.files[0];
-
-  const taxId = document.getElementById("proof-taxId")
-    ? document.getElementById("proof-taxId").value.trim()
-    : "";
-  const invoiceTitle = document.getElementById("proof-invoiceTitle")
-    ? document.getElementById("proof-invoiceTitle").value.trim()
-    : "";
+  const id = document.getElementById("upload-proof-id")?.value;
+  const file = document.getElementById("proof-file")?.files[0];
+  const taxId = document.getElementById("proof-taxId")?.value.trim() || "";
+  const invoiceTitle =
+    document.getElementById("proof-invoiceTitle")?.value.trim() || "";
 
   if (!file) return alert("請選擇圖片");
-
   if (taxId && !invoiceTitle) {
-    alert("請注意：填寫統一編號時，「公司抬頭」為必填項目，以利發票開立。");
-    document.getElementById("proof-invoiceTitle")?.focus();
+    alert("填寫統編時，抬頭為必填項目。");
     return;
   }
 
@@ -641,9 +600,8 @@ window.handleUploadProofSubmit = async function (e) {
       body: fd,
     });
     if (res.ok) {
-      alert("上傳成功！\n若有更新統編，系統將依新資料開立發票。");
-      const modal = document.getElementById("upload-proof-modal");
-      if (modal) modal.style.display = "none";
+      alert("上傳成功！");
+      document.getElementById("upload-proof-modal").style.display = "none";
       if (window.loadMyShipments) window.loadMyShipments();
     } else {
       const data = await res.json();
@@ -658,7 +616,7 @@ window.handleUploadProofSubmit = async function (e) {
 };
 
 /**
- * 訂單詳情 (100% 還原 V29.6 龐大的費用逆推計算)
+ * 訂單詳情 (V29.6 逆推計算)
  */
 window.openShipmentDetails = async function (id) {
   try {
@@ -677,133 +635,91 @@ window.openShipmentDetails = async function (id) {
       OVERWEIGHT_LIMIT: 100,
     };
 
-    const idEl = document.getElementById("sd-id");
-    if (idEl) idEl.textContent = s.id.slice(-8).toUpperCase();
-
-    const timelineContainer = document.getElementById("sd-timeline");
-    if (timelineContainer && typeof renderTimeline === "function") {
-      renderTimeline(timelineContainer, s.status);
-    }
-
-    const trackEl = document.getElementById("sd-trackingTW");
-    if (trackEl) trackEl.textContent = s.trackingNumberTW || "尚未產生";
-
+    document.getElementById("sd-id").textContent = s.id.slice(-8).toUpperCase();
+    if (
+      document.getElementById("sd-timeline") &&
+      typeof renderTimeline === "function"
+    )
+      renderTimeline(document.getElementById("sd-timeline"), s.status);
+    document.getElementById("sd-trackingTW").textContent =
+      s.trackingNumberTW || "尚未產生";
     document.getElementById("sd-name").textContent = s.recipientName;
     document.getElementById("sd-phone").textContent = s.phone;
     document.getElementById("sd-address").textContent = s.shippingAddress;
 
-    let dateHtml = `<div><strong>建立日期:</strong> <span>${new Date(
-      s.createdAt
-    ).toLocaleString()}</span></div>`;
-    if (s.loadingDate) {
-      dateHtml += `<div style="color:#28a745; font-weight:bold; margin-top:5px;">
-            <i class="fas fa-ship"></i> 裝櫃日期: ${new Date(
-              s.loadingDate
-            ).toLocaleDateString()}
-        </div>`;
-    }
     const dateContainer = document.getElementById("sd-date");
-    if (dateContainer) dateContainer.innerHTML = dateHtml;
+    if (dateContainer) {
+      let html = `<div><strong>建立日期:</strong> <span>${new Date(
+        s.createdAt
+      ).toLocaleString()}</span></div>`;
+      if (s.loadingDate)
+        html += `<div style="color:#28a745; font-weight:bold; margin-top:5px;"><i class="fas fa-ship"></i> 裝櫃日期: ${new Date(
+          s.loadingDate
+        ).toLocaleDateString()}</div>`;
+      dateContainer.innerHTML = html;
+    }
 
-    // 費用細分逆推
-    let hasOversized = false;
-    let hasOverweight = false;
-    let totalBaseFee = 0;
-
-    if (s.packages && Array.isArray(s.packages)) {
+    let hasOversized = false,
+      hasOverweight = false,
+      totalBaseFee = 0;
+    if (s.packages) {
       s.packages.forEach((pkg) => {
         totalBaseFee += pkg.totalCalculatedFee || 0;
-        const boxes = pkg.arrivedBoxes || [];
-        boxes.forEach((box) => {
-          const l = parseFloat(box.length) || 0;
-          const w = parseFloat(box.width) || 0;
-          const h = parseFloat(box.height) || 0;
-          const weight = parseFloat(box.weight) || 0;
+        (pkg.arrivedBoxes || []).forEach((box) => {
           if (
-            l >= CONSTANTS.OVERSIZED_LIMIT ||
-            w >= CONSTANTS.OVERSIZED_LIMIT ||
-            h >= CONSTANTS.OVERSIZED_LIMIT
+            Math.max(box.length, box.width, box.height) >=
+            CONSTANTS.OVERSIZED_LIMIT
           )
             hasOversized = true;
-          if (weight >= CONSTANTS.OVERWEIGHT_LIMIT) hasOverweight = true;
+          if (box.weight >= CONSTANTS.OVERWEIGHT_LIMIT) hasOverweight = true;
         });
       });
     }
 
     const baseFee = Math.max(totalBaseFee, CONSTANTS.MINIMUM_CHARGE);
-    const minChargeGap = baseFee - totalBaseFee;
-
-    let breakdownHtml = `<table class="fee-summary-table">
-        <tr><td>基本海運費 (共 ${
-          s.packages.length
-        } 件)</td><td align="right">$${totalBaseFee.toLocaleString()}</td></tr>`;
-
-    if (minChargeGap > 0) {
-      breakdownHtml += `<tr style="color:#28a745;"><td><i class="fas fa-arrow-up"></i> 未達低消補足 (低消 $${
+    let breakdownHtml = `<table class="fee-summary-table"><tr><td>基本海運費 (${
+      s.packages.length
+    } 件)</td><td align="right">$${totalBaseFee.toLocaleString()}</td></tr>`;
+    if (baseFee > totalBaseFee)
+      breakdownHtml += `<tr style="color:#28a745;"><td>補足低消 ($${
         CONSTANTS.MINIMUM_CHARGE
-      })</td><td align="right">+$${minChargeGap.toLocaleString()}</td></tr>`;
-    }
-    if (hasOversized) {
-      breakdownHtml += `<tr style="color:#e74a3b;"><td>⚠️ 超長附加費</td><td align="right">+$${CONSTANTS.OVERSIZED_FEE.toLocaleString()}</td></tr>`;
-    }
-    if (hasOverweight) {
-      breakdownHtml += `<tr style="color:#e74a3b;"><td>⚠️ 超重附加費</td><td align="right">+$${CONSTANTS.OVERWEIGHT_FEE.toLocaleString()}</td></tr>`;
-    }
+      })</td><td align="right">+$${(
+        baseFee - totalBaseFee
+      ).toLocaleString()}</td></tr>`;
+    if (hasOversized)
+      breakdownHtml += `<tr style="color:#e74a3b;"><td>⚠️ 超長費</td><td align="right">+$${CONSTANTS.OVERSIZED_FEE.toLocaleString()}</td></tr>`;
+    if (hasOverweight)
+      breakdownHtml += `<tr style="color:#e74a3b;"><td>⚠️ 超重費</td><td align="right">+$${CONSTANTS.OVERWEIGHT_FEE.toLocaleString()}</td></tr>`;
 
-    let estimatedTotal =
+    let currentTotal =
       baseFee +
       (hasOversized ? CONSTANTS.OVERSIZED_FEE : 0) +
       (hasOverweight ? CONSTANTS.OVERWEIGHT_FEE : 0);
-    let gap = s.totalCost - estimatedTotal;
-    if (gap > 0)
-      breakdownHtml += `<tr><td>偏遠地區 / 其他加收</td><td align="right">+$${gap.toLocaleString()}</td></tr>`;
-
+    if (s.totalCost > currentTotal)
+      breakdownHtml += `<tr><td>偏遠/其他加收</td><td align="right">+$${(
+        s.totalCost - currentTotal
+      ).toLocaleString()}</td></tr>`;
     breakdownHtml += `<tr><td><strong>總金額</strong></td><td align="right" style="font-size:18px; color:#d32f2f;"><strong>$${s.totalCost.toLocaleString()}</strong></td></tr></table>`;
 
     const breakdownEl = document.getElementById("sd-fee-breakdown");
-    if (breakdownEl) {
-      breakdownEl.innerHTML = breakdownHtml;
-      breakdownEl.style.display = "block";
-    }
-
-    // 發票與憑證
-    let invoiceContainer = document.getElementById("sd-invoice-info");
-    if (!invoiceContainer) {
-      invoiceContainer = document.createElement("div");
-      invoiceContainer.id = "sd-invoice-info";
-      document
-        .getElementById("sd-address")
-        ?.closest("div")
-        ?.insertAdjacentElement("afterend", invoiceContainer);
-    }
-    invoiceContainer.innerHTML = `<div class="modal-section-title" style="margin-top:15px;"><i class="fas fa-file-invoice"></i> 發票資訊</div>
-      <div style="background:#fff; border:1px solid #d9d9d9; padding:15px; border-radius:5px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-          <div><label style="font-size:12px; color:#666;">統編</label><input type="text" class="form-control" value="${
-            s.taxId || "個人"
-          }" disabled></div>
-          <div><label style="font-size:12px; color:#666;">抬頭</label><input type="text" class="form-control" value="${
-            s.invoiceTitle || "-"
-          }" disabled></div>
-      </div>`;
+    if (breakdownEl) breakdownEl.innerHTML = breakdownHtml;
 
     const gallery = document.getElementById("sd-proof-images");
-    if (gallery) {
+    if (gallery)
       gallery.innerHTML = s.paymentProof
         ? s.paymentProof === "WALLET_PAY"
           ? "錢包支付"
-          : `<img src="${API_BASE_URL}${s.paymentProof}" onclick="window.open(this.src)" style="max-width:120px; cursor:pointer; border:1px solid #ccc;">`
+          : `<img src="${API_BASE_URL}${s.paymentProof}" onclick="window.open(this.src)" style="max-width:120px; cursor:pointer;">`
         : "尚未上傳";
-    }
 
-    const modal = document.getElementById("shipment-details-modal");
-    if (modal) modal.style.display = "flex";
+    document.getElementById("shipment-details-modal").style.display = "flex";
   } catch (e) {
     alert("詳情載入失敗");
   }
 };
 
 /**
- * 時間軸渲染 (完整還原 V29.6 映射)
+ * 時間軸渲染
  */
 function renderTimeline(container, currentStatus) {
   const steps = [
@@ -814,7 +730,6 @@ function renderTimeline(container, currentStatus) {
     { code: "UNSTUFFING", label: "拆櫃派送" },
     { code: "COMPLETED", label: "已完成" },
   ];
-
   if (["CANCELLED", "RETURNED"].includes(currentStatus)) {
     container.innerHTML = `<div class="alert alert-error text-center">${
       currentStatus === "RETURNED" ? "已退回" : "已取消"
@@ -822,28 +737,27 @@ function renderTimeline(container, currentStatus) {
     return;
   }
   if (currentStatus === "PENDING_REVIEW") currentStatus = "PENDING_PAYMENT";
+  let curIdx = Math.max(
+    0,
+    steps.findIndex((s) => s.code === currentStatus)
+  );
 
-  let curIdx = steps.findIndex((s) => s.code === currentStatus);
-  if (curIdx === -1) curIdx = 0;
-
-  let html = `<div class="timeline-container" style="display:flex; justify-content:space-between; position:relative; margin:20px 0;">`;
-  html += `<div style="position:absolute; top:15px; left:0; right:0; height:4px; background:#eee; z-index:0;"></div>`;
-  html += `<div style="position:absolute; top:15px; left:0; width:${
-    (curIdx / (steps.length - 1)) * 100
-  }%; height:4px; background:#28a745; z-index:0; transition:width 0.3s;"></div>`;
+  let html = `<div class="timeline-container" style="display:flex; justify-content:space-between; position:relative; margin:20px 0;">
+    <div style="position:absolute; top:15px; left:0; right:0; height:4px; background:#eee; z-index:0;"></div>
+    <div style="position:absolute; top:15px; left:0; width:${
+      (curIdx / (steps.length - 1)) * 100
+    }%; height:4px; background:#28a745; z-index:0; transition:width 0.3s;"></div>`;
 
   steps.forEach((step, idx) => {
     const isComp = idx <= curIdx;
     html += `<div style="position:relative; z-index:1; text-align:center; flex:1;">
-                <i class="fas ${
-                  isComp ? "fa-check-circle" : "fa-circle"
-                }" style="color:${
+      <i class="fas ${isComp ? "fa-check-circle" : "fa-circle"}" style="color:${
       isComp ? "#28a745" : "#ccc"
-    }; font-size:20px; background:#fff; border-radius:50%;"></i>
-                <div style="font-size:11px; margin-top:5px; font-weight:${
-                  idx === curIdx ? "bold" : "normal"
-                }">${step.label}</div>
-            </div>`;
+    }; font-size:20px; background:#fff;"></i>
+      <div style="font-size:11px; margin-top:5px; font-weight:${
+        idx === curIdx ? "bold" : "normal"
+      }">${step.label}</div>
+    </div>`;
   });
   container.innerHTML = html + "</div>";
 }
