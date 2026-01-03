@@ -1,8 +1,11 @@
 /**
  * dashboard-packages.js
- * V2026.01.03.UltimateFix_Optimized
- * [優化]：解決大數據量下 filterAndRenderPackages 導致的點擊延遲 (Violation)
- * [保留]：智慧文字比對、強制前端重算、Cloudinary URL Fix、批量預報、無主領取
+ * V2026.01.14.StaticCheckout_Final_Optimized
+ * [功能]：包裹管理核心邏輯
+ * [優化]：
+ * 1. 解決合併打包按鈕遮擋手機導覽列問題（改為隨列表排版之靜態區塊）。
+ * 2. 解決大數據量下 filterAndRenderPackages 導致的點擊延遲 (Violation)。
+ * 3. 保留：智慧文字比對、強制前端重算費率、Cloudinary URL 修復、批量預報、無主件領取。
  */
 
 let currentEditPackageImages = [];
@@ -60,6 +63,16 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  // 5. 綁定新的靜態「合併打包」按鈕
+  const btnSimpleShip = document.getElementById("btn-create-shipment-simple");
+  if (btnSimpleShip) {
+    btnSimpleShip.addEventListener("click", () => {
+      if (typeof window.handleCreateShipmentClick === "function") {
+        window.handleCreateShipmentClick();
+      }
+    });
+  }
+
   // 綁定表單與 Excel 事件
   const claimForm = document.getElementById("claim-package-form");
   if (claimForm) claimForm.addEventListener("submit", handleClaimSubmit);
@@ -71,6 +84,27 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnConfirmBulk)
     btnConfirmBulk.addEventListener("click", submitBulkForecast);
 });
+
+// --- [核心] 結帳列更新邏輯 (新的靜態區域版) ---
+window.updateCheckoutBar = function () {
+  const checkboxes = document.querySelectorAll(".package-checkbox:checked");
+  const count = checkboxes.length;
+
+  const checkoutZone = document.getElementById("packages-checkout-zone");
+  const countDisplay = document.getElementById("selected-pkg-count-simple");
+
+  if (checkoutZone && countDisplay) {
+    if (count > 0) {
+      countDisplay.textContent = count;
+      checkoutZone.style.display = "flex";
+      // 同步更新舊的計數器（如有其他組件使用）
+      const oldBadge = document.getElementById("selected-pkg-count");
+      if (oldBadge) oldBadge.textContent = count;
+    } else {
+      checkoutZone.style.display = "none";
+    }
+  }
+};
 
 // --- [核心] 載入與篩選邏輯 ---
 window.loadMyPackages = async function () {
@@ -102,9 +136,11 @@ window.filterAndRenderPackages = function () {
     document.getElementById("pkg-status-filter")?.value || "all";
 
   const filtered = window.allPackagesData.filter((pkg) => {
+    const productName = pkg.productName || "";
+    const trackingNumber = pkg.trackingNumber || "";
     const matchesSearch =
-      pkg.productName.toLowerCase().includes(searchTerm) ||
-      pkg.trackingNumber.toLowerCase().includes(searchTerm);
+      productName.toLowerCase().includes(searchTerm) ||
+      trackingNumber.toLowerCase().includes(searchTerm);
     const matchesStatus = statusFilter === "all" || pkg.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -112,7 +148,7 @@ window.filterAndRenderPackages = function () {
   renderPackagesTable(filtered);
 };
 
-// --- [優化] 渲染函式 ---
+// --- [優化] 渲染函式 (DocumentFragment 大數據優化) ---
 function renderPackagesTable(dataToRender = null) {
   const tableBody = document.getElementById("packages-table-body");
   if (!tableBody) return;
@@ -124,8 +160,7 @@ function renderPackagesTable(dataToRender = null) {
   if (!displayData || displayData.length === 0) {
     tableBody.innerHTML =
       '<tr><td colspan="5" class="text-center" style="padding:30px; color:#999;">目前沒有符合條件的包裹</td></tr>';
-    if (typeof window.updateCheckoutBar === "function")
-      window.updateCheckoutBar();
+    window.updateCheckoutBar();
     return;
   }
 
@@ -205,7 +240,7 @@ function renderPackagesTable(dataToRender = null) {
       </td>
     `;
 
-    // 點擊事件綁定 (使用內部監聽器避免全域 onclick 衝突)
+    // 點擊事件綁定
     tr.querySelector(".btn-details").addEventListener("click", () =>
       window.openPackageDetails(encodeURIComponent(JSON.stringify(pkg)))
     );
@@ -221,16 +256,14 @@ function renderPackagesTable(dataToRender = null) {
       });
     }
     tr.querySelector(".package-checkbox")?.addEventListener("change", () => {
-      if (typeof window.updateCheckoutBar === "function")
-        window.updateCheckoutBar();
+      window.updateCheckoutBar();
     });
 
     fragment.appendChild(tr);
   });
 
   tableBody.appendChild(fragment);
-  if (typeof window.updateCheckoutBar === "function")
-    window.updateCheckoutBar();
+  window.updateCheckoutBar();
 }
 
 // --- 預報提交 ---
@@ -353,12 +386,12 @@ window.openPackageDetails = function (pkgDataStr) {
       }</span><span>$${volFee}</span></div>
           </div>
           ${
-            isBoxOversized
+            isPkgOversized
               ? `<div class="alert-highlight">⚠️ 尺寸超長 (+$${CONSTANTS.OVERSIZED_FEE})</div>`
               : ""
           }
           ${
-            isBoxOverweight
+            isPkgOverweight
               ? `<div class="alert-highlight">⚠️ 單件超重 (+$${CONSTANTS.OVERWEIGHT_FEE})</div>`
               : ""
           }
@@ -394,7 +427,7 @@ window.openPackageDetails = function (pkgDataStr) {
   }
 };
 
-// --- [其餘功能完全保留] ---
+// --- 無主包裹與領取 ---
 window.loadUnclaimedList = async function () {
   const tbody = document.getElementById("unclaimed-table-body");
   if (!tbody) return;
@@ -431,7 +464,8 @@ window.loadUnclaimedList = async function () {
 
 window.openClaimModalSafe = function () {
   const modal = document.getElementById("claim-package-modal");
-  document.getElementById("claim-package-form")?.reset();
+  const form = document.getElementById("claim-package-form");
+  if (form) form.reset();
   if (modal) modal.style.display = "flex";
   setTimeout(() => document.getElementById("claim-tracking")?.focus(), 100);
 };
@@ -469,6 +503,7 @@ async function handleClaimSubmit(e) {
   }
 }
 
+// --- Excel 批量操作 ---
 function handleExcelUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -519,6 +554,7 @@ async function submitBulkForecast() {
   }
 }
 
+// --- 異常處理與編輯 ---
 window.resolveException = function (pkgId) {
   const action = prompt("處理方式：1. 棄置, 2. 退回, 3. 發貨 (請輸入 1, 2, 3)");
   const map = { 1: "DISCARD", 2: "RETURN", 3: "SHIP_ANYWAY" };

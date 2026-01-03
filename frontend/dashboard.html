@@ -162,48 +162,55 @@
         border: 1px solid #eee;
       }
 
-      /* 結帳列優化：確保不擋到手機版導覽 */
-      .checkout-bar {
-        position: fixed;
-        bottom: 25px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 95%;
-        max-width: 700px;
-        background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(12px);
-        padding: 16px 24px;
-        border-radius: 20px;
+      /* 新增：包裹清單結帳區 (取代原本的華麗浮動列) */
+      .packages-checkout-zone {
+        margin-top: 25px;
+        padding: 25px;
+        background: #fff;
+        border: 2px solid #1a73e8;
+        border-radius: 24px;
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
         align-items: center;
-        z-index: 2100;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-        animation: slideUpUp 0.5s ease;
+        gap: 15px;
+        box-shadow: 0 8px 25px rgba(26, 115, 232, 0.1);
+        text-align: center;
+        animation: fadeIn 0.4s ease;
       }
 
-      @keyframes slideUpUp {
-        from {
-          bottom: -100px;
-          opacity: 0;
-        }
-        to {
-          bottom: 25px;
-          opacity: 1;
-        }
+      .checkout-summary-text {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1e293b;
       }
 
-      .btn-checkout-active {
-        background: linear-gradient(
-          135deg,
-          #28a745 0%,
-          #1e7e34 100%
-        ) !important;
-        color: white !important;
-        padding: 12px 28px !important;
-        border-radius: 14px !important;
-        font-weight: 900 !important;
+      .checkout-summary-text strong {
+        color: #1a73e8;
+        font-size: 1.5rem;
+        margin: 0 5px;
+      }
+
+      .btn-execute-merging {
+        width: 100%;
+        max-width: 450px;
+        height: 60px;
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        color: white;
+        border: none;
+        border-radius: 16px;
+        font-size: 1.15rem;
+        font-weight: 900;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 10px 20px rgba(40, 167, 69, 0.2);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .btn-execute-merging:active {
+        transform: scale(0.97);
       }
 
       /* 圖片上傳區樣式 */
@@ -230,11 +237,19 @@
         display: none;
       }
 
-      /* 行動端適配：底部導覽與結帳列避位 */
-      @media (max-width: 800px) {
-        .checkout-bar {
-          bottom: 85px; /* 墊高以避開底部導覽列 */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
         }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* 行動端適配 */
+      @media (max-width: 800px) {
         .hero-dashboard {
           flex-direction: column;
           text-align: center;
@@ -248,6 +263,10 @@
         }
         .dashboard-tabs-wrapper {
           top: 60px;
+        }
+        .packages-checkout-zone {
+          padding: 20px 15px;
+          margin-bottom: 30px; /* 留白給底部導覽 */
         }
       }
     </style>
@@ -595,16 +614,6 @@
           </main>
         </div>
       </div>
-    </div>
-
-    <div id="checkout-bar" class="checkout-bar" style="display: none">
-      <div class="checkout-info">
-        <i class="fas fa-shopping-basket" style="color: #ffc107"></i> 已選取
-        <span id="selected-pkg-count" class="highlight">0</span> 件包裹
-      </div>
-      <button id="btn-create-shipment" class="btn-checkout-active">
-        開始合併打包
-      </button>
     </div>
 
     <nav id="mobile-bottom-nav" class="universal-bottom-nav">
