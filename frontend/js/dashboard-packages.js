@@ -1,53 +1,20 @@
 /**
  * dashboard-packages.js
- * V2026.01.14.StaticCheckout_Final_Optimized
+ * V2026.01.14.Ultimate_Final_Fixed
  * [功能]：包裹管理核心邏輯
  * [優化]：
- * 1. 解決合併打包按鈕遮擋手機導覽列問題（改為隨列表排版之靜態區塊）。
- * 2. 解決大數據量下 filterAndRenderPackages 導致的點擊延遲 (Violation)。
- * 3. 保留：智慧文字比對、強制前端重算費率、Cloudinary URL 修復、批量預報、無主件領取。
+ * 1. 強力修復合併打包按鈕消失問題（確保非同步加載後能綁定）。
+ * 2. 解決大數據渲染造成的 Violation 卡頓。
+ * 3. 一字不漏保留：智慧文字比對、費率逆推、Cloudinary 修正、批量預報、草稿自動帶入。
  */
 
 let currentEditPackageImages = [];
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. 綁定「認領包裹」按鈕
-  const btnClaim = document.getElementById("btn-claim-package");
-  if (btnClaim) {
-    btnClaim.addEventListener("click", () => {
-      window.openClaimModalSafe();
-    });
-  }
+  // 1. 初始化按鈕監聽 (針對主頁面已存在的元素)
+  initStaticButtons();
 
-  // 2. 綁定「批量預報」按鈕 (支援多處按鈕)
-  const bulkBtns = document.querySelectorAll("#btn-bulk-forecast");
-  bulkBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const modal = document.getElementById("bulk-forecast-modal");
-      if (modal) modal.style.display = "flex";
-    });
-  });
-
-  // 3. 綁定「單件預報」按鈕
-  const btnSingle = document.getElementById("btn-single-forecast");
-  if (btnSingle) {
-    btnSingle.addEventListener("click", () => {
-      const forecastSection = document.querySelector(".forecast-section");
-      if (forecastSection) {
-        forecastSection.scrollIntoView({ behavior: "smooth", block: "center" });
-        setTimeout(() => {
-          const input = document.getElementById("trackingNumber");
-          if (input) {
-            input.focus();
-            input.style.boxShadow = "0 0 0 4px rgba(26, 115, 232, 0.3)";
-            setTimeout(() => (input.style.boxShadow = ""), 1500);
-          }
-        }, 600);
-      }
-    });
-  }
-
-  // 4. [效能優化] 搜尋與篩選監聽 (加入 requestAnimationFrame 避免卡頓)
+  // 2. [效能優化] 搜尋與篩選監聽
   let filterTimeout;
   const pkgSearchInput = document.getElementById("pkg-search-input");
   if (pkgSearchInput) {
@@ -63,17 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // 5. 綁定新的靜態「合併打包」按鈕
-  const btnSimpleShip = document.getElementById("btn-create-shipment-simple");
-  if (btnSimpleShip) {
-    btnSimpleShip.addEventListener("click", () => {
-      if (typeof window.handleCreateShipmentClick === "function") {
-        window.handleCreateShipmentClick();
-      }
-    });
-  }
-
-  // 綁定表單與 Excel 事件
+  // 3. 綁定表單與 Excel 事件
   const claimForm = document.getElementById("claim-package-form");
   if (claimForm) claimForm.addEventListener("submit", handleClaimSubmit);
 
@@ -85,7 +42,61 @@ document.addEventListener("DOMContentLoaded", () => {
     btnConfirmBulk.addEventListener("click", submitBulkForecast);
 });
 
-// --- [核心] 結帳列更新邏輯 (新的靜態區域版) ---
+/**
+ * 初始化靜態按鈕 (包含主頁面按鈕與認領功能)
+ */
+function initStaticButtons() {
+  const btnClaim = document.getElementById("btn-claim-package");
+  if (btnClaim) {
+    btnClaim.onclick = () => window.openClaimModalSafe();
+  }
+
+  const bulkBtns = document.querySelectorAll("#btn-bulk-forecast");
+  bulkBtns.forEach((btn) => {
+    btn.onclick = () => {
+      const modal = document.getElementById("bulk-forecast-modal");
+      if (modal) modal.style.display = "flex";
+    };
+  });
+
+  const btnSingle = document.getElementById("btn-single-forecast");
+  if (btnSingle) {
+    btnSingle.onclick = () => {
+      const forecastSection = document.querySelector(".forecast-section");
+      if (forecastSection) {
+        forecastSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => {
+          const input = document.getElementById("trackingNumber");
+          if (input) {
+            input.focus();
+            input.style.boxShadow = "0 0 0 4px rgba(26, 115, 232, 0.3)";
+            setTimeout(() => (input.style.boxShadow = ""), 1500);
+          }
+        }, 600);
+      }
+    };
+  }
+}
+
+/**
+ * [核心修復] 綁定結帳按鈕事件
+ * 因為 packages.html 是動態載入，必須在渲染後或顯示時重新綁定
+ */
+function bindCheckoutButton() {
+  const btnSimpleShip = document.getElementById("btn-create-shipment-simple");
+  if (btnSimpleShip) {
+    btnSimpleShip.onclick = (e) => {
+      e.preventDefault();
+      if (typeof window.handleCreateShipmentClick === "function") {
+        window.handleCreateShipmentClick();
+      } else {
+        console.error("找不到全域函數: handleCreateShipmentClick");
+      }
+    };
+  }
+}
+
+// --- [核心修復] 更新結帳列顯示邏輯 ---
 window.updateCheckoutBar = function () {
   const checkboxes = document.querySelectorAll(".package-checkbox:checked");
   const count = checkboxes.length;
@@ -96,12 +107,14 @@ window.updateCheckoutBar = function () {
   if (checkoutZone && countDisplay) {
     if (count > 0) {
       countDisplay.textContent = count;
-      checkoutZone.style.display = "flex";
-      // 同步更新舊的計數器（如有其他組件使用）
+      checkoutZone.style.display = "flex"; // 顯示區塊
+      bindCheckoutButton(); // 確保按鈕點擊有效
+
+      // 同步舊版計數器 (如果有其他 JS 引用)
       const oldBadge = document.getElementById("selected-pkg-count");
       if (oldBadge) oldBadge.textContent = count;
     } else {
-      checkoutZone.style.display = "none";
+      checkoutZone.style.display = "none"; // 隱藏
     }
   }
 };
@@ -112,7 +125,7 @@ window.loadMyPackages = async function () {
   if (!tableBody) return;
 
   tableBody.innerHTML =
-    '<tr><td colspan="5" class="text-center" style="padding:20px;">載入中...</td></tr>';
+    '<tr><td colspan="5" class="text-center" style="padding:40px;"><div class="loading-spinner"></div>載入中...</td></tr>';
 
   try {
     const res = await fetch(`${API_BASE_URL}/api/packages/my`, {
@@ -136,11 +149,11 @@ window.filterAndRenderPackages = function () {
     document.getElementById("pkg-status-filter")?.value || "all";
 
   const filtered = window.allPackagesData.filter((pkg) => {
-    const productName = pkg.productName || "";
-    const trackingNumber = pkg.trackingNumber || "";
+    const pName = pkg.productName || "";
+    const tNum = pkg.trackingNumber || "";
     const matchesSearch =
-      productName.toLowerCase().includes(searchTerm) ||
-      trackingNumber.toLowerCase().includes(searchTerm);
+      pName.toLowerCase().includes(searchTerm) ||
+      tNum.toLowerCase().includes(searchTerm);
     const matchesStatus = statusFilter === "all" || pkg.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -166,26 +179,25 @@ function renderPackagesTable(dataToRender = null) {
 
   const statusMap = window.PACKAGE_STATUS_MAP || {};
   const statusClasses = window.STATUS_CLASSES || {};
-
-  // 使用 DocumentFragment 減少 DOM 操縱次數，提升效能
   const fragment = document.createDocumentFragment();
 
   displayData.forEach((pkg) => {
     const statusText = statusMap[pkg.status] || pkg.status;
     const statusClass = statusClasses[pkg.status] || "";
-    const isReady =
-      pkg.status === "ARRIVED" &&
-      !pkg.exceptionStatus &&
-      (pkg.productUrl || (pkg.productImages && pkg.productImages.length > 0));
+
+    // 合併條件：已入庫。 (放寬條件確保按鈕能顯示，不齊全的資料由後續 Modal 檢查)
+    const isReady = pkg.status === "ARRIVED" && !pkg.exceptionStatus;
 
     let badgesHtml = "";
     if (pkg.exceptionStatus) {
-      const exText = pkg.exceptionStatus === "DAMAGED" ? "破損" : "違禁品/異常";
+      const exText = pkg.exceptionStatus === "DAMAGED" ? "破損" : "異常件";
       badgesHtml += `<span class="badge-alert" style="background:#ffebee; color:#d32f2f; border:1px solid red; cursor:pointer;" onclick="resolveException('${pkg.id}')">⚠️ ${exText}</span> `;
     }
-    if (
-      !(pkg.productUrl || (pkg.productImages && pkg.productImages.length > 0))
-    ) {
+
+    // 檢查資料是否完整 (URL 或 圖片)
+    const hasInfo =
+      pkg.productUrl || (pkg.productImages && pkg.productImages.length > 0);
+    if (!hasInfo) {
       badgesHtml += `<span class="badge-alert" style="background:#fff3e0; color:#d32f2f; border:1px solid #ff9800; cursor:pointer;" onclick='openEditPackageModal(${JSON.stringify(
         pkg
       )})'>⚠️ 待完善</span> `;
@@ -240,10 +252,11 @@ function renderPackagesTable(dataToRender = null) {
       </td>
     `;
 
-    // 點擊事件綁定
+    // 詳情按鈕
     tr.querySelector(".btn-details").addEventListener("click", () =>
       window.openPackageDetails(encodeURIComponent(JSON.stringify(pkg)))
     );
+    // 修改按鈕
     const editBtn = tr.querySelector(".btn-edit");
     if (editBtn) {
       editBtn.addEventListener("click", (e) => {
@@ -255,6 +268,7 @@ function renderPackagesTable(dataToRender = null) {
         }
       });
     }
+    // 勾選框監聽
     tr.querySelector(".package-checkbox")?.addEventListener("change", () => {
       window.updateCheckoutBar();
     });
@@ -263,7 +277,7 @@ function renderPackagesTable(dataToRender = null) {
   });
 
   tableBody.appendChild(fragment);
-  window.updateCheckoutBar();
+  window.updateCheckoutBar(); // 初始檢查
 }
 
 // --- 預報提交 ---
@@ -386,12 +400,12 @@ window.openPackageDetails = function (pkgDataStr) {
       }</span><span>$${volFee}</span></div>
           </div>
           ${
-            isPkgOversized
+            isBoxOversized
               ? `<div class="alert-highlight">⚠️ 尺寸超長 (+$${CONSTANTS.OVERSIZED_FEE})</div>`
               : ""
           }
           ${
-            isPkgOverweight
+            isBoxOverweight
               ? `<div class="alert-highlight">⚠️ 單件超重 (+$${CONSTANTS.OVERWEIGHT_FEE})</div>`
               : ""
           }
