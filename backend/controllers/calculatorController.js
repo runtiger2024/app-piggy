@@ -222,12 +222,12 @@ const calculateSeaFreight = async (req, res) => {
             message: `項目 "${name}" 選擇依尺寸計算，但 長/寬/高 必須大於 0。`,
           });
         }
-        // 材積計算：(L*W*H) / 除數 (預設 6000)，結果無條件進位
-        const divisor = CONSTANTS.VOLUME_DIVISOR || 6000;
+        // 材積計算：(L*W*H) / 除數 (預設 28317)，結果無條件進位
+        const divisor = CONSTANTS.VOLUME_DIVISOR || 28317;
         singleVolume = Math.ceil((length * width * height) / divisor);
 
         // 超規檢查 (單邊 >= 限制值)
-        const limit = CONSTANTS.OVERSIZED_LIMIT || 200;
+        const limit = CONSTANTS.OVERSIZED_LIMIT || 300;
         if (length >= limit || width >= limit || height >= limit) {
           isItemOversized = true;
         }
@@ -238,8 +238,8 @@ const calculateSeaFreight = async (req, res) => {
             message: `項目 "${name}" 選擇依立方米計算，但 CBM 必須大於 0。`,
           });
         }
-        // CBM 轉材：CBM * 系數 (預設 35.315)，結果無條件進位
-        const factor = CONSTANTS.CBM_TO_CAI_FACTOR || 35.315;
+        // CBM 轉材：CBM * 系數 (預設 35.3)，結果無條件進位
+        const factor = CONSTANTS.CBM_TO_CAI_FACTOR || 35.3;
         singleVolume = Math.ceil(cbm * factor);
       }
 
