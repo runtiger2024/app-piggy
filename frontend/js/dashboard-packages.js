@@ -1,15 +1,15 @@
 /**
  * dashboard-packages.js
- * V2026.01.14.Ultimate_Final_FullVersion
- * [功能]：包裹管理核心邏輯
+ * V2026.01.15.Enhanced_FullVersion
+ * [功能]：包裹管理核心邏輯 (整合無主包裹優化版)
  * [修復]：
- * 1. 解決非同步加載導致的「合併打包」按鈕 ID 抓取不到的問題。
- * 2. 採用「事件委派」機制，確保表格更新後勾選功能依然有效。
- * 3. 解決大數據渲染造成的 Violation 卡頓。
- * 4. 保留：費率逆推計算、智慧文字比對、Cloudinary 修正、預報草稿佇列、批量預報。
+ * 1. 整合 Cache-First (SWR) 策略至無主包裹載入，消除切換頓挫感。
+ * 2. 新增無主包裹即時過濾搜尋與圖片預覽功能。
+ * 3. 保留 V2026.01.14 所有修復：事件委派、大數據渲染優化、費率逆推、批量預報。
  */
 
 let currentEditPackageImages = [];
+window.unclaimedCache = []; // 全域快取：無主包裹
 
 document.addEventListener("DOMContentLoaded", () => {
   // 1. 初始化按鈕監聽 (針對主頁面已存在的預報功能)
@@ -31,7 +31,15 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // 3. 綁定表單與 Excel 事件
+  // 3. [新功能] 無主包裹搜尋監聽
+  const unclaimedSearchInput = document.getElementById("unclaimed-search");
+  if (unclaimedSearchInput) {
+    unclaimedSearchInput.addEventListener("input", (e) =>
+      window.filterUnclaimed(e.target.value)
+    );
+  }
+
+  // 4. 綁定表單與 Excel 事件
   const claimForm = document.getElementById("claim-package-form");
   if (claimForm) claimForm.addEventListener("submit", handleClaimSubmit);
 
@@ -82,22 +90,19 @@ function initPackageStaticUI() {
 
 /**
  * [核心修復] 更新結帳列顯示邏輯 (靜態區域版)
- * 確保在 packages.html 被 fetch 載入後依然能運作
  */
 window.updateCheckoutBar = function () {
   const checkboxes = document.querySelectorAll(".package-checkbox:checked");
   const count = checkboxes.length;
 
-  // 獲取 packages.html 中的 ID 元件
   const checkoutZone = document.getElementById("packages-checkout-zone");
   const countDisplay = document.getElementById("selected-pkg-count-simple");
 
   if (checkoutZone && countDisplay) {
     if (count > 0) {
       countDisplay.textContent = count;
-      checkoutZone.style.display = "flex"; // 顯示區塊
+      checkoutZone.style.display = "flex";
 
-      // [關鍵修復]：動態綁定合併按鈕事件 (確保點擊能開啟 Shipment Modal)
       const btnMerge = document.getElementById("btn-create-shipment-simple");
       if (btnMerge) {
         btnMerge.onclick = (e) => {
@@ -111,11 +116,10 @@ window.updateCheckoutBar = function () {
         };
       }
 
-      // 同步舊版計數器 (如有其他組件使用)
       const oldBadge = document.getElementById("selected-pkg-count");
       if (oldBadge) oldBadge.textContent = count;
     } else {
-      checkoutZone.style.display = "none"; // 無選取則隱藏
+      checkoutZone.style.display = "none";
     }
   }
 };
@@ -168,7 +172,7 @@ window.filterAndRenderPackages = function () {
 };
 
 /**
- * [優化] 渲染函式 (DocumentFragment 大數據優化，徹底解決延遲)
+ * [優化] 渲染函式 (DocumentFragment 大數據優化)
  */
 function renderPackagesTable(dataToRender = null) {
   const tableBody = document.getElementById("packages-table-body");
@@ -192,8 +196,6 @@ function renderPackagesTable(dataToRender = null) {
   displayData.forEach((pkg) => {
     const statusText = statusMap[pkg.status] || pkg.status;
     const statusClass = statusClasses[pkg.status] || "";
-
-    // [條件修復]：只要已入庫且非異常即可勾選，不齊全的資料(如缺圖)由後續流程提醒
     const isArrived = pkg.status === "ARRIVED";
     const isReady = isArrived && !pkg.exceptionStatus;
 
@@ -265,7 +267,6 @@ function renderPackagesTable(dataToRender = null) {
       </td>
     `;
 
-    // 事件監聽綁定
     tr.querySelector(".btn-details-trigger").onclick = () =>
       window.openPackageDetails(encodeURIComponent(JSON.stringify(pkg)));
 
@@ -281,21 +282,17 @@ function renderPackagesTable(dataToRender = null) {
       };
     }
 
-    // 勾選框監聽：即時觸發 updateCheckoutBar
-    tr.querySelector(".package-checkbox")?.addEventListener("change", () => {
-      window.updateCheckoutBar();
-    });
-
+    tr.querySelector(".package-checkbox")?.addEventListener("change", () =>
+      window.updateCheckoutBar()
+    );
     fragment.appendChild(tr);
   });
 
   tableBody.appendChild(fragment);
-
-  // 重要：表格渲染後立即執行一次檢查，確保勾選狀態同步
   window.updateCheckoutBar();
 }
 
-// --- 預報提交與草稿佇列 (保留) ---
+// --- 預報提交 ---
 window.handleForecastSubmit = async function (e) {
   e.preventDefault();
   const btn = e.target.querySelector("button[type='submit']");
@@ -369,7 +366,6 @@ window.openPackageDetails = function (pkgDataStr) {
     };
     const arrivedBoxes = pkg.arrivedBoxes || [];
 
-    // [智慧邏輯]：逆推計算費率
     let calculatedTotalBaseFee = 0;
     let pkgRateConfig = { weightRate: 22, volumeRate: 125 };
 
@@ -446,7 +442,6 @@ window.openPackageDetails = function (pkgDataStr) {
       "details-total-fee"
     ).textContent = `NT$ ${calculatedTotalBaseFee.toLocaleString()}`;
 
-    // 照片渲染 (Cloudinary Fix)
     imagesGallery.innerHTML = "";
     (pkg.warehouseImages || []).forEach((url) => {
       const src = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
@@ -463,45 +458,146 @@ window.openPackageDetails = function (pkgDataStr) {
   }
 };
 
-// --- 無主包裹 (保留) ---
-window.loadUnclaimedList = async function () {
+// --- [優化新功能] 無主包裹優化系統 ---
+
+/**
+ * [新功能] 加載無主清單 (SWR 策略)
+ */
+window.loadUnclaimedList = async function (forceRefresh = false) {
   const tbody = document.getElementById("unclaimed-table-body");
   if (!tbody) return;
+
+  // [SWR 優化]：快取優先
+  if (
+    !forceRefresh &&
+    window.unclaimedCache &&
+    window.unclaimedCache.length > 0
+  ) {
+    renderUnclaimed(window.unclaimedCache);
+    fetchUnclaimedData(true); // 背景更新
+    return;
+  }
+
   tbody.innerHTML =
-    '<tr><td colspan="5" class="text-center">載入中...</td></tr>';
+    '<tr><td colspan="5" class="text-center" style="padding:20px;"><i class="fas fa-spinner fa-spin"></i> 資料載入中...</td></tr>';
+  await fetchUnclaimedData(false);
+};
+
+async function fetchUnclaimedData(isBackground) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/packages/unclaimed`, {
       headers: { Authorization: `Bearer ${window.dashboardToken}` },
     });
     const data = await res.json();
-    if (data.success && data.packages?.length > 0) {
-      tbody.innerHTML = data.packages
-        .map(
-          (pkg) => `
-        <tr>
-          <td>${new Date(pkg.createdAt).toLocaleDateString()}</td>
-          <td style="font-family:monospace; font-weight:bold;">${
-            pkg.maskedTrackingNumber
-          }</td>
-          <td>${pkg.productName}</td>
-          <td>${pkg.weightInfo}</td>
-          <td><button class="btn btn-sm btn-primary" onclick="window.openClaimModalSafe()"><i class="fas fa-hand-paper"></i> 認領</button></td>
-        </tr>`
-        )
-        .join("");
-    } else {
-      tbody.innerHTML =
-        '<tr><td colspan="5" class="text-center">目前沒有無主包裹</td></tr>';
+    if (data.success) {
+      window.unclaimedCache = data.packages || [];
+      renderUnclaimed(window.unclaimedCache);
     }
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5">載入失敗</td></tr>`;
+    if (!isBackground) {
+      document.getElementById(
+        "unclaimed-table-body"
+      ).innerHTML = `<tr><td colspan="5" class="text-center" style="color:red;">載入失敗</td></tr>`;
+    }
+  }
+}
+
+/**
+ * [新功能] 渲染無主包裹 (整合圖片預覽)
+ */
+function renderUnclaimed(list, isFiltering = false) {
+  const tbody = document.getElementById("unclaimed-table-body");
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:30px; color:#999;">${
+      isFiltering ? "找不到符合條件的單號" : "目前沒有無主包裹"
+    }</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list
+    .map((pkg) => {
+      // 取得照片 (如有)
+      const firstImg =
+        pkg.warehouseImages && pkg.warehouseImages.length > 0
+          ? pkg.warehouseImages[0]
+          : null;
+      const imgHtml = firstImg
+        ? `<div class="unclaimed-thumb-wrapper" onclick="window.previewUnclaimedImage('${firstImg}')"><img src="${
+            firstImg.startsWith("http") ? firstImg : API_BASE_URL + firstImg
+          }" class="unclaimed-thumb"><i class="fas fa-search-plus"></i></div>`
+        : '<span style="color:#ccc;">(無照片)</span>';
+
+      return `
+      <tr>
+        <td>${new Date(pkg.createdAt).toLocaleDateString()}</td>
+        <td style="font-family:monospace; font-weight:bold; color:#d32f2f;">${
+          pkg.maskedTrackingNumber || pkg.trackingNumber
+        }</td>
+        <td>
+          <div style="font-weight:bold;">${pkg.productName}</div>
+          ${imgHtml}
+        </td>
+        <td>${pkg.weightInfo || "--"}</td>
+        <td><button class="btn btn-sm btn-primary" onclick="window.initiateClaimByTracking('${
+          pkg.trackingNumber
+        }')"><i class="fas fa-hand-paper"></i> 認領</button></td>
+      </tr>`;
+    })
+    .join("");
+}
+
+/**
+ * [新功能] 無主包裹過濾搜尋
+ */
+window.filterUnclaimed = function (keyword) {
+  const kw = keyword.toLowerCase().trim();
+  if (!window.unclaimedCache) return;
+  const filtered = window.unclaimedCache.filter(
+    (p) =>
+      p.trackingNumber.toLowerCase().includes(kw) ||
+      p.productName.toLowerCase().includes(kw)
+  );
+  renderUnclaimed(filtered, true);
+};
+
+/**
+ * [新功能] 認領時自動帶入單號
+ */
+window.initiateClaimByTracking = function (tracking) {
+  window.openClaimModalSafe();
+  const input = document.getElementById("claim-tracking");
+  if (input) {
+    input.value = tracking;
+    input.style.backgroundColor = "#fff9db";
+  }
+};
+
+/**
+ * [新功能] 圖片大圖預覽
+ */
+window.previewUnclaimedImage = function (url) {
+  const src = url.startsWith("http") ? url : API_BASE_URL + url;
+  const modal = document.getElementById("view-images-modal");
+  if (modal) {
+    modal.innerHTML = `<div class="modal-content" style="max-width:800px; padding:0; background:transparent; box-shadow:none;">
+        <span class="modal-close" style="color:#fff; font-size:40px; top:0; right:10px;">&times;</span>
+        <img src="${src}" style="width:100%; border-radius:12px; border:3px solid #fff;">
+    </div>`;
+    modal.style.display = "flex";
+  } else {
+    window.open(src, "_blank");
   }
 };
 
 window.openClaimModalSafe = function () {
   const modal = document.getElementById("claim-package-modal");
   const form = document.getElementById("claim-package-form");
-  if (form) form.reset();
+  if (form) {
+    form.reset();
+    document.getElementById("claim-tracking").style.backgroundColor = "";
+  }
   if (modal) modal.style.display = "flex";
   setTimeout(() => document.getElementById("claim-tracking")?.focus(), 100);
 };
@@ -510,13 +606,13 @@ async function handleClaimSubmit(e) {
   e.preventDefault();
   const btn = e.target.querySelector("button[type='submit']");
   btn.disabled = true;
+  const trackingNum = document.getElementById("claim-tracking").value.trim();
+
   const fd = new FormData();
-  fd.append(
-    "trackingNumber",
-    document.getElementById("claim-tracking").value.trim()
-  );
+  fd.append("trackingNumber", trackingNum);
   const file = document.getElementById("claim-proof").files[0];
   if (file) fd.append("proof", file);
+
   try {
     const res = await fetch(`${API_BASE_URL}/api/packages/claim`, {
       method: "POST",
@@ -524,11 +620,17 @@ async function handleClaimSubmit(e) {
       body: fd,
     });
     if (res.ok) {
-      alert("認領成功！");
+      window.showMessage("認領申請已提交！", "success");
       document.getElementById("claim-package-modal").style.display = "none";
+      // 樂觀更新：從快取移除
+      window.unclaimedCache = window.unclaimedCache.filter(
+        (p) => p.trackingNumber !== trackingNum
+      );
+      renderUnclaimed(window.unclaimedCache);
       window.loadMyPackages();
     } else {
-      alert("認領失敗");
+      const data = await res.json();
+      alert(data.message || "認領失敗");
     }
   } catch (err) {
     alert("網路錯誤");
@@ -537,7 +639,7 @@ async function handleClaimSubmit(e) {
   }
 }
 
-// --- Excel 批量操作 (保留) ---
+// --- Excel 批量操作 ---
 function handleExcelUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -586,7 +688,7 @@ async function submitBulkForecast() {
   }
 }
 
-// --- 異常處理與編輯 (保留) ---
+// --- 異常處理與編輯 ---
 window.resolveException = function (pkgId) {
   const action = prompt("處理方式：1. 棄置, 2. 退回, 3. 發貨 (請輸入 1, 2, 3)");
   const map = { 1: "DISCARD", 2: "RETURN", 3: "SHIP_ANYWAY" };
