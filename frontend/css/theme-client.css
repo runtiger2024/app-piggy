@@ -2617,3 +2617,268 @@ textarea {
     border: 4px solid var(--p-primary-light);
   }
 }
+/* --- 個人資料彈窗 (Profile Modal V2) 深度美化 --- */
+
+/* 1. 彈窗容器：增加更深邃的陰影與動畫 */
+.profile-modal-v2 {
+  border: none !important;
+  background: #fcfdfe !important;
+  overflow: hidden;
+  box-shadow: 0 30px 60px -12px rgba(15, 23, 42, 0.3) !important;
+}
+
+/* 2. 頭部設計：深藍漸層與資訊佈局 */
+.profile-modal-header {
+  background: linear-gradient(135deg, #1a73e8 0%, #004299 100%);
+  padding: 35px 30px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+/* 裝飾性背景圓圈 */
+.profile-modal-header::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+}
+
+.avatar-big {
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.user-main-info h3 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 5px;
+  color: #fff;
+}
+
+.member-badge {
+  background: #ffc107;
+  color: #000;
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* 專屬標識碼卡片 */
+.user-id-card {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 12px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: right;
+}
+
+.user-id-card label {
+  font-size: 10px;
+  text-transform: uppercase;
+  opacity: 0.8;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.user-id-card .id-value {
+  font-family: "Monaco", monospace;
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+/* 3. 頁身區塊化設計 */
+.profile-modal-body {
+  padding: 25px;
+}
+
+.modal-section-card {
+  background: white;
+  border: 1.5px solid #edf2f7;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: 0.3s var(--ease-ios);
+}
+
+.modal-section-card:hover {
+  border-color: var(--p-primary-light);
+  box-shadow: var(--shadow-2); /* 0 4px 16px rgba(0, 0, 0, 0.08) */
+}
+
+.modal-section-title {
+  color: var(--p-primary); /* #1a73e8 */
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-section-title i {
+  font-size: 1.1rem;
+  background: var(--p-primary-bg);
+  padding: 8px;
+  border-radius: 10px;
+}
+
+/* 4. 輸入框質感強化 */
+.form-control {
+  background-color: #f8fafc !important; /* 更輕盈的背景 */
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  font-weight: 600;
+}
+
+.form-control:focus {
+  background-color: #fff !important;
+  border-color: var(--p-primary) !important;
+  box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1) !important;
+}
+
+/* 5. 頁尾按鈕強化 */
+.modal-footer-actions {
+  padding: 0 25px 25px;
+  display: flex;
+  gap: 15px;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
+  border-radius: 16px !important;
+  font-size: 1.1rem !important;
+  height: 54px !important;
+  box-shadow: 0 10px 20px rgba(26, 115, 232, 0.3) !important;
+}
+
+.btn-secondary {
+  background: #f1f5f9 !important;
+  border-radius: 16px !important;
+  color: #64748b !important;
+}
+
+/* 手機版適配 */
+@media (max-width: 600px) {
+  .profile-modal-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  .user-id-card {
+    width: 100%;
+    text-align: center;
+  }
+}
+/* --- 圖片預覽區域強化 --- */
+
+/* 讓原本的大上傳區支援網格排列 */
+.upload-zone {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 15px;
+  height: auto !important; /* 讓高度隨內容撐開 */
+  min-height: 140px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* 每一張縮圖的容器 */
+.upload-item {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.upload-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: zoom-in;
+}
+
+/* 縮圖上的刪除按鈕 (X) */
+.upload-item .remove-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 59, 48, 0.9); /* 品牌危險紅 */
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 「新增更多」按鈕的樣式 (讓它長得像一個小格位) */
+.upload-add-btn {
+  width: 80px;
+  height: 80px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: all 0.2s;
+}
+
+.upload-add-btn:hover {
+  border-color: #1a73e8;
+  color: #1a73e8;
+  background: #f1f5f9;
+}
+
+.upload-add-btn i {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.upload-add-btn span {
+  font-size: 11px;
+  font-weight: bold;
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

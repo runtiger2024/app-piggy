@@ -1307,3 +1307,51 @@
   background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
   margin-top: 10px;
 }
+#checkout-bar {
+  position: fixed;
+  bottom: 60px; /* 電腦版距離底部距離 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  max-width: 760px; /* 與主容器寬度契合 */
+  z-index: 2000; /* 確保在所有內容之上 */
+
+  /* 毛玻璃效果 */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 24px;
+  padding: 15px 25px;
+  display: flex; /* 由 JS 控制顯示時會切換為 flex */
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* --- [手機端適配：避開底部導覽列] --- */
+@media (max-width: 800px) {
+  #checkout-bar {
+    bottom: 5px; /* 關鍵：抬高位置以避開手機版底部選單 (80px) */
+    width: 92%;
+    padding: 12px 15px;
+    flex-direction: row; /* 依然保持水平排列，節省高度 */
+    border-radius: 20px;
+  }
+
+  .checkout-summary-text {
+    font-size: 0.9rem;
+  }
+
+  .checkout-summary-text strong {
+    font-size: 1.3rem;
+  }
+
+  .btn-execute-merging {
+    min-width: 130px;
+    height: 44px !important;
+    font-size: 0.9rem !important;
+    padding: 0 15px;
+  }
+}

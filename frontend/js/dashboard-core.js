@@ -1,12 +1,13 @@
 /**
  * dashboard-core.js
  * 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件、通知系統
- * V2026.1.15_Optimized - 旗艦終極優化版
+ * V2026.1.15_Optimized_V2 - 旗艦終極優化版 (增強圖片上傳反饋)
  * * 變更紀錄：
- * 1. [效能優化]：重構 initImageUploader 渲染邏輯，使用 DocumentFragment 減少 DOM 操縱，解決點擊/上傳時的 Violation。
- * 2. [整合修復]：syncProfileToUI 現在會同步資料至密碼表單的隱藏使用者名稱欄位 (cp-username-hidden)。
- * 3. [邏輯修正]：修復 openShipmentDetails 的潛在遞迴錯誤。
- * 4. [穩定性]：強化 Toast 訊息容器偵測機制。
+ * 1. [新增功能]：上傳組件選取檔案後新增自動 Toast 提示張數與成功狀態。
+ * 2. [效能優化]：重構 initImageUploader 渲染邏輯，使用 DocumentFragment 減少 DOM 操縱。
+ * 3. [整合修復]：syncProfileToUI 現在會同步資料至密碼表單的隱藏使用者名稱欄位 (cp-username-hidden)。
+ * 4. [邏輯修正]：修復 openShipmentDetails 的潛在遞迴錯誤。
+ * 5. [穩定性]：強化 Toast 訊息容器偵測機制。
  */
 
 // --- [1. 全域變數與狀態管理] ---
@@ -206,7 +207,7 @@ window.loadSystemSettings = async function () {
 
 /**
  * 初始化圖片上傳器 (效能優化版)
- * 使用 DocumentFragment 減少 Reflow 頻率，解決 Violation 警告
+ * 使用 DocumentFragment 減少 Reflow 頻率，並新增使用者操作提示與預覽縮圖功能
  */
 window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
   const mainInput = document.getElementById(inputId);
@@ -215,12 +216,15 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
 
   const dataTransfer = new DataTransfer();
 
+  /**
+   * 渲染圖片縮圖與操作介面
+   */
   function render() {
     // 效能優化：使用 fragment 一次性寫入 DOM
     container.innerHTML = "";
     const fragment = document.createDocumentFragment();
 
-    // 1. 渲染預覽圖
+    // 1. 渲染預覽圖 (縮圖顯示於上傳區域內)
     Array.from(dataTransfer.files).forEach((file, index) => {
       const item = document.createElement("div");
       item.className = "upload-item animate-pop-in";
@@ -239,6 +243,7 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
         dataTransfer.items.remove(index);
         mainInput.files = dataTransfer.files;
         render();
+        window.showMessage("已移除該照片", "info");
       };
 
       item.appendChild(img);
@@ -263,13 +268,34 @@ window.initImageUploader = function (inputId, containerId, maxFiles = 5) {
 
       tempInput.onchange = (e) => {
         const newFiles = Array.from(e.target.files);
+        let addedCount = 0;
+        let isOverLimit = false;
+
         newFiles.forEach((f) => {
           if (dataTransfer.items.length < maxFiles) {
             dataTransfer.items.add(f);
+            addedCount++;
+          } else {
+            isOverLimit = true;
           }
         });
+
         mainInput.files = dataTransfer.files;
         render();
+
+        // 選取後的新功能：顯示張數提示與警告
+        if (addedCount > 0) {
+          window.showMessage(
+            `已成功選取 ${addedCount} 張商品照片，縮圖已顯示在下方。`,
+            "success"
+          );
+        }
+        if (isOverLimit) {
+          window.showMessage(
+            `抱歉，照片數量上限為 ${maxFiles} 張，其餘檔案未加入。`,
+            "warning"
+          );
+        }
       };
 
       addLabel.appendChild(tempInput);

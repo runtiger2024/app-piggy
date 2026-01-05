@@ -1,53 +1,277 @@
-<div class="section-card">
+<div class="wallet-section-container animate-slide-up">
   <div
-    class="card-header"
-    style="display: flex; justify-content: space-between; align-items: center"
+    class="wallet-hero-card"
+    style="
+      background: linear-gradient(135deg, #1a73e8 0%, #003a8c 100%);
+      border-radius: 24px;
+      padding: 30px;
+      color: white;
+      margin-bottom: 25px;
+      box-shadow: 0 12px 30px rgba(26, 115, 232, 0.25);
+      position: relative;
+      overflow: hidden;
+    "
   >
-    <h3><i class="fas fa-coins"></i> 錢包餘額</h3>
-    <button id="btn-deposit" class="btn btn-success btn-sm" style="width: auto">
-      <i class="fas fa-plus-circle"></i> 申請儲值
-    </button>
-  </div>
-  <div class="card-body">
-    <div style="text-align: center; padding: 20px">
-      <div style="font-size: 14px; color: #666">當前餘額 (NT$)</div>
-      <div
-        id="wallet-balance"
+    <div
+      style="
+        position: absolute;
+        right: -20px;
+        bottom: -20px;
+        font-size: 8rem;
+        color: rgba(255, 255, 255, 0.05);
+        transform: rotate(-15deg);
+        pointer-events: none;
+      "
+    >
+      <i class="fas fa-wallet"></i>
+    </div>
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      "
+    >
+      <div>
+        <div
+          style="
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 600;
+            margin-bottom: 8px;
+          "
+        >
+          <i class="fas fa-coins"></i> 當前可用餘額 (TWD)
+        </div>
+        <div
+          id="wallet-balance"
+          style="
+            font-size: 42px;
+            font-weight: 900;
+            font-family: 'Monaco', monospace;
+            letter-spacing: -1px;
+          "
+        >
+          0
+        </div>
+        <div
+          id="wallet-loading"
+          style="display: none; font-size: 13px; opacity: 0.8; margin-top: 5px"
+        >
+          <i class="fas fa-spinner fa-spin"></i> 正在同步帳務數據...
+        </div>
+      </div>
+      <button
+        id="btn-deposit"
+        class="btn"
         style="
-          font-size: 36px;
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          padding: 10px 20px;
+          border-radius: 14px;
           font-weight: 800;
-          color: #28a745;
-          margin: 10px 0;
+          backdrop-filter: blur(10px);
         "
       >
-        0
-      </div>
-      <div id="wallet-loading" style="display: none; color: #999">
-        <i class="fas fa-spinner fa-spin"></i> 更新中...
-      </div>
+        <i class="fas fa-plus-circle"></i> 申請儲值
+      </button>
     </div>
-    <hr />
-    <h4>交易紀錄</h4>
-    <div class="table-responsive">
-      <table style="width: 100%; border-collapse: collapse; font-size: 14px">
-        <thead style="background: #f8f9fa">
-          <tr>
-            <th style="padding: 10px; text-align: left">時間</th>
-            <th style="padding: 10px; text-align: left">類型</th>
-            <th style="padding: 10px; text-align: left">說明</th>
-            <th style="padding: 10px; text-align: right">金額</th>
-            <th style="padding: 10px; text-align: center">狀態</th>
-          </tr>
-        </thead>
-        <tbody id="transaction-list">
-          <tr>
-            <td colspan="5" class="text-center" style="padding: 20px">
-              載入中...
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div
+      style="
+        margin-top: 25px;
+        display: flex;
+        gap: 15px;
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0.8;
+      "
+    >
+      <span><i class="fas fa-check-circle"></i> 帳戶已認證</span>
+      <span><i class="fas fa-lock"></i> 加密傳輸中</span>
+    </div>
+  </div>
+
+  <div
+    class="transaction-filters"
+    style="
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+      -webkit-overflow-scrolling: touch;
+    "
+  >
+    <button
+      class="filter-chip active"
+      onclick="filterTransactions('ALL', this)"
+      style="
+        padding: 8px 18px;
+        border-radius: 50px;
+        border: 1.5px solid #eee;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: 0.2s;
+      "
+    >
+      全部
+    </button>
+    <button
+      class="filter-chip"
+      onclick="filterTransactions('DEPOSIT', this)"
+      style="
+        padding: 8px 18px;
+        border-radius: 50px;
+        border: 1.5px solid #eee;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: 0.2s;
+      "
+    >
+      儲值
+    </button>
+    <button
+      class="filter-chip"
+      onclick="filterTransactions('PAYMENT', this)"
+      style="
+        padding: 8px 18px;
+        border-radius: 50px;
+        border: 1.5px solid #eee;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: 0.2s;
+      "
+    >
+      運費支付
+    </button>
+    <button
+      class="filter-chip"
+      onclick="filterTransactions('REFUND', this)"
+      style="
+        padding: 8px 18px;
+        border-radius: 50px;
+        border: 1.5px solid #eee;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: 0.2s;
+      "
+    >
+      退款紀錄
+    </button>
+  </div>
+
+  <div
+    class="section-card"
+    style="background: transparent; border: none; box-shadow: none"
+  >
+    <h4
+      style="
+        margin-bottom: 15px;
+        font-weight: 800;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      "
+    >
+      <i class="fas fa-history" style="color: #1a73e8"></i> 最近交易明細
+    </h4>
+
+    <div id="transaction-list" class="transaction-card-wrapper">
+      <div style="text-align: center; padding: 40px; color: #94a3b8">
+        <i class="fas fa-spinner fa-spin fa-2x"></i>
+        <p style="margin-top: 10px">帳務讀取中...</p>
+      </div>
     </div>
   </div>
 </div>
-<div style="height: 80px"></div>
+
+<div style="height: 100px"></div>
+
+<style>
+  .transaction-card-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .filter-chip.active {
+    background: #1a73e8 !important;
+    color: white !important;
+    border-color: #1a73e8 !important;
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
+  }
+
+  /* 交易卡片專屬樣式 */
+  .tx-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #f1f5f9;
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+  .tx-card:active {
+    transform: scale(0.98);
+  }
+  .tx-left {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+  }
+  .tx-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .tx-info h5 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: #1e293b;
+  }
+  .tx-info small {
+    color: #94a3b8;
+    font-size: 12px;
+    display: block;
+    margin-top: 2px;
+  }
+  .tx-right {
+    text-align: right;
+  }
+  .tx-amount {
+    font-family: "Monaco", monospace;
+    font-size: 16px;
+    font-weight: 900;
+    margin-bottom: 4px;
+  }
+  .tx-amount.plus {
+    color: #28a745;
+  }
+  .tx-amount.minus {
+    color: #dc3545;
+  }
+</style>

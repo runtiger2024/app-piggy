@@ -1,20 +1,19 @@
-// frontend/js/dashboard-wallet.js
-// V30.0 - Fix Cloudinary Image Path & Optimize UI
+/**
+ * dashboard-wallet.js
+ * V30.0_Enhanced - 旗艦優化版 (整合完整功能與卡片 UI)
+ */
+
+window.rawTransactions = []; // 快取數據供過濾使用
 
 // --- 輔助函式：處理圖片路徑 (Fix Broken Images) ---
 function getImageUrl(path) {
   if (!path) return null;
-  // 如果是 Cloudinary 或外部連結 (http/https 開頭)，直接回傳
-  if (path.startsWith("http") || path.startsWith("https")) {
-    return path;
-  }
-  // 否則視為本地路徑，補上 API_BASE_URL
-  // 確保路徑以 / 開頭
+  if (path.startsWith("http") || path.startsWith("https")) return path;
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return `${API_BASE_URL}${cleanPath}`;
 }
 
-// [NEW] 獨立更新全域餘額顯示 (Header / Profile)
+// 1. 更新全域餘額顯示 (Header / Profile)
 window.updateGlobalWalletDisplay = async function () {
   try {
     const res = await fetch(`${API_BASE_URL}/api/wallet/my`, {
@@ -26,18 +25,16 @@ window.updateGlobalWalletDisplay = async function () {
       const balance = data.wallet.balance;
       const formatted = `$${balance.toLocaleString()}`;
 
-      // 更新 Profile Card 上的餘額
       const headerEl = document.getElementById("header-wallet-balance");
       if (headerEl) {
         headerEl.textContent = formatted;
-        headerEl.style.color = balance < 0 ? "#d32f2f" : "#28a745";
+        headerEl.style.color = balance < 0 ? "#d32f2f" : "#ffffff"; // Header 內通常為白字或亮色
       }
 
-      // 順便更新錢包分頁內的餘額 (如果存在)
       const tabBalanceEl = document.getElementById("wallet-balance");
       if (tabBalanceEl) {
-        tabBalanceEl.textContent = formatted;
-        tabBalanceEl.style.color = balance < 0 ? "#d32f2f" : "#28a745";
+        tabBalanceEl.textContent = balance.toLocaleString();
+        tabBalanceEl.style.color = balance < 0 ? "#ffcdd2" : "#ffffff";
       }
     }
   } catch (e) {
@@ -45,15 +42,13 @@ window.updateGlobalWalletDisplay = async function () {
   }
 };
 
-// 1. 載入錢包資料 (含交易紀錄)
+// 2. 載入錢包資料 (含交易紀錄)
 window.loadWalletData = async function () {
   const listEl = document.getElementById("transaction-list");
   const loadingEl = document.getElementById("wallet-loading");
 
   if (loadingEl) loadingEl.style.display = "block";
-  if (listEl) listEl.innerHTML = "";
-
-  // 同步更新上方餘額
+  // 同步更新全域餘額
   await window.updateGlobalWalletDisplay();
 
   try {
@@ -63,22 +58,27 @@ window.loadWalletData = async function () {
     const data = await res.json();
 
     if (data.success && data.wallet) {
-      renderTransactions(data.wallet.transactions || []);
+      window.rawTransactions = data.wallet.transactions || [];
+      renderTransactionCards(window.rawTransactions);
     }
   } catch (e) {
     console.error("錢包載入失敗", e);
+    if (listEl)
+      listEl.innerHTML = `<p style="text-align:center;color:red;padding:20px;">載入失敗，請檢查連線</p>`;
   } finally {
     if (loadingEl) loadingEl.style.display = "none";
   }
 };
 
-// [UI 優化] 交易列表渲染 (新增顏色、圖示與憑證查看)
-function renderTransactions(txs) {
+/**
+ * [UI 優化] 交易列表卡片式渲染
+ */
+function renderTransactionCards(txs) {
   const listEl = document.getElementById("transaction-list");
   if (!listEl) return;
 
   if (txs.length === 0) {
-    listEl.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:20px; color:#999;">尚無交易紀錄</td></tr>`;
+    listEl.innerHTML = `<div style="text-align:center; padding:40px; color:#94a3b8;"><i class="fas fa-ghost fa-3x"></i><p style="margin-top:10px;">尚無帳務紀錄</p></div>`;
     return;
   }
 
@@ -89,179 +89,170 @@ function renderTransactions(txs) {
     REJECTED: { text: "已駁回", class: "status-CANCELLED" },
   };
 
-  // 定義不同類型的視覺樣式
   const typeConfig = {
     DEPOSIT: {
       label: "儲值",
-      icon: "fa-arrow-up",
+      icon: "fa-arrow-down",
       color: "#28a745",
       bg: "#e6f9ec",
-    }, // 綠色
+    },
     PAYMENT: {
       label: "支付",
       icon: "fa-shopping-cart",
       color: "#d32f2f",
       bg: "#ffebee",
-    }, // 紅色
-    REFUND: { label: "退款", icon: "fa-undo", color: "#17a2b8", bg: "#e0f7fa" }, // 藍色
-    ADJUST: { label: "調整", icon: "fa-cog", color: "#6c757d", bg: "#f8f9fa" }, // 灰色
+    },
+    SHIPMENT_PAY: {
+      label: "運費",
+      icon: "fa-shipping-fast",
+      color: "#1a73e8",
+      bg: "#e3f2fd",
+    },
+    REFUND: { label: "退款", icon: "fa-undo", color: "#17a2b8", bg: "#e0f7fa" },
+    ADJUST: { label: "調整", icon: "fa-cog", color: "#6c757d", bg: "#f8f9fa" },
   };
 
-  let html = "";
-  txs.forEach((tx) => {
-    const statusObj = statusMap[tx.status] || { text: tx.status, class: "" };
+  listEl.innerHTML = txs
+    .map((tx) => {
+      const statusObj = statusMap[tx.status] || { text: tx.status, class: "" };
+      const typeInfo = typeConfig[tx.type] || {
+        label: tx.type,
+        icon: "fa-circle",
+        color: "#333",
+        bg: "#f1f5f9",
+      };
 
-    // 設定類型樣式，若無對應則使用預設
-    const typeInfo = typeConfig[tx.type] || {
-      label: tx.type,
-      icon: "fa-circle",
-      color: "#333",
-      bg: "#fff",
-    };
+      const isNegative = tx.amount < 0;
+      const amountSign = isNegative ? "" : "+";
 
-    const isNegative = tx.amount < 0;
-    const amountClass = isNegative ? "text-danger" : "text-success";
-    const amountSign = isNegative ? "" : "+";
+      // 額外資訊 HTML
+      let extraHtml = "";
+      if (tx.invoiceNumber)
+        extraHtml += `<div style="color:#28a745;font-size:11px;margin-top:4px;"><i class="fas fa-file-invoice"></i> 發票 ${tx.invoiceNumber}</div>`;
+      if (tx.taxId)
+        extraHtml += `<div style="color:#666;font-size:11px;">統編: ${tx.taxId}</div>`;
 
-    // 若有發票號碼，顯示小圖示
-    let invHtml = "";
-    if (tx.invoiceNumber) {
-      invHtml = `<br><span style="font-size:11px; color:#28a745;"><i class="fas fa-file-invoice"></i> 發票已開</span>`;
-    }
-
-    // 統編顯示 (如果有)
-    let taxHtml = "";
-    if (tx.taxId) {
-      taxHtml = `<span style="font-size:11px; color:#666; display:block;">統編: ${tx.taxId}</span>`;
-    }
-
-    // [Fix] 憑證按鈕顯示 (使用 getImageUrl 處理路徑)
-    let proofBtnHtml = "";
-    if (tx.proofImage) {
-      const safeUrl = getImageUrl(tx.proofImage);
-      if (safeUrl) {
-        proofBtnHtml = `
-          <div style="margin-top:4px;">
-            <a href="${safeUrl}" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:11px; padding:2px 6px; text-decoration:none;">
-              <i class="fas fa-image"></i> 查看憑證
-            </a>
-          </div>`;
+      // 憑證按鈕
+      let proofHtml = "";
+      if (tx.proofImage) {
+        const safeUrl = getImageUrl(tx.proofImage);
+        if (safeUrl) {
+          proofHtml = `<a href="${safeUrl}" target="_blank" style="display:inline-block; margin-top:6px; font-size:11px; color:#1a73e8; text-decoration:none;"><i class="fas fa-image"></i> 查看憑證</a>`;
+        }
       }
-    }
 
-    html += `
-            <tr style="border-left: 3px solid ${typeInfo.color};">
-                <td>
-                    ${new Date(tx.createdAt).toLocaleDateString()} 
-                    <small style="color:#999;">${new Date(
-                      tx.createdAt
-                    ).toLocaleTimeString()}</small>
-                </td>
-                <td>
-                    <span style="color:${
-                      typeInfo.color
-                    }; font-weight:bold; display:flex; align-items:center; gap:5px;">
-                        <i class="fas ${typeInfo.icon}"></i> ${typeInfo.label}
-                    </span>
-                </td>
-                <td>
-                    ${tx.description || "-"}
-                    ${taxHtml}
-                    ${invHtml}
-                    ${proofBtnHtml} 
-                </td>
-                <td class="${amountClass}" style="font-weight:bold; font-family:monospace; font-size:1.1em; text-align:right;">
-                    ${amountSign}${tx.amount.toLocaleString()}
-                </td>
-                <td style="text-align:center;"><span class="status-badge ${
-                  statusObj.class
-                }">${statusObj.text}</span></td>
-            </tr>
-        `;
-  });
-
-  listEl.innerHTML = html;
+      return `
+      <div class="tx-card animate-pop-in">
+        <div class="tx-left">
+          <div class="tx-icon" style="background: ${typeInfo.bg}; color: ${
+        typeInfo.color
+      };">
+            <i class="fas ${typeInfo.icon}"></i>
+          </div>
+          <div class="tx-info">
+            <h5>${tx.description || typeInfo.label}</h5>
+            <small>${new Date(tx.createdAt).toLocaleString()}</small>
+            ${extraHtml}
+            ${proofHtml}
+          </div>
+        </div>
+        <div class="tx-right">
+          <div class="tx-amount ${isNegative ? "minus" : "plus"}">
+            ${amountSign}${tx.amount.toLocaleString()}
+          </div>
+          <div class="status-badge ${statusObj.class}" style="font-size:10px;">
+            ${statusObj.text}
+          </div>
+        </div>
+      </div>
+    `;
+    })
+    .join("");
 }
 
-// 2. 儲值 Modal
+/**
+ * [NEW] 交易過濾邏輯
+ */
+window.filterTransactions = function (type, btn) {
+  document
+    .querySelectorAll(".filter-chip")
+    .forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+
+  if (type === "ALL") {
+    renderTransactionCards(window.rawTransactions);
+  } else {
+    const filtered = window.rawTransactions.filter((t) => t.type === type);
+    renderTransactionCards(filtered);
+  }
+};
+
+// 3. 儲值 Modal 開啟與初始化
 window.openDepositModal = function () {
   const modal = document.getElementById("deposit-modal");
   const form = document.getElementById("deposit-form");
-
   const bankInfoEl = document.getElementById("deposit-bank-info");
+
   if (bankInfoEl && window.BANK_INFO_CACHE) {
     bankInfoEl.innerHTML = `
-            <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:15px; font-size:14px;">
-                <p style="margin:0 0 5px 0;"><strong>請轉帳至：</strong></p>
-                <div>銀行：${window.BANK_INFO_CACHE.bankName}</div>
-                <div>帳號：<span style="color:#d32f2f; font-weight:bold; font-family:monospace;">${window.BANK_INFO_CACHE.account}</span></div>
-                <div>戶名：${window.BANK_INFO_CACHE.holder}</div>
-            </div>
-        `;
+      <div style="background:#f1f5f9; padding:15px; border-radius:12px; margin-bottom:15px; font-size:14px; border-left:4px solid #1a73e8;">
+        <p style="margin:0 0 8px 0;"><strong>匯款帳戶資訊：</strong></p>
+        <div style="margin-bottom:2px;">銀行：${window.BANK_INFO_CACHE.bankName}</div>
+        <div style="margin-bottom:2px;">帳號：<span style="color:#d32f2f; font-weight:bold; font-family:monospace;">${window.BANK_INFO_CACHE.account}</span></div>
+        <div>戶名：${window.BANK_INFO_CACHE.holder}</div>
+      </div>
+    `;
   }
 
-  // 自動插入統編輸入欄位 (如果 HTML 尚未包含)
-  // 檢查是否已存在 ID 為 dep-taxId 的元素，若無則動態插入
-  const existingTaxInput = document.getElementById("dep-taxId");
-  if (!existingTaxInput && form) {
-    const amountGroup = form.querySelector(".form-group"); // 插在金額欄位後
+  // 動態插入發票欄位邏輯 (若無則建)
+  if (form && !document.getElementById("dep-taxId")) {
+    const amountGroup = form.querySelector(".form-group");
     if (amountGroup) {
       const taxDiv = document.createElement("div");
       taxDiv.className = "form-group";
       taxDiv.style.background = "#f0f7ff";
-      taxDiv.style.padding = "10px";
-      taxDiv.style.borderRadius = "5px";
+      taxDiv.style.padding = "12px";
+      taxDiv.style.borderRadius = "12px";
       taxDiv.style.border = "1px solid #cce5ff";
+      taxDiv.style.marginTop = "15px";
       taxDiv.innerHTML = `
-            <label style="color:#0056b3; font-weight:bold; font-size:13px;">發票資訊 (B2B 請填寫)</label>
-            <div style="display: flex; gap: 10px; margin-top:5px;">
-                <input type="text" id="dep-taxId" class="form-control" placeholder="統一編號 (8碼)" style="font-size:13px;">
-                <input type="text" id="dep-invoiceTitle" class="form-control" placeholder="公司抬頭" style="font-size:13px;">
-            </div>
-          `;
+        <label style="color:#0056b3; font-weight:bold; font-size:13px;"><i class="fas fa-file-invoice"></i> 發票資訊 (B2B 請填寫)</label>
+        <div style="display: flex; gap: 10px; margin-top:8px;">
+          <input type="text" id="dep-taxId" class="form-control" placeholder="統一編號 (8碼)" style="font-size:13px;">
+          <input type="text" id="dep-invoiceTitle" class="form-control" placeholder="公司抬頭" style="font-size:13px;">
+        </div>
+      `;
       amountGroup.insertAdjacentElement("afterend", taxDiv);
     }
   }
 
   if (form) form.reset();
 
-  // [Auto-fill] 自動填入預設資料
+  // 自動帶入個人預設值
   if (window.currentUser) {
     const tInput = document.getElementById("dep-taxId");
     const titleInput = document.getElementById("dep-invoiceTitle");
-    if (tInput && window.currentUser.defaultTaxId) {
-      tInput.value = window.currentUser.defaultTaxId;
-    }
-    if (titleInput && window.currentUser.defaultInvoiceTitle) {
-      titleInput.value = window.currentUser.defaultInvoiceTitle;
-    }
+    if (tInput) tInput.value = window.currentUser.defaultTaxId || "";
+    if (titleInput)
+      titleInput.value = window.currentUser.defaultInvoiceTitle || "";
   }
 
   if (modal) modal.style.display = "flex";
 };
 
-// 3. 處理儲值提交 (含統編)
+// 4. 處理儲值提交 (含統編驗證)
 async function handleDepositSubmit(e) {
   e.preventDefault();
   const btn = e.target.querySelector("button[type='submit']");
-
-  // 先取得欄位值進行驗證
   const amount = document.getElementById("dep-amount").value;
   const desc = document.getElementById("dep-note").value;
-  const fileInput = document.getElementById("dep-proof");
-  const file = fileInput.files[0];
+  const file = document.getElementById("dep-proof").files[0];
+  const taxId = document.getElementById("dep-taxId")?.value.trim() || "";
+  const invoiceTitle =
+    document.getElementById("dep-invoiceTitle")?.value.trim() || "";
 
-  // [NEW] 取得統編欄位
-  const taxId = document.getElementById("dep-taxId")
-    ? document.getElementById("dep-taxId").value.trim()
-    : "";
-  const invoiceTitle = document.getElementById("dep-invoiceTitle")
-    ? document.getElementById("dep-invoiceTitle").value.trim()
-    : "";
-
-  // [Validation] 若有填寫統編，抬頭必填
   if (taxId && !invoiceTitle) {
-    alert("請注意：填寫統一編號時，「公司抬頭」為必填項目，以利發票開立。");
+    alert("填寫統一編號時，「公司抬頭」為必填項目。");
     document.getElementById("dep-invoiceTitle").focus();
     return;
   }
@@ -282,27 +273,23 @@ async function handleDepositSubmit(e) {
       headers: { Authorization: `Bearer ${window.dashboardToken}` },
       body: fd,
     });
-    const data = await res.json();
-
     if (res.ok) {
-      alert(
-        "儲值申請已提交，請等待管理員審核。\n若有填寫統編，發票將依此開立。"
-      );
+      alert("儲值申請已提交！請等待審核。\n發票將依提供的統編開立。");
       document.getElementById("deposit-modal").style.display = "none";
       window.loadWalletData();
     } else {
+      const data = await res.json();
       alert(data.message || "提交失敗");
     }
   } catch (e) {
     alert("網路錯誤");
-    console.error(e);
   } finally {
     btn.disabled = false;
     btn.textContent = "提交申請";
   }
 }
 
-// --- 初始化 (移至下方) ---
+// --- 初始化監聽 ---
 document.addEventListener("DOMContentLoaded", () => {
   const tabWallet = document.getElementById("tab-wallet");
   if (tabWallet) {
@@ -313,23 +300,16 @@ document.addEventListener("DOMContentLoaded", () => {
       document
         .querySelectorAll(".tab-content")
         .forEach((c) => (c.style.display = "none"));
-
       tabWallet.classList.add("active");
-      document.getElementById("wallet-section").style.display = "block";
-
-      if (typeof window.loadWalletData === "function") {
-        window.loadWalletData();
-      }
+      const sec = document.getElementById("wallet-section");
+      if (sec) sec.style.display = "block";
+      window.loadWalletData();
     });
   }
 
-  const btnDeposit = document.getElementById("btn-deposit");
-  if (btnDeposit) {
-    btnDeposit.addEventListener("click", () => window.openDepositModal());
-  }
+  const btnDep = document.getElementById("btn-deposit");
+  if (btnDep) btnDep.addEventListener("click", () => window.openDepositModal());
 
-  const form = document.getElementById("deposit-form");
-  if (form) {
-    form.addEventListener("submit", handleDepositSubmit);
-  }
+  const formDep = document.getElementById("deposit-form");
+  if (formDep) formDep.addEventListener("submit", handleDepositSubmit);
 });
