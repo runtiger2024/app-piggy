@@ -1,30 +1,41 @@
-<script>
-  if (localStorage.getItem("token")) {
-    window.location.href = "dashboard.html";
-  }
-</script>
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>會員中心 - 小跑豬</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>會員登入 | 小跑豬集運</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
-    <link rel="stylesheet" href="css/modals-unified.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/theme-client.css" />
+    <link rel="stylesheet" href="css/auth-unified.css" />
     <script src="js/styleLoader.js"></script>
+    <script>
+      // [核心功能] 快速檢查：若 localStorage 已有 Token 則直接導向會員中心
+      if (localStorage.getItem("token")) {
+        window.location.href = "dashboard.html";
+      }
+    </script>
   </head>
-  <body>
-    <div class="container">
-      <img src="assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
-      <h1>會員中心</h1>
+  <body class="auth-page-bg">
+    <div class="auth-container-wrapper">
+      <div class="auth-card animate-fade-in">
+        <div class="auth-header">
+          <a href="index.html">
+            <img src="assets/logo.png" alt="小跑豬 LOGO" class="auth-logo" />
+          </a>
+          <h1>歡迎回來</h1>
+          <p class="auth-subtitle">專業傢俱集運，連結兩岸生活</p>
+        </div>
 
-      <nav class="main-nav"></nav>
-
-      <div class="auth-container">
         <div class="auth-tabs">
           <button id="tab-login" class="tab-btn active">會員登入</button>
-          <button id="tab-register" class="tab-btn">註冊新會員</button>
+          <button id="tab-register" class="tab-btn">註冊帳號</button>
         </div>
 
         <div id="message-box" class="alert" style="display: none"></div>
@@ -32,39 +43,98 @@
         <form id="login-form" class="auth-form active">
           <div class="form-group">
             <label for="login-email">電子郵件 (Email)</label>
-            <input type="email" id="login-email" required />
+            <div class="input-with-icon">
+              <i class="fas fa-envelope"></i>
+              <input
+                type="email"
+                id="login-email"
+                placeholder="請輸入 Email"
+                required
+              />
+            </div>
           </div>
           <div class="form-group">
             <label for="login-password">密碼</label>
-            <input type="password" id="login-password" required />
-            <div style="text-align: right; margin-top: 5px">
-              <a
-                href="forgot-password.html"
-                style="font-size: 13px; color: #666; text-decoration: underline"
-                >忘記密碼？</a
-              >
+            <div class="input-with-icon">
+              <i class="fas fa-lock"></i>
+              <input
+                type="password"
+                id="login-password"
+                placeholder="請輸入密碼"
+                required
+              />
+            </div>
+            <div class="form-footer-link">
+              <a href="forgot-password.html">忘記密碼？</a>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary">登入</button>
+          <button type="submit" class="btn btn-primary btn-block">
+            <span>立即登入</span> <i class="fas fa-arrow-right"></i>
+          </button>
         </form>
 
         <form id="register-form" class="auth-form" style="display: none">
           <div class="form-group">
-            <label for="reg-name">姓名 (必填)</label>
-            <input type="text" id="reg-name" required />
+            <label for="reg-name">姓名</label>
+            <div class="input-with-icon">
+              <i class="fas fa-user"></i>
+              <input
+                type="text"
+                id="reg-name"
+                placeholder="您的姓名"
+                required
+              />
+            </div>
           </div>
           <div class="form-group">
-            <label for="reg-email">電子郵件 (Email) (必填)</label>
-            <input type="email" id="reg-email" required />
+            <label for="reg-email">電子郵件 (Email)</label>
+            <div class="input-with-icon">
+              <i class="fas fa-envelope"></i>
+              <input
+                type="email"
+                id="reg-email"
+                placeholder="作為登入帳號使用"
+                required
+              />
+            </div>
           </div>
           <div class="form-group">
-            <label for="reg-password">密碼 (必填，至少6位數)</label>
-            <input type="password" id="reg-password" minlength="6" required />
+            <label for="reg-password">設定密碼</label>
+            <div class="input-with-icon">
+              <i class="fas fa-lock"></i>
+              <input
+                type="password"
+                id="reg-password"
+                minlength="6"
+                placeholder="至少 6 位數"
+                required
+              />
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary">註冊</button>
+          <div class="form-group">
+            <label for="reg-password-confirm">確認密碼</label>
+            <div class="input-with-icon">
+              <i class="fas fa-check-double"></i>
+              <input
+                type="password"
+                id="reg-password-confirm"
+                minlength="6"
+                placeholder="請再次輸入密碼"
+                required
+              />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            <span>建立帳號</span> <i class="fas fa-user-plus"></i>
+          </button>
         </form>
+
+        <div class="auth-footer">
+          <p>© 2025 兩隻老虎國際貿易. All Rights Reserved.</p>
+        </div>
       </div>
     </div>
+
     <script src="js/apiConfig.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/auth.js"></script>

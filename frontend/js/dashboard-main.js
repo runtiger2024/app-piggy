@@ -369,6 +369,13 @@ function bindGlobalButtons() {
       }
     });
   }
+  const btnClaimTile = document.getElementById("btn-claim-package-tile");
+  if (btnClaimTile) {
+    btnClaimTile.addEventListener("click", () => {
+      const tabUnclaimed = document.getElementById("tab-unclaimed");
+      if (tabUnclaimed) tabUnclaimed.click(); // 觸發 Tab 切換，內含捲動與數據載入邏輯
+    });
+  }
 
   const btnChangePwd = document.getElementById("btn-change-password");
   if (btnChangePwd)
