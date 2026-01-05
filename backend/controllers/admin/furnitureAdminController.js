@@ -1,9 +1,23 @@
 // backend/controllers/admin/furnitureAdminController.js
-// V2026.1.1 - 修正欄位對照、同步金額計算邏輯、支援分頁搜尋
+// V2026.1.6 - 終極修復版：補齊批量操作與 CRUD，確保匯出名稱與路由完全對應
 
 const prisma = require("../../config/db.js");
 const createLog = require("../../utils/createLog.js");
 const createNotification = require("../../utils/createNotification.js");
+
+/**
+ * 內部輔助：狀態文字轉換
+ */
+function getStatusText(status) {
+  const map = {
+    PENDING: "待處理",
+    PROCESSING: "處理中",
+    PAID: "已支付工廠",
+    COMPLETED: "已結案",
+    CANCELLED: "已取消",
+  };
+  return map[status] || status;
+}
 
 /**
  * 取得所有傢俱代採購訂單 (支援分頁、狀態過濾與關鍵字搜尋)
@@ -13,7 +27,6 @@ const getAllFurnitureOrders = async (req, res) => {
     const { page = 1, limit = 20, status, search } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // 構建查詢條件
     const where = {};
     if (status) {
       where.status = status;
@@ -27,7 +40,6 @@ const getAllFurnitureOrders = async (req, res) => {
       ];
     }
 
-    // 執行查詢與總數統計
     const [orders, total] = await prisma.$transaction([
       prisma.furnitureOrder.findMany({
         where,
@@ -43,18 +55,14 @@ const getAllFurnitureOrders = async (req, res) => {
       prisma.furnitureOrder.count({ where }),
     ]);
 
-    // 格式化輸出，確保與前端欄位對齊 (例如計算 serviceFee 顯示值)
     const formattedOrders = orders.map((o) => ({
       ...o,
-      // 計算用於顯示的服務費 (TWD)
       serviceFee: Math.round(
         o.priceRMB * o.quantity * o.exchangeRate * o.serviceFeeRate
       ),
-      // 確保總額與資料庫一致
       totalTWD: o.totalAmountTWD,
-      // 前端對應欄位名稱轉換
       adminNote: o.adminRemark,
-      serviceRate: o.serviceFeeRate * 100, // 轉為百分比顯示
+      serviceRate: o.serviceFeeRate * 100,
     }));
 
     res.status(200).json({
@@ -74,40 +82,31 @@ const getAllFurnitureOrders = async (req, res) => {
 };
 
 /**
- * 更新訂單狀態與資訊 (含匯率、服務費率與管理員備註)
+ * 管理員手動建立代採購訂單
  */
-const updateFurnitureOrder = async (req, res) => {
+const createFurnitureOrder = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, exchangeRate, serviceRate, adminNote } = req.body;
+    const {
+      userId,
+      factoryName,
+      productName,
+      quantity,
+      priceRMB,
+      exchangeRate,
+      adminNote,
+    } = req.body;
 
-    const existingOrder = await prisma.furnitureOrder.findUnique({
-      where: { id },
-    });
-
-    if (!existingOrder) {
-      return res.status(404).json({ success: false, message: "找不到該訂單" });
+    if (!userId || !productName || !quantity || !priceRMB) {
+      return res.status(400).json({ success: false, message: "必填欄位缺失" });
     }
 
-    // --- 同步金額計算邏輯 ---
-    const newRate =
-      exchangeRate !== undefined
-        ? parseFloat(exchangeRate)
-        : existingOrder.exchangeRate;
-    // 前端傳入的是百分比 (如 5)，後端存儲需轉為小數 (如 0.05)
-    const newServiceRate =
-      serviceRate !== undefined
-        ? parseFloat(serviceRate) / 100
-        : existingOrder.serviceFeeRate;
+    const rate = parseFloat(exchangeRate || 4.65);
+    const sRate = 0.05; // 預設 5% 服務費
 
-    // 1. 人民幣貨值
-    const subtotalRMB = existingOrder.priceRMB * existingOrder.quantity;
-    // 2. 貨值轉台幣
-    const subtotalTWD = subtotalRMB * newRate;
-    // 3. 計算服務費 (台幣)
-    const rawServiceFeeTWD = subtotalTWD * newServiceRate;
+    const subtotalTWD = priceRMB * quantity * rate;
+    const rawServiceFeeTWD = subtotalTWD * sRate;
 
-    // 取得系統最低服務費設定 (與 furnitureController 邏輯一致)
+    // 取得低消設定
     const configSetting = await prisma.systemSetting.findUnique({
       where: { key: "furniture_config" },
     });
@@ -121,10 +120,79 @@ const updateFurnitureOrder = async (req, res) => {
     }
 
     const finalServiceFeeTWD = Math.max(rawServiceFeeTWD, minServiceFee);
-    // 4. 總金額 (無條件進位)
     const totalAmountTWD = Math.ceil(subtotalTWD + finalServiceFeeTWD);
 
-    // 執行更新
+    const newOrder = await prisma.furnitureOrder.create({
+      data: {
+        userId,
+        factoryName,
+        productName,
+        quantity: parseInt(quantity),
+        priceRMB: parseFloat(priceRMB),
+        exchangeRate: rate,
+        serviceFeeRate: sRate,
+        serviceFeeRMB: finalServiceFeeTWD / rate,
+        totalAmountTWD,
+        adminRemark: adminNote,
+        status: "PROCESSING",
+      },
+    });
+
+    await createLog(
+      req.user.id,
+      "CREATE_FURNITURE_ORDER",
+      newOrder.id,
+      `管理員建單: ${productName}`
+    );
+    res.status(201).json({ success: true, order: newOrder });
+  } catch (error) {
+    console.error("管理員建立傢俱訂單失敗:", error);
+    res.status(500).json({ success: false, message: "建立失敗，請檢查資料" });
+  }
+};
+
+/**
+ * 更新訂單狀態與資訊 (含匯率、服務費率與管理員備註)
+ */
+const updateFurnitureOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, exchangeRate, serviceRate, adminNote } = req.body;
+
+    const existingOrder = await prisma.furnitureOrder.findUnique({
+      where: { id },
+    });
+    if (!existingOrder)
+      return res.status(404).json({ success: false, message: "找不到該訂單" });
+
+    const newRate =
+      exchangeRate !== undefined
+        ? parseFloat(exchangeRate)
+        : existingOrder.exchangeRate;
+    const newServiceRate =
+      serviceRate !== undefined
+        ? parseFloat(serviceRate) / 100
+        : existingOrder.serviceFeeRate;
+
+    const subtotalTWD =
+      existingOrder.priceRMB * existingOrder.quantity * newRate;
+    const rawServiceFeeTWD = subtotalTWD * newServiceRate;
+
+    const configSetting = await prisma.systemSetting.findUnique({
+      where: { key: "furniture_config" },
+    });
+    let minServiceFee = 500;
+    if (configSetting) {
+      const config =
+        typeof configSetting.value === "string"
+          ? JSON.parse(configSetting.value)
+          : configSetting.value;
+      minServiceFee = parseFloat(config.minServiceFee || 500);
+    }
+
+    const finalServiceFeeTWD = Math.max(rawServiceFeeTWD, minServiceFee);
+    const totalAmountTWD = Math.ceil(subtotalTWD + finalServiceFeeTWD);
+
     const updatedOrder = await prisma.furnitureOrder.update({
       where: { id },
       data: {
@@ -139,82 +207,102 @@ const updateFurnitureOrder = async (req, res) => {
       },
     });
 
-    // 建立操作日誌
     await createLog(
       req.user.id,
       "UPDATE_FURNITURE_ORDER",
       id,
-      `更新傢俱訂單 ${id}: 狀態 ${status}, 總額 NT$${totalAmountTWD}`
+      `更新狀態: ${status}`
     );
-
-    // 發送通知給客戶
     await createNotification(
       existingOrder.userId,
       "傢俱代採購狀態更新",
-      `您的傢俱代採購單(${
-        existingOrder.productName
-      }) 狀態已更新為: ${getStatusText(status)}`,
+      `您的訂單(${existingOrder.productName}) 已更新為: ${getStatusText(
+        status
+      )}`,
       "FURNITURE",
       `/dashboard/furniture`
     );
 
-    res.status(200).json({
-      success: true,
-      message: "訂單已更新並完成金額重算",
-      order: updatedOrder,
-    });
+    res.status(200).json({ success: true, order: updatedOrder });
   } catch (error) {
-    console.error("更新傢俱代採購訂單失敗:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "更新失敗，請檢查輸入格式" });
+    console.error("更新失敗:", error);
+    res.status(500).json({ success: false, message: "更新失敗" });
   }
 };
 
 /**
- * 刪除訂單 (僅限管理員)
+ * 批量更新訂單狀態
+ */
+const bulkUpdateFurnitureStatus = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    await prisma.furnitureOrder.updateMany({
+      where: { id: { in: ids } },
+      data: { status, updatedAt: new Date() },
+    });
+    await createLog(
+      req.user.id,
+      "BULK_UPDATE_FURNITURE",
+      null,
+      `批量更新 ${ids.length} 筆訂單狀態`
+    );
+    res.status(200).json({ success: true, message: "更新成功" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "批量更新失敗" });
+  }
+};
+
+/**
+ * 刪除訂單 (單筆)
  */
 const deleteFurnitureOrder = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const order = await prisma.furnitureOrder.findUnique({ where: { id } });
-    if (!order) {
-      return res.status(404).json({ success: false, message: "找不到該訂單" });
-    }
-
     await prisma.furnitureOrder.delete({ where: { id } });
-
     await createLog(
       req.user.id,
       "DELETE_FURNITURE_ORDER",
       id,
-      `管理員刪除了傢俱代採購單: ${order.productName}`
+      `刪除單筆傢俱訂單`
     );
-
-    res.status(200).json({ success: true, message: "訂單已永久刪除" });
+    res.status(200).json({ success: true, message: "訂單已刪除" });
   } catch (error) {
-    console.error("刪除傢俱代採購訂單失敗:", error);
-    res.status(500).json({ success: false, message: "伺服器錯誤" });
+    res.status(500).json({ success: false, message: "刪除失敗" });
   }
 };
 
 /**
- * 內部輔助：狀態文字轉換
+ * 批量刪除訂單
+ * 注意：這裡匯出名稱與 adminRoutes 裡的 .bulkDeleteFurniture 一致
  */
-function getStatusText(status) {
-  const map = {
-    PENDING: "待處理",
-    PROCESSING: "處理中",
-    PAID: "已支付工廠",
-    COMPLETED: "已結案",
-    CANCELLED: "已取消",
-  };
-  return map[status] || status;
-}
+const bulkDeleteFurniture = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    const deleteCount = await prisma.furnitureOrder.deleteMany({
+      where: { id: { in: ids } },
+    });
+    await createLog(
+      req.user.id,
+      "BULK_DELETE_FURNITURE",
+      null,
+      `批量刪除 ${deleteCount.count} 筆傢俱訂單`
+    );
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: `已成功刪除 ${deleteCount.count} 筆訂單`,
+      });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "批量刪除失敗" });
+  }
+};
 
 module.exports = {
   getAllFurnitureOrders,
+  createFurnitureOrder,
   updateFurnitureOrder,
+  bulkUpdateFurnitureStatus,
   deleteFurnitureOrder,
+  bulkDeleteFurniture,
 };

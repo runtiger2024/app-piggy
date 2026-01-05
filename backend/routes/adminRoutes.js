@@ -319,21 +319,40 @@ router
 // 7. 傢俱代採購管理 [新增模組]
 // ==========================================
 router
-  .route("/furniture/list") // 對應前端 loadOrders() API
+  .route("/furniture/list")
   .get(
     protect,
     checkPermission("FURNITURE_VIEW"),
     furnitureAdminController.getAllFurnitureOrders
   );
-
 router
-  .route("/furniture/update/:id") // 對應前端 handleFormSubmit() API
+  .route("/furniture/create")
+  .post(
+    protect,
+    checkPermission("FURNITURE_EDIT"),
+    furnitureAdminController.createFurnitureOrder
+  ); // 新增
+router
+  .route("/furniture/update/:id")
   .put(
     protect,
     checkPermission("FURNITURE_EDIT"),
     furnitureAdminController.updateFurnitureOrder
   );
-
+router
+  .route("/furniture/bulk-delete")
+  .post(
+    protect,
+    checkPermission("FURNITURE_DELETE"),
+    furnitureAdminController.bulkDeleteFurniture
+  ); // 新增
+router
+  .route("/furniture/bulk-status")
+  .put(
+    protect,
+    checkPermission("FURNITURE_EDIT"),
+    furnitureAdminController.bulkUpdateFurnitureStatus
+  ); // 新增
 router
   .route("/furniture/:id")
   .delete(

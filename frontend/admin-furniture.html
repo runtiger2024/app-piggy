@@ -13,7 +13,8 @@
     <link rel="stylesheet" href="css/admin-modern.css" />
     <style>
       /* 針對彈窗內的捲軸進行微調，確保行動端體驗 */
-      #order-modal .card {
+      #order-modal .card,
+      #create-modal .card {
         margin: 1rem;
         max-height: calc(100vh - 2rem);
       }
@@ -23,11 +24,42 @@
         font-size: 12px;
         font-weight: 600;
       }
+      /* 新增：批量操作列樣式 */
+      .bulk-actions-bar {
+        display: none;
+        background: #fff3cd;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ffeeba;
+        align-items: center;
+        justify-content: space-between;
+        animation: slideDown 0.3s ease-out;
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .check-col {
+        width: 40px;
+        text-align: center;
+      }
     </style>
   </head>
   <body>
     <div class="container-fluid">
-      <h1 class="page-title">傢俱代採購管理</h1>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title mb-0">傢俱代採購管理</h1>
+        <button class="btn btn-success" id="btn-open-create">
+          <i class="fas fa-plus"></i> 手動建立訂單
+        </button>
+      </div>
 
       <div class="card mb-4">
         <div class="card-body">
@@ -63,6 +95,32 @@
         </div>
       </div>
 
+      <div id="bulk-bar" class="bulk-actions-bar">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-check-square mr-2 text-warning"></i>
+          <span>已選取 <b id="selected-count">0</b> 項訂單</span>
+        </div>
+        <div class="d-flex gap-2">
+          <select
+            id="bulk-status-select"
+            class="form-control form-control-sm"
+            style="width: 150px"
+          >
+            <option value="">批量更新狀態...</option>
+            <option value="PROCESSING">處理中</option>
+            <option value="PAID">已付工廠</option>
+            <option value="COMPLETED">已結案</option>
+            <option value="CANCELLED">已取消</option>
+          </select>
+          <button class="btn btn-sm btn-warning" id="btn-bulk-update">
+            執行更新
+          </button>
+          <button class="btn btn-sm btn-danger" id="btn-bulk-delete">
+            <i class="fas fa-trash"></i> 批量刪除
+          </button>
+        </div>
+      </div>
+
       <div class="card">
         <div
           class="card-header d-flex justify-content-between align-items-center"
@@ -75,6 +133,9 @@
             <table class="modern-table">
               <thead>
                 <tr>
+                  <th class="check-col">
+                    <input type="checkbox" id="check-all" />
+                  </th>
                   <th>申請日期</th>
                   <th>會員資訊</th>
                   <th>傢俱工廠名稱</th>
@@ -88,7 +149,7 @@
               </thead>
               <tbody id="furnitureTableBody">
                 <tr>
-                  <td colspan="9" class="text-center p-5">
+                  <td colspan="10" class="text-center p-5">
                     <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
                     <br />數據載入中，請稍候...
                   </td>
@@ -276,12 +337,6 @@
                     >$0</span
                   >
                 </div>
-                <div
-                  class="mt-2"
-                  style="font-size: 12px; color: #6c757d; line-height: 1.4"
-                >
-                  * 此金額為試算預覽，儲存後將正式更新客戶端的付款資訊。
-                </div>
               </div>
 
               <div class="form-group mb-4">
@@ -302,13 +357,162 @@
               >
                 <button
                   type="button"
-                  class="btn btn-light modal-close-btn px-4"
-                  style="border: 1px solid #ddd; margin-right: 10px"
+                  class="btn btn-outline-danger px-4 mr-auto"
+                  id="btn-delete-order"
                 >
-                  取消返回
+                  <i class="fas fa-trash-alt mr-1"></i> 刪除訂單
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-light modal-close-btn px-4"
+                >
+                  取消
                 </button>
                 <button type="submit" class="btn btn-primary px-5 shadow-sm">
-                  <i class="fas fa-save mr-2"></i> 儲存並更新訂單
+                  <i class="fas fa-save mr-2"></i> 儲存並更新
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="create-modal"
+        class="modal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.7);
+          z-index: 9999;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <div class="card" style="width: 700px; max-width: 95%; border: none">
+          <div
+            class="card-header bg-success text-white d-flex justify-content-between align-items-center"
+          >
+            <h5 class="mb-0">
+              <i class="fas fa-plus-circle mr-2"></i> 手動建立代採購訂單
+            </h5>
+            <button
+              type="button"
+              class="btn btn-sm btn-light modal-close-btn"
+              style="border-radius: 50%"
+            >
+              <i class="fas fa-times text-success"></i>
+            </button>
+          </div>
+          <div class="card-body" style="overflow-y: auto; max-height: 80vh">
+            <form id="create-order-form">
+              <div class="form-group mb-3">
+                <label class="small font-weight-bold"
+                  >1. 搜尋並選擇會員 (Email 或 姓名)</label
+                >
+                <div class="input-group">
+                  <input
+                    type="text"
+                    id="create-user-search"
+                    class="form-control"
+                    placeholder="輸入關鍵字..."
+                  />
+                  <div class="input-group-append">
+                    <button
+                      class="btn btn-outline-secondary"
+                      type="button"
+                      id="btn-search-user"
+                    >
+                      搜尋
+                    </button>
+                  </div>
+                </div>
+                <select id="create-userId" class="form-control mt-2" required>
+                  <option value="">-- 請先搜尋並選擇會員 --</option>
+                </select>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 form-group mb-3">
+                  <label class="small font-weight-bold">2. 傢俱工廠名稱</label>
+                  <input
+                    type="text"
+                    id="create-factoryName"
+                    class="form-control"
+                    required
+                    placeholder="如：廣東某某家具廠"
+                  />
+                </div>
+                <div class="col-md-6 form-group mb-3">
+                  <label class="small font-weight-bold">3. 商品品名</label>
+                  <input
+                    type="text"
+                    id="create-productName"
+                    class="form-control"
+                    required
+                    placeholder="如：真皮沙發三件組"
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4 form-group mb-3">
+                  <label class="small font-weight-bold">4. 數量</label>
+                  <input
+                    type="number"
+                    id="create-quantity"
+                    class="form-control"
+                    value="1"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div class="col-md-4 form-group mb-3">
+                  <label class="small font-weight-bold"
+                    >5. 人民幣單價 (¥)</label
+                  >
+                  <input
+                    type="number"
+                    id="create-priceRMB"
+                    class="form-control"
+                    placeholder="單價"
+                    required
+                  />
+                </div>
+                <div class="col-md-4 form-group mb-3">
+                  <label class="small font-weight-bold">6. 匯率</label>
+                  <input
+                    type="number"
+                    id="create-exchangeRate"
+                    class="form-control"
+                    step="0.001"
+                    value="4.65"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group mb-4">
+                <label class="small font-weight-bold">管理員備註</label>
+                <textarea
+                  id="create-adminNote"
+                  class="form-control"
+                  rows="2"
+                ></textarea>
+              </div>
+
+              <div class="d-flex justify-content-end gap-2">
+                <button
+                  type="button"
+                  class="btn btn-light modal-close-btn px-4"
+                >
+                  取消
+                </button>
+                <button type="submit" class="btn btn-success px-5">
+                  建立訂單
                 </button>
               </div>
             </form>
