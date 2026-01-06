@@ -1,5 +1,5 @@
 // frontend/js/admin-layout.js
-// V2026.1.7 - 終極穩定版：整合全域通知、路徑校正與高韌性內容注入
+// V2026.1.8 - 品牌視覺優化版：導入實體 LOGO、整合全域通知標籤與高韌性注入
 
 document.addEventListener("DOMContentLoaded", () => {
   // 1. 讀取管理員基本資訊與權限
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
   ];
 
-  // 4. 權限檢查邏輯 (支援超級管理員與管理員權限覆蓋)
+  // 4. 權限檢查邏輯
   const hasAccess = (perm) => {
     if (!perm) return true;
     const superPerms = ["SUPER_ADMIN", "CAN_MANAGE_USERS", "CAN_MANAGE_SYSTEM"];
@@ -120,6 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .join("");
 
   // 6. 重構頁面結構 (注入 Sidebar 與 Topbar)
+  // [優化重點] 將原本的圖示替換為 assets/logo.png 並調整樣式
   const originalContent = document.body.innerHTML;
   document.body.innerHTML = "";
 
@@ -127,9 +128,11 @@ document.addEventListener("DOMContentLoaded", () => {
   wrapper.id = "wrapper";
   wrapper.innerHTML = `
         <ul class="sidebar" id="accordionSidebar">
-            <a class="sidebar-brand" href="admin-dashboard.html">
-                <i class="fas fa-piggy-bank"></i>
-                <div class="sidebar-brand-text">小跑豬後台</div>
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="admin-dashboard.html" style="padding: 1.5rem 0.5rem; text-decoration: none;">
+                <div class="sidebar-brand-icon">
+                    <img src="assets/logo.png" alt="小跑豬" style="width: 45px; height: 45px; object-fit: contain; border-radius: 8px;">
+                </div>
+                <div class="sidebar-brand-text mx-2" style="font-weight: 800; font-size: 1.1rem; color: #fff; letter-spacing: 1px;">小跑豬後台</div>
             </a>
             <div class="sidebar-nav">${navItemsHtml}</div>
         </ul>
@@ -151,24 +154,17 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   document.body.appendChild(wrapper);
 
-  // 插入行動版選單遮罩
   const overlay = document.createElement("div");
   overlay.className = "sidebar-overlay";
   document.body.appendChild(overlay);
 
-  // 7. 注入原頁面內容 (修正彈窗遺失問題)
+  // 7. 注入原頁面內容
   const mainContainer = document.getElementById("main-content-container");
   const parser = new DOMParser();
   const doc = parser.parseFromString(originalContent, "text/html");
 
-  // 移除舊有的 Header 容器避免衝突
   doc.getElementById("admin-header-container")?.remove();
 
-  /**
-   * [核心修復]
-   * 這裡改為優先尋找 .container-fluid，若無則尋找 .container 或 body。
-   * 確保 admin-furniture.html 中的彈窗能正確被注入到 mainContainer 中。
-   */
   const pageContent =
     doc.querySelector(".container-fluid") ||
     doc.querySelector(".container") ||
@@ -176,24 +172,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   mainContainer.innerHTML = pageContent.innerHTML;
 
-  // 8. [重點優化] 全域通知標籤同步功能
-  // 掛載至 window，讓其他頁面 (如 admin-furniture.js) 處理完訂單後可立即呼叫
+  // 8. 全域通知標籤同步功能
   window.refreshAdminBadges = async function () {
     if (!adminToken) return;
     try {
-      // 自動修正 API 基底網址結尾斜槓
       const baseUrl = (
         typeof API_BASE_URL !== "undefined" ? API_BASE_URL : ""
       ).replace(/\/$/, "");
-
-      // 請求正確的統計路徑
       const response = await fetch(`${baseUrl}/api/admin/stats`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
 
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-
       const data = await response.json();
 
       if (data.success && data.stats?.badges) {
@@ -208,23 +199,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  /**
-   * 更新 UI 上的數字標籤
-   */
   function updateBadgeUI(id, count) {
     const el = document.getElementById(id);
     if (!el) return;
     const num = parseInt(count) || 0;
     if (num > 0) {
       el.innerText = num > 99 ? "99+" : num;
-      // 強制設定顯示樣式，避免 CSS 覆蓋
       el.style.setProperty("display", "inline-block", "important");
     } else {
       el.style.display = "none";
     }
   }
 
-  // 9. 事件綁定 (側邊欄、遮罩與登出)
+  // 9. 事件綁定
   const sidebar = document.querySelector(".sidebar");
 
   document
@@ -250,7 +237,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 10. 初始化執行
   window.refreshAdminBadges();
-
-  // 設定每 60 秒自動刷新
   setInterval(window.refreshAdminBadges, 60000);
 });

@@ -24,8 +24,9 @@
         font-size: 12px;
         font-weight: bold;
         display: inline-block;
+        white-space: nowrap;
       }
-      /* 狀態標籤顏色 (同步專案風格) */
+      /* 視覺化配色方案 */
       .tag-red {
         background: #ffebee;
         color: #b71c1c;
@@ -76,31 +77,122 @@
                 placeholder="搜尋管理員 Email 或 備註細節..."
               />
             </div>
-            <div style="flex: 0 0 200px">
+            <div style="flex: 0 0 240px">
               <select id="action-filter" class="form-control">
                 <option value="">所有動作類型</option>
-                <optgroup label="包裹管理">
-                  <option value="CREATE_PACKAGE">建立包裹</option>
-                  <option value="UPDATE_PACKAGE">更新包裹</option>
-                  <option value="DELETE_PACKAGE">刪除包裹</option>
-                  <option value="CLAIM_PACKAGE">認領包裹</option>
+                <optgroup label="📦 包裹管理">
+                  <option value="CREATE_PACKAGE">建立包裹/手動入庫</option>
+                  <option value="ADMIN_CREATE_PACKAGE">管理員代客預報</option>
+                  <option value="UPDATE_PACKAGE">修改包裹內容</option>
+                  <option value="UPDATE_PACKAGE_STATUS">變更包裹狀態</option>
+                  <option value="UPDATE_PACKAGE_DETAILS">
+                    更新測量數據(含改價)
+                  </option>
+                  <option value="DELETE_PACKAGE">刪除包裹紀錄</option>
+                  <option value="ADMIN_DELETE_PACKAGE">管理員刪除包裹</option>
+                  <option value="CLAIM_PACKAGE">認領無主包裹</option>
+                  <option value="BULK_FORECAST">批量預報包裹</option>
+                  <option value="BULK_UPDATE_PACKAGE_STATUS">
+                    批量修改包裹狀態
+                  </option>
+                  <option value="BULK_DELETE_PACKAGES">批量刪除多筆包裹</option>
+                  <option value="RESOLVE_EXCEPTION">回覆異常包裹處理</option>
                 </optgroup>
-                <optgroup label="集運訂單">
-                  <option value="CREATE_SHIPMENT">建立集運單</option>
-                  <option value="UPDATE_SHIPMENT">更新訂單狀態</option>
-                  <option value="ADJUST_PRICE">人工改價</option>
-                  <option value="REJECT_SHIPMENT">退回訂單</option>
+                <optgroup label="🚚 集運訂單">
+                  <option value="CREATE_SHIPMENT">手動建立集運單</option>
+                  <option value="UPDATE_SHIPMENT">變更集運狀態</option>
+                  <option value="UPDATE_SHIPMENT_STATUS">修改物流狀態</option>
+                  <option value="ADJUST_PRICE">管理員人工改價</option>
+                  <option value="ADJUST_SHIPMENT_PRICE">
+                    訂單金額調整操作
+                  </option>
+                  <option value="REJECT_SHIPMENT">駁回集運申請</option>
+                  <option value="RETURN_SHIPMENT">退回/駁回集運單</option>
+                  <option value="DELETE_SHIPMENT">永久刪除集運紀錄</option>
+                  <option value="ADMIN_DELETE_SHIPMENT">
+                    管理員刪除集運單
+                  </option>
+                  <option value="BULK_UPDATE_SHIPMENT_STATUS">
+                    批量更新訂單狀態
+                  </option>
+                  <option value="BULK_DELETE_SHIPMENTS">
+                    批量刪除多筆訂單
+                  </option>
+                  <option value="CREATE_INVOICE">系統自動開立發票</option>
+                  <option value="INVOICE_ISSUE">手動開立電子發票</option>
+                  <option value="INVOICE_VOID">作廢電子發票</option>
                 </optgroup>
-                <optgroup label="財務審核">
-                  <option value="APPROVE_TRANSACTION">通過儲值</option>
-                  <option value="REJECT_TRANSACTION">駁回儲值</option>
-                  <option value="ADJUST_BALANCE">手動調整餘額</option>
-                  <option value="ISSUE_INVOICE">開立發票</option>
+                <optgroup label="🛋️ 傢俱代採購">
+                  <option value="CREATE_FURNITURE_ORDER">
+                    提交傢俱代購申請
+                  </option>
+                  <option value="UPDATE_FURNITURE_ORDER">
+                    修改代購訂單狀態
+                  </option>
+                  <option value="DELETE_FURNITURE_ORDER">
+                    刪除傢俱代購紀錄
+                  </option>
+                  <option value="BULK_UPDATE_FURNITURE">
+                    批量更新傢俱狀態
+                  </option>
+                  <option value="BULK_DELETE_FURNITURE">
+                    批量刪除傢俱紀錄
+                  </option>
                 </optgroup>
-                <optgroup label="帳號安全">
-                  <option value="LOGIN">管理員登入</option>
-                  <option value="UPDATE_PERMISSIONS">修改權限</option>
-                  <option value="IMPERSONATE">模擬會員登入</option>
+                <optgroup label="💰 財務與發票">
+                  <option value="WALLET_DEPOSIT_REQUEST">提交儲值申請</option>
+                  <option value="APPROVE_DEPOSIT">通過儲值審核</option>
+                  <option value="REJECT_DEPOSIT">駁回儲值申請</option>
+                  <option value="APPROVE_TRANSACTION">通過交易審核</option>
+                  <option value="REJECT_TRANSACTION">駁回交易申請</option>
+                  <option value="REVIEW_TRANSACTION">審核財務交易紀錄</option>
+                  <option value="ADJUST_BALANCE">調整會員錢包餘額</option>
+                  <option value="MANUAL_ADJUST">管理員手動調整餘額</option>
+                  <option value="MANUAL_ISSUE_INVOICE">補開集運發票</option>
+                  <option value="MANUAL_VOID_INVOICE">管理員手動廢票</option>
+                  <option value="MANUAL_ISSUE_DEPOSIT_INVOICE">
+                    開立儲值手續費發票
+                  </option>
+                  <option value="MANUAL_INVOICE_DEPOSIT">
+                    補開儲值手續費發票
+                  </option>
+                </optgroup>
+                <optgroup label="🛡️ 會員與安全性">
+                  <option value="LOGIN">管理後台登入成功</option>
+                  <option value="REGISTER">新會員註冊紀錄</option>
+                  <option value="USER_REGISTER">新會員註冊(系統)</option>
+                  <option value="CREATE_STAFF">建立後台工作人員</option>
+                  <option value="CREATE_STAFF_USER">新增管理團隊成員</option>
+                  <option value="UPDATE_USER_STATUS">停用/啟用會員帳號</option>
+                  <option value="TOGGLE_USER">變更帳號狀態(停用/啟用)</option>
+                  <option value="TOGGLE_USER_STATUS">變更帳號活動狀態</option>
+                  <option value="UPDATE_USER_PROFILE">
+                    管理員修改用戶個資
+                  </option>
+                  <option value="ADMIN_UPDATE_PROFILE">
+                    管理員強制修改個資
+                  </option>
+                  <option value="UPDATE_USER_PERMISSIONS">
+                    變更管理操作權限
+                  </option>
+                  <option value="UPDATE_PERMS">修改管理帳號權限</option>
+                  <option value="UPDATE_PERMISSIONS">修改帳號權限設定</option>
+                  <option value="DELETE_USER">永久刪除會員帳號</option>
+                  <option value="RESET_USER_PASSWORD">執行密碼強制重置</option>
+                  <option value="RESET_PASSWORD">後台強制重設密碼</option>
+                  <option value="IMPERSONATE">模擬會員登入(一鍵穿越)</option>
+                  <option value="IMPERSONATE_USER">以會員身份進入系統</option>
+                  <option value="USER_UPDATE">個人檔案自我更新</option>
+                  <option value="USER_DELETE">會員自行註銷帳號</option>
+                </optgroup>
+                <optgroup label="⚙️ 系統設定">
+                  <option value="UPDATE_SETTINGS">修改全域系統費率參數</option>
+                  <option value="UPDATE_SYSTEM_SETTING">
+                    更新單項系統設定值
+                  </option>
+                  <option value="UPDATE_SYSTEM_SETTINGS">
+                    更新全域費率與系統參數
+                  </option>
                 </optgroup>
               </select>
             </div>
@@ -129,7 +221,9 @@
               </thead>
               <tbody id="logs-list">
                 <tr>
-                  <td colspan="5" class="text-center p-4">資料載入中...</td>
+                  <td colspan="5" class="text-center p-4">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>資料載入中...
+                  </td>
                 </tr>
               </tbody>
             </table>
