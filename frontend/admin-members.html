@@ -41,6 +41,20 @@
         border-radius: 8px;
         margin-top: 10px;
       }
+      /* 優化表格內的微小文字樣式 */
+      .info-subtext {
+        font-size: 0.85rem;
+        color: #6c757d;
+        display: block;
+        margin-top: 2px;
+      }
+      .address-cell {
+        max-width: 180px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.85rem;
+      }
     </style>
   </head>
   <body>
@@ -89,10 +103,10 @@
             <table class="modern-table">
               <thead>
                 <tr>
-                  <th>姓名</th>
-                  <th>Email / 帳號</th>
-                  <th>電話</th>
-                  <th>錢包餘額</th>
+                  <th>會員資訊 (代碼/姓名)</th>
+                  <th>聯絡資訊 (Email/電話)</th>
+                  <th>預設收貨地址</th>
+                  <th>資信摘要 (餘額/統編)</th>
                   <th>角色權限</th>
                   <th>註冊日期</th>
                   <th>狀態</th>
@@ -115,7 +129,7 @@
       </div>
 
       <div id="member-modal" class="modal">
-        <div class="modal-card card" style="width: 550px; max-width: 95%">
+        <div class="modal-card card" style="width: 600px; max-width: 95%">
           <div class="card-header d-flex justify-content-between">
             <span id="modal-title">編輯會員資料</span>
             <button type="button" class="btn btn-sm btn-danger modal-close-btn">
@@ -125,36 +139,71 @@
           <div class="card-body">
             <form id="member-form">
               <input type="hidden" id="edit-user-id" />
-              <div class="form-group mb-3">
-                <label>Email (帳號)</label>
-                <input
-                  type="email"
-                  id="m-email"
-                  class="form-control"
-                  disabled
-                  style="background-color: #f0f0f0"
-                />
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px"
+                class="mb-3"
+              >
+                <div class="form-group">
+                  <label>Email (帳號)</label>
+                  <input
+                    type="email"
+                    id="m-email"
+                    class="form-control"
+                    disabled
+                    style="background-color: #f0f0f0"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="text-primary font-weight-bold"
+                    >會員專屬代碼</label
+                  >
+                  <input
+                    type="text"
+                    id="m-piggyId"
+                    class="form-control"
+                    placeholder="系統自動分配"
+                  />
+                </div>
               </div>
+
               <div
                 style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px"
               >
                 <div class="form-group">
-                  <label>姓名</label
-                  ><input type="text" id="m-name" class="form-control" />
+                  <label>姓名</label>
+                  <input type="text" id="m-name" class="form-control" />
                 </div>
                 <div class="form-group">
-                  <label>電話</label
-                  ><input type="text" id="m-phone" class="form-control" />
+                  <label>電話</label>
+                  <input type="text" id="m-phone" class="form-control" />
                 </div>
               </div>
+
               <div class="form-group mb-3 mt-3">
                 <label>預設收件地址</label>
                 <textarea
                   id="m-address"
                   class="form-control"
                   rows="2"
+                  placeholder="客戶常用的收貨地址"
                 ></textarea>
               </div>
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px"
+                class="mb-3"
+              >
+                <div class="form-group">
+                  <label>發票抬頭</label>
+                  <input type="text" id="m-invoiceTitle" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label>統一編號</label>
+                  <input type="text" id="m-taxId" class="form-control" />
+                </div>
+              </div>
+
               <hr />
               <div class="form-group mb-3">
                 <label class="font-weight-bold text-primary"

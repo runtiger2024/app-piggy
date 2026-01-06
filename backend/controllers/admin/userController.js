@@ -10,16 +10,20 @@ const getUsers = async (req, res) => {
     const skip = (page - 1) * limit;
     const { status, search, role, filter } = req.query;
     const where = {};
+
     if (status !== undefined && status !== "")
       where.isActive = status === "true";
+
     if (search) {
       const s = search.trim();
       where.OR = [
         { name: { contains: s, mode: "insensitive" } },
         { email: { contains: s, mode: "insensitive" } },
         { phone: { contains: s, mode: "insensitive" } },
+        { piggyId: { contains: s, mode: "insensitive" } }, // [新增] 支援會員專屬代碼 (RP000xxx) 搜尋
       ];
     }
+
     if (role) {
       if (role === "ADMIN")
         where.permissions = { array_contains: "CAN_MANAGE_USERS" };
@@ -40,13 +44,15 @@ const getUsers = async (req, res) => {
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
+          piggyId: true, // [新增] 回傳會員專屬代碼
           email: true,
           name: true,
           phone: true,
+          defaultAddress: true, // [新增] 回傳預設收件地址，方便後台直接核對
+          defaultTaxId: true, // [新增] 回傳發票統編，強化資信透明度
           permissions: true,
           createdAt: true,
           isActive: true,
-          // [新增] 關聯查詢錢包餘額
           wallet: {
             select: {
               balance: true,
@@ -55,6 +61,7 @@ const getUsers = async (req, res) => {
         },
       }),
     ]);
+
     res.status(200).json({
       success: true,
       users,
@@ -66,6 +73,7 @@ const getUsers = async (req, res) => {
       },
     });
   } catch (e) {
+    console.error(e);
     res.status(500).json({ success: false, message: "伺服器錯誤" });
   }
 };
@@ -78,12 +86,13 @@ const getUsersList = async (req, res) => {
       where.OR = [
         { email: { contains: search } },
         { name: { contains: search } },
+        { piggyId: { contains: search } }, // [優化] 下拉清單也支援代碼搜尋
       ];
     const users = await prisma.user.findMany({
       where,
       take: 20,
       orderBy: { email: "asc" },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, piggyId: true }, // [新增] 回傳 piggyId
     });
     res.status(200).json({ success: true, users });
   } catch (e) {
@@ -132,12 +141,17 @@ const toggleUserStatus = async (req, res) => {
 const adminUpdateUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phone, defaultAddress } = req.body;
+    const { name, phone, defaultAddress, piggyId, defaultTaxId } = req.body; // [擴充] 允許管理員手動校正關鍵資訊
     await prisma.user.update({
       where: { id },
-      data: { name, phone, defaultAddress },
+      data: { name, phone, defaultAddress, piggyId, defaultTaxId },
     });
-    await createLog(req.user.id, "UPDATE_USER_PROFILE", id, "更新個資");
+    await createLog(
+      req.user.id,
+      "UPDATE_USER_PROFILE",
+      id,
+      "更新個資(含資信欄位)"
+    );
     res.status(200).json({ success: true, message: "更新成功" });
   } catch (e) {
     res.status(500).json({ message: "錯誤" });

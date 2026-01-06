@@ -1,6 +1,6 @@
 // frontend/js/admin-members.js
-// V2025.Security.Enhanced.Robust - Robust ID Handling & Promise.all Optimization
-// [Fix] 解決 "Cannot set properties of null" 報錯，優化動態 DOM 抓取機制
+// V2025.Security.Enhanced.Robust - Robust ID Handling & Info-Rich Layout
+// [優化] 強化會員名單顯示：加入會員 ID (piggyId)、預設地址與資信摘要
 
 document.addEventListener("DOMContentLoaded", () => {
   const adminToken = localStorage.getItem("admin_token");
@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 渲染表格 UI
+   * 渲染表格 UI - 優化內容顯示
    */
   function renderTable(users) {
     const tbody = document.getElementById("members-list");
@@ -162,25 +162,44 @@ document.addEventListener("DOMContentLoaded", () => {
         ? '<span class="text-success"><i class="fas fa-check-circle"></i> 啟用中</span>'
         : '<span class="text-danger"><i class="fas fa-ban"></i> 已停用</span>';
 
-      // 3. 錢包餘額格式化
+      // 3. 錢包與資信摘要 (新增統編顯示)
       const balance = u.wallet ? u.wallet.balance : 0;
       const formattedBalance = new Intl.NumberFormat("zh-TW", {
         style: "currency",
         currency: "TWD",
         minimumFractionDigits: 0,
       }).format(balance);
+      const taxIdHtml = u.defaultTaxId
+        ? `<div class="mt-1"><small class="badge bg-light text-muted border">統編: ${u.defaultTaxId}</small></div>`
+        : "";
+
+      // 4. 地址縮略處理 (增加直觀性)
+      const addrDisplay = u.defaultAddress
+        ? `<div style="max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.85rem;" title="${u.defaultAddress}">${u.defaultAddress}</div>`
+        : '<span class="text-muted" style="font-size: 0.85rem;">- 未設定 -</span>';
 
       const uStr = encodeURIComponent(JSON.stringify(u));
 
       tr.innerHTML = `
-        <td data-label="姓名"><div class="font-weight-bold text-dark">${
-          u.name || "-"
-        }</div></td>
-        <td data-label="帳號">${u.email}</td>
-        <td data-label="電話">${u.phone || "-"}</td>
-        <td data-label="錢包餘額" style="font-family: monospace; font-weight: bold; color: #2c3e50;">${formattedBalance}</td>
+        <td data-label="會員資訊">
+          <div class="font-weight-bold text-primary" style="letter-spacing: 0.5px;">${
+            u.piggyId || "待分配"
+          }</div>
+          <div class="text-dark font-weight-bold">${u.name || "-"}</div>
+        </td>
+        <td data-label="聯絡帳號">
+          <div style="font-size: 0.9rem;">${u.email}</div>
+          <div class="text-muted" style="font-size: 0.85rem;">${
+            u.phone || "-"
+          }</div>
+        </td>
+        <td data-label="預設收貨地址">${addrDisplay}</td>
+        <td data-label="資信摘要">
+          <div style="font-family: 'Roboto Mono', monospace; font-weight: bold; color: #2c3e50;">${formattedBalance}</div>
+          ${taxIdHtml}
+        </td>
         <td data-label="角色">${roleBadge}</td>
-        <td data-label="註冊日期">${new Date(
+        <td data-label="註冊日期" style="font-size: 0.85rem;">${new Date(
           u.createdAt
         ).toLocaleDateString()}</td>
         <td data-label="狀態">${statusHtml}</td>
