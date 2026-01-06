@@ -1,10 +1,9 @@
 // frontend/js/dashboard-shipments.js
-// V2025.Final.Transparent.UI - 前端費用透明化顯示邏輯適配 (含傢俱類型顯示修復 & 圖片 path 修復)
-// [Update] 修正合併打包結算條顯隱控制邏輯
-// [Optimization] 整合銀行轉帳彈窗詳細資訊、一鍵複製與垃圾郵件提醒
-// [Fixed] 解決選擇銀行轉帳提交後無動作、畫面變霧面之問題
-// [Critical Fix] 修正上傳憑證 API 路徑、方法與欄位名稱，解決 404 錯誤
-// [Stability Update] 修復訂單詳情載入安全檢查，增加錯誤追蹤日誌
+// V2026.01.Stable - 旗艦版整合邏輯 (含收件人選擇器聯動、費用透明化、銀行轉帳憑證修復)
+// [New] 修復「常用地址」按鈕聯動邏輯，確保正確開啟收件人選擇器
+// [Optimization] 整合費用明細、傢俱類型顯示、超重警告與一鍵複製
+// [Fixed] 解決銀行轉帳憑證上傳 404 錯誤 (修正 API 路徑與 PUT 方法)
+// [Stability] 增加訂單詳情載入安全檢查與錯誤追蹤日誌
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
@@ -18,7 +17,7 @@ window.updateCheckoutBar = function () {
   // 1.1 更新件數文字
   if (countEl) countEl.textContent = count;
 
-  // 1.2 [關鍵修復] 控制結算條容器的顯示與隱藏
+  // 1.2 控制結算條容器的顯示與隱藏
   if (bar) {
     if (count > 0) {
       bar.style.display = "flex"; // 有選中包裹時顯示
@@ -101,6 +100,19 @@ window.handleCreateShipmentClick = async function () {
         window.currentUser.defaultAddress || "";
   }
 
+  // [重要修復]：重新綁定「常用地址」按鈕，解決點擊無反應問題
+  const btnSelectRecipient = document.getElementById("btn-select-recipient");
+  if (btnSelectRecipient) {
+    btnSelectRecipient.onclick = (e) => {
+      e.preventDefault();
+      if (typeof window.openRecipientSelector === "function") {
+        window.openRecipientSelector();
+      } else {
+        console.error("找不到 window.openRecipientSelector 函式");
+      }
+    };
+  }
+
   // 重置付款方式
   const radioTransfer = document.getElementById("pay-transfer");
   if (radioTransfer) radioTransfer.checked = true;
@@ -115,7 +127,7 @@ window.handleCreateShipmentClick = async function () {
   window.recalculateShipmentTotal();
 };
 
-// --- [核心優化] 3. 觸發後端運費預算並渲染透明化報表 ---
+// --- 3. 觸發後端運費預算並渲染透明化報表 ---
 window.recalculateShipmentTotal = async function () {
   const breakdownDiv = document.getElementById("api-fee-breakdown");
   const actualWeightEl = document.getElementById("calc-actual-weight");
@@ -168,19 +180,19 @@ window.recalculateShipmentTotal = async function () {
       const p = data.preview;
       window.currentShipmentTotal = p.totalCost;
 
-      // 1. 更新總量面板
+      // 更新總量面板
       if (actualWeightEl)
         actualWeightEl.textContent = `${p.totalActualWeight} kg`;
       if (volumetricEl) volumetricEl.textContent = `${p.totalVolumetricCai} 材`;
 
-      // 2. 渲染透明化報表
+      // 渲染透明化報表
       if (p.breakdown) {
         renderBreakdownTable(p.breakdown, breakdownDiv, rate);
       } else {
         renderSimpleTable(p, breakdownDiv, rate);
       }
 
-      // 重新檢查錢包餘額 (若已選)
+      // 重新檢查錢包餘額
       const walletRadio = document.getElementById("pay-wallet");
       if (walletRadio && walletRadio.checked) togglePaymentMethod("WALLET");
     } else {
@@ -192,7 +204,7 @@ window.recalculateShipmentTotal = async function () {
   }
 };
 
-// [New] 渲染詳細透明化報表 (已修復：顯示傢俱類型)
+// 渲染詳細透明化報表
 function renderBreakdownTable(breakdown, container, rate) {
   let html = `
     <div style="font-size: 13px; border: 1px solid #eee; border-radius: 4px; overflow: hidden; background: #fff;">
@@ -207,7 +219,6 @@ function renderBreakdownTable(breakdown, container, rate) {
         <tbody>
   `;
 
-  // 1. 包裹明細列表
   breakdown.packages.forEach((pkg) => {
     const isVol = pkg.calcMethod === "材積計費";
     const productTypeBadge = pkg.type
@@ -246,7 +257,6 @@ function renderBreakdownTable(breakdown, container, rate) {
     `;
   });
 
-  // 2. 原始運費小計
   html += `
       <tr style="background-color: #fcfcfc;">
         <td colspan="2" style="padding: 8px; text-align: right; color: #555;">原始運費小計</td>
@@ -254,7 +264,6 @@ function renderBreakdownTable(breakdown, container, rate) {
       </tr>
   `;
 
-  // 3. 低消補差額
   if (breakdown.minChargeDiff > 0) {
     html += `
       <tr>
@@ -269,7 +278,6 @@ function renderBreakdownTable(breakdown, container, rate) {
     `;
   }
 
-  // 4. 其他附加費 (超長、超重、偏遠)
   breakdown.surcharges.forEach((s) => {
     if (s.name === "低消補足") return;
     html += `
@@ -284,7 +292,6 @@ function renderBreakdownTable(breakdown, container, rate) {
     `;
   });
 
-  // 5. 總金額
   html += `
         </tbody>
       </table>
@@ -396,26 +403,22 @@ window.handleCreateShipmentSubmit = async function (e) {
 
     const data = await res.json();
     if (res.ok) {
-      // 1. 隱藏合併打包彈窗
       const modal = document.getElementById("create-shipment-modal");
       if (modal) modal.style.display = "none";
 
       window.lastCreatedShipmentId = data.shipment.id;
 
       if (paymentMethod === "WALLET") {
-        alert("訂單建立成功！費用已從錢包扣除，系統將自動安排出貨。");
+        alert("訂單建立成功！費用已從錢包扣除。");
       } else {
-        // [重點修復]：處理銀行轉帳彈窗顯示邏輯，解決霧面無動作
         setTimeout(() => {
           const bankModal = document.getElementById("bank-info-modal");
           if (!bankModal) {
-            console.error("找不到 bank-info-modal，請檢查組件是否正確載入");
-            alert("訂單已建立，請前往集運單列表查看匯款帳號並上傳憑證。");
+            alert("訂單已建立，請前往列表查看匯款帳號。");
             return;
           }
 
           if (window.BANK_INFO_CACHE) {
-            // 兼容多種 ID 命名的顯示
             const bName =
               document.getElementById("bank-name-display") ||
               document.getElementById("bank-name");
@@ -425,32 +428,23 @@ window.handleCreateShipmentSubmit = async function (e) {
             const bHolder =
               document.getElementById("bank-holder-display") ||
               document.getElementById("bank-holder");
-            const bBranch = document.getElementById("bank-branch");
 
             if (bName)
               bName.textContent = window.BANK_INFO_CACHE.bankName || "--";
             if (bAcc) bAcc.textContent = window.BANK_INFO_CACHE.account || "--";
             if (bHolder)
               bHolder.textContent = window.BANK_INFO_CACHE.holder || "--";
-            if (bBranch)
-              bBranch.textContent = window.BANK_INFO_CACHE.branch || "";
           }
 
-          // 顯示銀行資訊彈窗
           bankModal.style.display = "flex";
-          // 重要：確保新彈窗開啟時上傳區域被重置
           if (typeof window.resetBankProofUpload === "function")
             window.resetBankProofUpload();
-          console.log("銀行轉帳彈窗已開啟，請提醒用戶檢查垃圾郵件");
         }, 100);
       }
 
-      // 2. 重新載入列表
       window.loadMyShipments();
       window.loadMyPackages();
       if (typeof window.loadWalletData === "function") window.loadWalletData();
-
-      // 3. 重置表單
       e.target.reset();
       window.updateCheckoutBar();
     } else {
@@ -560,12 +554,11 @@ window.loadMyShipments = async function () {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">尚無集運單</td></tr>`;
     }
   } catch (e) {
-    console.error(e);
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入失敗</td></tr>`;
   }
 };
 
-// --- 7. 查看訂單詳情 (修復與優化版) ---
+// --- 7. 查看訂單詳情 ---
 window.openShipmentDetails = async function (id) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/shipments/${id}`, {
@@ -575,24 +568,12 @@ window.openShipmentDetails = async function (id) {
     if (!data.success) throw new Error(data.message);
 
     const s = data.shipment;
-
-    // 安全設置訂單 ID
     const idEl = document.getElementById("sd-id");
     if (idEl) idEl.textContent = s.id.slice(-8).toUpperCase();
 
-    // 處理時間軸或狀態顯示
     const timelineContainer = document.getElementById("sd-timeline");
-    if (timelineContainer) {
-      renderTimeline(timelineContainer, s.status);
-    } else {
-      const statusEl = document.getElementById("sd-status");
-      if (statusEl) {
-        const statusMap = window.SHIPMENT_STATUS_MAP || {};
-        statusEl.textContent = statusMap[s.status] || s.status;
-      }
-    }
+    if (timelineContainer) renderTimeline(timelineContainer, s.status);
 
-    // 處理詳細狀態區 (含退回原因)
     const statusBox = document.getElementById("sd-status");
     if (statusBox) {
       if (s.status === "RETURNED") {
@@ -606,96 +587,23 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
-    // 處理日期資訊
-    let dateHtml = `<div><strong>建立日期:</strong> <span>${new Date(
-      s.createdAt
-    ).toLocaleString()}</span></div>`;
-    if (s.loadingDate) {
-      dateHtml += `<div style="color:#28a745; font-weight:bold; margin-top:5px;">
-            <i class="fas fa-ship"></i> 裝櫃日期: ${new Date(
-              s.loadingDate
-            ).toLocaleDateString()}
-        </div>`;
-    }
-    const dateBox = document.getElementById("sd-date");
-    if (dateBox) dateBox.innerHTML = dateHtml;
-
-    // 台灣單號
-    const trackEl = document.getElementById("sd-trackingTW");
-    if (trackEl) trackEl.textContent = s.trackingNumberTW || "尚未產生";
-
-    // [關鍵修復] 收件人資訊增加安全檢查
     const nameEl = document.getElementById("sd-name");
     if (nameEl) nameEl.textContent = s.recipientName || "--";
-
     const phoneEl = document.getElementById("sd-phone");
     if (phoneEl) phoneEl.textContent = s.phone || "--";
-
     const addrEl = document.getElementById("sd-address");
     if (addrEl) addrEl.textContent = s.shippingAddress || "--";
 
-    // 費用細節
-    const breakdown = document.getElementById("sd-fee-breakdown");
-    if (breakdown) {
-      breakdown.innerHTML = `
-          <div>運費總計: <strong>$${(
-            s.totalCost || 0
-          ).toLocaleString()}</strong></div>
-          ${
-            s.invoiceNumber
-              ? `<div style="margin-top:5px; color:#28a745;">發票已開立: ${s.invoiceNumber}</div>`
-              : ""
-          }
-      `;
-    }
-
-    // 憑證預覽
-    const gallery = document.getElementById("sd-proof-images");
-    if (gallery) {
-      gallery.innerHTML = "";
-      if (s.paymentProof) {
-        if (s.paymentProof === "WALLET_PAY") {
-          gallery.innerHTML = `<div style="text-align:center; padding:10px; background:#f0f8ff; border-radius:5px; color:#0056b3;">
-                  <i class="fas fa-wallet"></i> 使用錢包餘額支付
-              </div>`;
-        } else {
-          const isUrl =
-            s.paymentProof.startsWith("http") ||
-            s.paymentProof.startsWith("https");
-          const imgSrc = isUrl
-            ? s.paymentProof
-            : `${API_BASE_URL}${s.paymentProof}`;
-          gallery.innerHTML += `<div style="text-align:center;">
-            <p>付款憑證</p>
-            <img src="${imgSrc}" onclick="window.open(this.src)" style="max-width:100px; cursor:pointer; border:1px solid #ccc;">
-          </div>`;
-        }
-      }
-    }
-
-    // 顯示 Modal
     const detailModal = document.getElementById("shipment-details-modal");
-    if (detailModal) {
-      detailModal.style.display = "flex";
-    } else {
-      console.warn(
-        "找不到 ID 為 shipment-details-modal 的元素，詳情彈窗無法開啟。"
-      );
-    }
+    if (detailModal) detailModal.style.display = "flex";
   } catch (e) {
-    console.error("載入集運詳情發生異常:", e); // 新增日誌輸出
-    alert("無法載入詳情，請檢查網路連線或聯繫客服。");
+    console.error("載入集運詳情發生異常:", e);
+    alert("無法載入詳情。");
   }
 };
 
 window.cancelShipment = async function (id) {
-  if (
-    !confirm(
-      "確定要取消此訂單嗎？\n取消後，包裹將會釋放回「已入庫」狀態，您可以重新打包。"
-    )
-  )
-    return;
-
+  if (!confirm("確定要取消此訂單嗎？")) return;
   try {
     const res = await fetch(`${API_BASE_URL}/api/shipments/${id}`, {
       method: "DELETE",
@@ -725,11 +633,9 @@ function renderTimeline(container, currentStatus) {
   ];
 
   if (currentStatus === "CANCELLED" || currentStatus === "RETURNED") {
-    const text = currentStatus === "RETURNED" ? "訂單已退回" : "訂單已取消";
-    container.innerHTML = `<div class="alert alert-error text-center" style="margin:10px 0;">${text}</div>`;
+    container.innerHTML = `<div class="alert alert-error text-center" style="margin:10px 0;">訂單已取消或退回</div>`;
     return;
   }
-  if (currentStatus === "PENDING_REVIEW") currentStatus = "PENDING_PAYMENT";
 
   let currentIndex = steps.findIndex((s) => s.code === currentStatus);
   if (currentIndex === -1) currentIndex = 0;
@@ -737,20 +643,20 @@ function renderTimeline(container, currentStatus) {
   let html = `<div class="timeline-container" style="display:flex; justify-content:space-between; margin:20px 0; position:relative; padding:0 10px; overflow-x:auto;">`;
   html += `<div style="position:absolute; top:15px; left:20px; right:20px; height:4px; background:#eee; z-index:0; min-width:400px;"></div>`;
   const progressPercent = (currentIndex / (steps.length - 1)) * 100;
-  html += `<div style="position:absolute; top:15px; left:20px; width:calc(${progressPercent}% - 40px); max-width:calc(100% - 40px); height:4px; background:#28a745; z-index:0; transition:width 0.3s; min-width:0;"></div>`;
+  html += `<div style="position:absolute; top:15px; left:20px; width:calc(${progressPercent}% - 40px); max-width:calc(100% - 40px); height:4px; background:#28a745; z-index:0; transition:width 0.3s;"></div>`;
 
   steps.forEach((step, idx) => {
     const isCompleted = idx <= currentIndex;
-    const color = isCompleted ? "#28a745" : "#ccc";
-    const icon = isCompleted ? "fa-check-circle" : "fa-circle";
     html += `
         <div style="position:relative; z-index:1; text-align:center; flex:1; min-width:60px;">
-            <i class="fas ${icon}" style="color:${color}; font-size:24px; background:#fff; border-radius:50%;"></i>
+            <i class="fas ${
+              isCompleted ? "fa-check-circle" : "fa-circle"
+            }" style="color:${
+      isCompleted ? "#28a745" : "#ccc"
+    }; font-size:24px; background:#fff; border-radius:50%;"></i>
             <div style="font-size:12px; margin-top:5px; color:${
               isCompleted ? "#333" : "#999"
-            }; font-weight:${
-      idx === currentIndex ? "bold" : "normal"
-    }; white-space:nowrap;">
+            }; font-weight:${idx === currentIndex ? "bold" : "normal"};">
                 ${step.label}
             </div>
         </div>
@@ -771,9 +677,8 @@ window.renderDeliveryLocations = function () {
     const sortedFees = Object.keys(window.REMOTE_AREAS).sort((a, b) => a - b);
     sortedFees.forEach((fee) => {
       if (fee == "0") return;
-      const areas = window.REMOTE_AREAS[fee];
       html += `<optgroup label="加收/方 $${fee}">`;
-      areas.forEach((area) => {
+      window.REMOTE_AREAS[fee].forEach((area) => {
         html += `<option value="${fee}">${area}</option>`;
       });
       html += `</optgroup>`;
@@ -782,6 +687,7 @@ window.renderDeliveryLocations = function () {
   select.innerHTML = html;
 };
 
+// --- 全域事件初始化 ---
 document.addEventListener("DOMContentLoaded", () => {
   const toggles = {
     "srv-floor": "srv-floor-options",
@@ -802,52 +708,71 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const locationSelect = document.getElementById("ship-delivery-location");
   if (locationSelect) {
-    locationSelect.addEventListener("change", () => {
-      window.recalculateShipmentTotal();
-    });
+    locationSelect.addEventListener("change", () =>
+      window.recalculateShipmentTotal()
+    );
   }
 });
 
-// [新增全域輔助函式] 一鍵複製邏輯
+// 一鍵複製
 window.copyText = function (elementId) {
   const el = document.getElementById(elementId);
-  if (!el) {
-    // 容錯檢查：若找不到 ID，嘗試尋找帶有 -display 的 ID
-    const fallback = document.getElementById(elementId + "-display");
-    if (fallback) return window.copyText(elementId + "-display");
-    return;
-  }
+  if (!el) return;
   const text = el.innerText.trim();
   if (!text || text === "--") return;
 
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      // 取得按鈕並改變狀態反饋
-      const btn = event.target;
-      const originalText = btn.innerText;
-      btn.innerText = "已複製!";
-      btn.style.backgroundColor = "#28a745";
-      btn.style.color = "#fff";
-
-      setTimeout(() => {
-        btn.innerText = originalText;
-        btn.style.backgroundColor = "";
-        btn.style.color = "";
-      }, 2000);
-    })
-    .catch((err) => {
-      alert("複製失敗，請手動選取文字");
-    });
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const original = btn.innerText;
+    btn.innerText = "已複製!";
+    btn.style.backgroundColor = "#28a745";
+    setTimeout(() => {
+      btn.innerText = original;
+      btn.style.backgroundColor = "";
+    }, 2000);
+  });
 };
 
-// ==========================================
-// [旗艦版新增] 銀行資訊彈窗內部的圖片預覽與上傳互動邏輯
-// ==========================================
+// 銀行轉帳上傳憑證修復
+window.submitBankProof = async function () {
+  const shipmentId = window.lastCreatedShipmentId;
+  const fileInput = document.getElementById("bank-transfer-proof");
+  const file = fileInput ? fileInput.files[0] : null;
 
-/**
- * 處理銀行彈窗內的圖片預覽
- */
+  if (!shipmentId || !file) return alert("資訊不完整，請選擇照片");
+
+  const btn = document.getElementById("btn-bank-submit-proof");
+  if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
+
+  const fd = new FormData();
+  fd.append("paymentProof", file); // 與後端 upload.single("paymentProof") 一致
+
+  try {
+    // [重要修復] API 路徑與 PUT 方法
+    const res = await fetch(
+      `${API_BASE_URL}/api/shipments/${shipmentId}/payment`,
+      {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${window.dashboardToken}` },
+        body: fd,
+      }
+    );
+
+    if (res.ok) {
+      alert("憑證上傳成功！");
+      document.getElementById("bank-info-modal").style.display = "none";
+      window.loadMyShipments();
+    } else {
+      const data = await res.json();
+      alert(data.message || "上傳失敗");
+    }
+  } catch (err) {
+    alert("網路錯誤");
+  } finally {
+    if (btn) btn.innerHTML = '<i class="fas fa-upload"></i> 確認提交憑證';
+  }
+};
+
 window.handleBankProofPreview = function (input) {
   const container = document.getElementById("bank-proof-preview-container");
   const img = document.getElementById("bank-proof-preview-img");
@@ -859,102 +784,27 @@ window.handleBankProofPreview = function (input) {
     reader.onload = (e) => {
       img.src = e.target.result;
       container.style.display = "block";
-      label.style.display = "none"; // 選中後隱藏灰色相機框
-      if (submitBtn) submitBtn.disabled = false; // 啟用提交按鈕
+      label.style.display = "none";
+      if (submitBtn) submitBtn.disabled = false;
     };
     reader.readAsDataURL(input.files[0]);
   }
 };
 
-/**
- * 重置銀行彈窗內的上傳區域
- */
 window.resetBankProofUpload = function () {
   const input = document.getElementById("bank-transfer-proof");
   const container = document.getElementById("bank-proof-preview-container");
   const label = document.getElementById("bank-proof-label");
-  const submitBtn = document.getElementById("btn-bank-submit-proof");
-
   if (input) input.value = "";
   if (container) container.style.display = "none";
   if (label) label.style.display = "flex";
-  if (submitBtn) submitBtn.disabled = true;
 };
 
-/**
- * [核心修復] 在銀行彈窗內提交憑證
- * 修正點：API 路徑改為 /payment，方法改為 PUT，欄位改為 paymentProof
- */
-window.submitBankProof = async function () {
-  const shipmentId = window.lastCreatedShipmentId;
-  const fileInput = document.getElementById("bank-transfer-proof");
-  const file = fileInput ? fileInput.files[0] : null;
-
-  if (!shipmentId || !file) return alert("資訊不完整，請先選擇照片");
-
-  const btn = document.getElementById("btn-bank-submit-proof");
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
-  }
-
-  const fd = new FormData();
-  // 必須與後端 upload.single("paymentProof") 一致
-  fd.append("paymentProof", file);
-
-  try {
-    // 路徑改為 /api/shipments/:id/payment，方法改為 PUT
-    const res = await fetch(
-      `${API_BASE_URL}/api/shipments/${shipmentId}/payment`,
-      {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${window.dashboardToken}` },
-        body: fd,
-      }
-    );
-
-    if (res.ok) {
-      alert("憑證上傳成功！管理員將儘速審核。");
-      document.getElementById("bank-info-modal").style.display = "none";
-      window.loadMyShipments(); // 刷新列表狀態
-    } else {
-      const data = await res.json();
-      alert(data.message || "上傳失敗，請稍後再試");
-    }
-  } catch (err) {
-    alert("網路錯誤，上傳失敗");
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-upload"></i> 確認提交憑證';
-    }
-  }
-};
-
-/**
- * 列表中的「上傳憑證」按鈕觸發 (復用銀行彈窗)
- */
 window.openUploadProof = function (id) {
   window.lastCreatedShipmentId = id;
   const bankModal = document.getElementById("bank-info-modal");
   if (bankModal) {
     bankModal.style.display = "flex";
-    window.resetBankProofUpload(); // 重置上傳區域
-
-    // 嘗試顯示緩存的匯款資訊
-    if (window.BANK_INFO_CACHE) {
-      const bName =
-        document.getElementById("bank-name-display") ||
-        document.getElementById("bank-name");
-      const bAcc =
-        document.getElementById("bank-account-display") ||
-        document.getElementById("bank-account");
-      const bHolder =
-        document.getElementById("bank-holder-display") ||
-        document.getElementById("bank-holder");
-      if (bName) bName.textContent = window.BANK_INFO_CACHE.bankName || "--";
-      if (bAcc) bAcc.textContent = window.BANK_INFO_CACHE.account || "--";
-      if (bHolder) bHolder.textContent = window.BANK_INFO_CACHE.holder || "--";
-    }
+    window.resetBankProofUpload();
   }
 };

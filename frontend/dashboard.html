@@ -688,6 +688,8 @@
     <div id="modal-container-deposit"></div>
     <div id="modal-container-bulk-forecast"></div>
     <div id="modal-container-claim-package"></div>
+    <div id="modal-container-recipient-selector"></div>
+
     <div
       id="package-details-modal"
       class="modal-overlay"
@@ -760,6 +762,11 @@
           "modal-container-claim-package",
           "components/modals/claim-package.html"
         ),
+        // [關鍵新增] 載入常用收件人選擇器 HTML
+        loadHtml(
+          "modal-container-recipient-selector",
+          "components/modals/recipient-selector.html"
+        ),
         loadHtml(
           "package-details-modal",
           "components/modals/package-details.html"
@@ -808,6 +815,19 @@
         (async () => {
           for (const src of scripts) {
             await loadScript(src);
+          }
+
+          // [核心修正] 強制重新綁定「常用地址」按鈕事件
+          // 因為 shipment-create.html 是動態載入的，腳本載入完畢後需確保按鈕與功能連結
+          const btnSelect = document.getElementById("btn-select-recipient");
+          if (btnSelect && typeof window.openRecipientSelector === "function") {
+            const newBtn = btnSelect.cloneNode(true);
+            btnSelect.parentNode.replaceChild(newBtn, btnSelect);
+            newBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              window.openRecipientSelector();
+            });
+            console.log("常用地址按鈕已成功重新綁定");
           }
 
           // 初始化快速導向與交互

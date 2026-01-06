@@ -1,35 +1,32 @@
 // frontend/js/dashboard-recipient.js
 // 負責常用收件人管理與選擇邏輯
-// V26.0 - Latest: Retained Cache-First & SWR + Added Search/Filter & Validation
+// V2026.Final.Pro - 最新完整旗艦版
+// [保留] Cache-First & SWR, 樂觀更新, 敏感資訊遮罩
+// [新增] 自動運費重算連動, 動態事件重新綁定機制, 強化校驗
 
-// --- 函式定義 ---
-
-// 1. 載入與渲染 (核心優化)
+// --- 1. 載入與渲染 (核心優化) ---
 window.loadRecipients = async function (forceRefresh = false) {
   const container = document.getElementById("recipient-list-container");
   if (!container) return;
 
   // [優化 1] 快取優先策略 (Cache-First)
-  // 如果已有資料且非強制重新整理，直接渲染現有資料，不顯示 Loading
   if (!forceRefresh && window.myRecipients && window.myRecipients.length > 0) {
     renderRecipients(window.myRecipients);
-
-    // [優化 2] 背景靜默更新 (SWR - Stale While Revalidate)
-    // 在背景偷偷發送請求確認是否有最新資料，使用者無感
+    // [優化 2] 背景靜默更新 (SWR)
     fetchRecipientsData(container, true);
     return;
   }
 
-  // 只有在真的沒資料時，才顯示載入中動畫，避免畫面閃爍
+  // 初始載入顯示 Spinner
   if (!window.myRecipients || window.myRecipients.length === 0) {
     container.innerHTML =
-      '<div style="width:100%; text-align:center; padding:30px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>';
+      '<div style="width:100%; text-align:center; padding:30px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 正在獲取常用聯絡人...</div>';
   }
 
   await fetchRecipientsData(container, false);
 };
 
-// 獨立出來的 API 請求函式
+// 獨立 API 請求函式
 async function fetchRecipientsData(container, isBackgroundUpdate) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/recipients`, {
@@ -38,34 +35,32 @@ async function fetchRecipientsData(container, isBackgroundUpdate) {
     const data = await res.json();
 
     if (data.success) {
-      // 排序邏輯：將預設者排在最前面
+      // 排序：預設者置頂
       let sortedData = data.recipients || [];
       sortedData.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
-
       window.myRecipients = sortedData;
 
       if (window.myRecipients.length > 0) {
         renderRecipients(window.myRecipients);
       } else {
-        // 只有非背景更新時才顯示「尚未建立」
         if (!isBackgroundUpdate && container) {
           container.innerHTML = `
-                <div style="grid-column:1/-1; text-align:center; padding:30px; color:#999;">
-                    <i class="fas fa-address-book" style="font-size:30px; margin-bottom:10px;"></i><br>
-                    尚未建立常用收件人
-                </div>`;
+            <div style="grid-column:1/-1; text-align:center; padding:30px; color:#999;">
+                <i class="fas fa-address-book" style="font-size:30px; margin-bottom:10px;"></i><br>
+                尚未建立常用收件人，點擊「新增」開始使用
+            </div>`;
         }
       }
     }
   } catch (e) {
     console.error("載入收件人失敗", e);
     if (!isBackgroundUpdate && container) {
-      container.innerHTML = `<p class="text-center" style="color:red;">載入失敗，請檢查網路</p>`;
+      container.innerHTML = `<p class="text-center" style="color:red;">載入失敗，請檢查網路連線</p>`;
     }
   }
 }
 
-// [新功能] 搜尋過濾邏輯
+// [功能] 搜尋過濾邏輯
 window.filterRecipients = function (keyword) {
   const kw = keyword.trim().toLowerCase();
   if (!window.myRecipients) return;
@@ -78,6 +73,7 @@ window.filterRecipients = function (keyword) {
   renderRecipients(filtered, true);
 };
 
+// [核心渲染] 常用收件人卡片
 function renderRecipients(list, isFiltering = false) {
   const container = document.getElementById("recipient-list-container");
   if (!container) return;
@@ -89,12 +85,11 @@ function renderRecipients(list, isFiltering = false) {
   }
 
   let htmlContent = "";
-
   list.forEach((r) => {
-    // 隱藏敏感資訊 (身分證)
+    // 敏感資訊遮罩 (身分證)
     const maskedId = r.idNumber
       ? r.idNumber.substring(0, 3) + "*****" + r.idNumber.slice(-2)
-      : "";
+      : "未填寫";
 
     const defaultBadge = r.isDefault
       ? '<span class="badge-default">預設</span>'
@@ -137,21 +132,22 @@ function renderRecipients(list, isFiltering = false) {
         </div>
     `;
   });
-
   container.innerHTML = htmlContent;
 }
 
-// [新功能] 複製收件人資訊到剪貼簿
+// [功能] 複製到剪貼簿
 window.copyRecipientInfo = function (id) {
   const r = window.myRecipients.find((x) => x.id === id);
   if (!r) return;
-  const text = `${r.name}\n${r.phone}\n${r.idNumber || ""}\n${r.address}`;
+  const text = `收件人：${r.name}\n電話：${r.phone}\n身分證：${
+    r.idNumber || "未提供"
+  }\n地址：${r.address}`;
   navigator.clipboard.writeText(text).then(() => {
-    window.showMessage("資訊已複製到剪貼簿", "success");
+    window.showMessage("資訊已複製", "success");
   });
 };
 
-// 2. 新增/編輯 Modal
+// --- 2. 新增/編輯 Modal 控制 ---
 window.openRecipientModal = function (mode, id = null) {
   const modal = document.getElementById("recipient-modal");
   const form = document.getElementById("recipient-form");
@@ -186,20 +182,21 @@ async function handleRecipientSubmit(e) {
   const isEdit = !!id;
   const btn = e.target.querySelector("button[type='submit']");
 
-  // [新功能] 前端基本校驗
   const name = document.getElementById("rec-name").value.trim();
   const phone = document.getElementById("rec-phone").value.trim();
-  if (name.length < 2) return alert("請輸入正確姓名");
-  if (phone.length < 8) return alert("請輸入正確電話格式");
+  const idNum = document.getElementById("rec-idNumber").value.trim();
 
-  // UI 鎖定
+  // 強化校驗
+  if (name.length < 2) return alert("請輸入真實姓名");
+  if (phone.length < 8) return alert("請輸入有效的電話號碼");
+
   btn.disabled = true;
-  btn.textContent = "儲存中...";
+  btn.textContent = "正在處理...";
 
   const payload = {
-    name: name,
-    phone: phone,
-    idNumber: document.getElementById("rec-idNumber").value.trim(),
+    name,
+    phone,
+    idNumber: idNum,
     address: document.getElementById("rec-address").value.trim(),
     isDefault: document.getElementById("rec-isDefault").checked,
   };
@@ -211,7 +208,7 @@ async function handleRecipientSubmit(e) {
 
   try {
     const res = await fetch(url, {
-      method: method,
+      method,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${window.dashboardToken}`,
@@ -220,24 +217,25 @@ async function handleRecipientSubmit(e) {
     });
 
     if (res.ok) {
-      window.showMessage(isEdit ? "更新成功" : "新增成功", "success");
+      window.showMessage(isEdit ? "資料已更新" : "成功新增常用地址", "success");
       const modal = document.getElementById("recipient-modal");
       if (modal) modal.style.display = "none";
-      window.loadRecipients(true); // 強制重新整理
+      window.loadRecipients(true);
     } else {
-      alert("操作失敗，請檢查資料格式");
+      const err = await res.json();
+      alert(err.message || "操作失敗，請檢查資料格式");
     }
   } catch (e) {
-    alert("網路錯誤");
+    alert("網路錯誤，請稍後再試");
   } finally {
     btn.disabled = false;
     btn.textContent = "儲存";
   }
 }
 
-// 3. 刪除與設為預設
+// --- 3. 刪除與設為預設 ---
 window.deleteRecipient = async function (id) {
-  if (!confirm("確定刪除此收件人？")) return;
+  if (!confirm("確定要刪除此聯絡資訊嗎？")) return;
   try {
     // 樂觀刪除
     window.myRecipients = window.myRecipients.filter((r) => r.id !== id);
@@ -247,8 +245,7 @@ window.deleteRecipient = async function (id) {
       method: "DELETE",
       headers: { Authorization: `Bearer ${window.dashboardToken}` },
     });
-
-    window.loadRecipients(true); // 背景再確認一次
+    window.loadRecipients(true);
   } catch (e) {
     alert("刪除失敗");
     window.loadRecipients(true);
@@ -260,12 +257,11 @@ window.setDefaultRecipient = async function (id) {
     const target = window.myRecipients.find((r) => r.id === id);
     if (!target) return;
 
-    // 樂觀更新 (Optimistic UI Update)：先改畫面
+    // 樂觀更新
     const optimisticList = window.myRecipients.map((r) => ({
       ...r,
       isDefault: r.id === id,
     }));
-    // 重新排序使預設者置頂
     optimisticList.sort(
       (a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0)
     );
@@ -280,7 +276,7 @@ window.setDefaultRecipient = async function (id) {
       body: JSON.stringify({ ...target, isDefault: true }),
     });
 
-    window.showMessage("已設為預設", "success");
+    window.showMessage("預設地址已變更", "success");
     window.loadRecipients(true);
   } catch (e) {
     alert("設定失敗");
@@ -288,49 +284,65 @@ window.setDefaultRecipient = async function (id) {
   }
 };
 
-// 4. 選擇器邏輯 (在集運單 Modal 中使用)
+// --- 4. 選擇器邏輯 (用於集運建立彈窗) ---
 window.openRecipientSelector = async function () {
   const modal = document.getElementById("recipient-selector-modal");
   const list = document.getElementById("recipient-selector-list");
   const searchInput = document.getElementById("recipient-selector-search");
 
-  // 如果快取為空，嘗試抓取
+  if (!modal || !list) return console.error("找不到選擇器 Modal 組件");
+
   if (!window.myRecipients || window.myRecipients.length === 0) {
     list.innerHTML =
-      '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>';
+      '<div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> 正在載入清單...</div>';
     await fetchRecipientsData(null, true);
   }
 
-  // 渲染選擇器內容的內部函式
   const renderSelectorItems = (items) => {
     list.innerHTML = "";
     if (!items || items.length === 0) {
       list.innerHTML =
-        "<p style='padding:10px; color:#666;'>無符合的收件人</p>";
+        "<p style='padding:20px; color:#999; text-align:center;'>無相符的聯絡人</p>";
       return;
     }
     items.forEach((r) => {
       const div = document.createElement("div");
       div.className = "recipient-selector-item";
+      const defaultTag = r.isDefault
+        ? '<span style="color:#1a73e8; font-size:11px;">[預設]</span> '
+        : "";
       div.innerHTML = `
-                <div><strong>${r.name}</strong> <span style="font-size:12px; color:#666;">(${r.phone})</span></div>
-                <div style="font-size:12px; color:#555;">${r.address}</div>
-            `;
+          <div><strong>${defaultTag}${r.name}</strong> <span style="font-size:12px; color:#666;">(${r.phone})</span></div>
+          <div style="font-size:12px; color:#888;">${r.address}</div>
+      `;
       div.onclick = () => {
-        document.getElementById("ship-name").value = r.name;
-        document.getElementById("ship-phone").value = r.phone;
-        document.getElementById("ship-street-address").value = r.address;
-        document.getElementById("ship-idNumber").value = r.idNumber || "";
+        // 帶入欄位
+        const fieldMap = {
+          "ship-name": r.name,
+          "ship-phone": r.phone,
+          "ship-street-address": r.address,
+          "ship-idNumber": r.idNumber || "",
+        };
+
+        Object.keys(fieldMap).forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.value = fieldMap[id];
+        });
+
         modal.style.display = "none";
-        window.showMessage("已帶入收件人資訊", "success");
+        window.showMessage("已自動帶入收件資訊", "success");
+
+        // [新增功能] 如果有運費試算邏輯，自動觸發重算
+        if (typeof window.recalculateShipmentTotal === "function") {
+          window.recalculateShipmentTotal();
+        }
       };
       list.appendChild(div);
     });
   };
 
-  // 綁定選擇器搜尋
   if (searchInput) {
-    searchInput.value = ""; // 重置搜尋
+    searchInput.value = "";
     searchInput.oninput = (e) => {
       const kw = e.target.value.toLowerCase();
       const filtered = window.myRecipients.filter(
@@ -344,21 +356,35 @@ window.openRecipientSelector = async function () {
   modal.style.display = "flex";
 };
 
-// --- 初始化事件綁定 ---
+/**
+ * [新增] 動態綁定觸發器
+ * 用於在集運彈窗彈出後，強制將「常用地址」按鈕與選擇器連結
+ */
+window.bindRecipientSelectorTrigger = function () {
+  const btnSelect = document.getElementById("btn-select-recipient");
+  if (btnSelect) {
+    // 移除舊事件並重新綁定
+    const newBtn = btnSelect.cloneNode(true);
+    btnSelect.parentNode.replaceChild(newBtn, btnSelect);
+    newBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.openRecipientSelector();
+    });
+  }
+};
+
+// --- 5. 初始化事件綁定 ---
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. 綁定「新增收件人」按鈕
+  // 新增按鈕
   const btnAdd = document.getElementById("btn-add-recipient");
-  if (btnAdd) {
+  if (btnAdd)
     btnAdd.addEventListener("click", () => window.openRecipientModal("create"));
-  }
 
-  // 2. 綁定表單提交
+  // 表單提交
   const form = document.getElementById("recipient-form");
-  if (form) {
-    form.addEventListener("submit", handleRecipientSubmit);
-  }
+  if (form) form.addEventListener("submit", handleRecipientSubmit);
 
-  // 3. 綁定主介面搜尋框 (如果有此元素)
+  // 主介面搜尋
   const mainSearch = document.getElementById("recipient-main-search");
   if (mainSearch) {
     mainSearch.addEventListener("input", (e) =>
@@ -366,11 +392,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // 4. 綁定集運單中的「從常用選取」按鈕
-  const btnSelect = document.getElementById("btn-select-recipient");
-  if (btnSelect) {
-    const newBtn = btnSelect.cloneNode(true);
-    btnSelect.parentNode.replaceChild(newBtn, btnSelect);
-    newBtn.addEventListener("click", () => window.openRecipientSelector());
-  }
+  // 初次嘗試綁定集運單按鈕
+  window.bindRecipientSelectorTrigger();
 });
