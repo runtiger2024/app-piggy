@@ -1,5 +1,5 @@
 // backend/controllers/furnitureController.js
-// V2026.1.2 - 傢俱代採購服務核心邏輯 (新增支援使用者上傳參考圖片路徑儲存)
+// V2026.1.7 - 傢俱代採購服務核心邏輯 (旗艦完整版：支援會員參考圖與管理員憑證檔案上傳)
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
@@ -14,7 +14,7 @@ const createFurnitureOrder = async (req, res) => {
     const { factoryName, productName, quantity, priceRMB, note } = req.body;
     const userId = req.user.id;
 
-    // [新增] 處理上傳的參考圖片檔案
+    // [核心優化] 處理會員上傳的參考圖片檔案 (對應前端預覽縮圖功能)
     const refImageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!factoryName || !productName || !quantity || !priceRMB) {
@@ -80,7 +80,7 @@ const createFurnitureOrder = async (req, res) => {
         serviceFeeRate,
         totalAmountTWD,
         note,
-        refImageUrl, // [新增] 儲存使用者上傳的參考截圖路徑
+        refImageUrl, // 儲存使用者上傳的參考截圖路徑 (對應預覽縮圖)
         status: "PENDING",
       },
     });
@@ -151,6 +151,11 @@ const adminUpdateOrder = async (req, res) => {
     const { id } = req.params;
     const { status, adminRemark, invoiceUrl } = req.body;
 
+    // [新增] 處理管理員上傳的正式發票或支付憑證檔案
+    const uploadedInvoiceUrl = req.file
+      ? `/uploads/${req.file.filename}`
+      : invoiceUrl;
+
     // 先檢查訂單是否存在
     const existingOrder = await prisma.furnitureOrder.findUnique({
       where: { id },
@@ -166,7 +171,7 @@ const adminUpdateOrder = async (req, res) => {
       data: {
         status,
         adminRemark,
-        ...(invoiceUrl && { invoiceUrl }),
+        invoiceUrl: uploadedInvoiceUrl, // 使用新上傳的檔案路徑或原本的 URL
         updatedAt: new Date(),
       },
     });

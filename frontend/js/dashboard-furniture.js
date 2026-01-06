@@ -1,5 +1,5 @@
 // frontend/js/dashboard-furniture.js
-// V2026.1.6 - 新增圖片預覽縮圖功能與 FormData 提交邏輯
+// V2026.1.7 - 修正圖片預覽 ID 匹配、保留旗艦版計算與 FormData 邏輯
 
 (function () {
   let procurementConfig = {
@@ -19,6 +19,7 @@
     }
     await loadFurnitureHistory();
 
+    // 監聽金額輸入
     const inputs = ["priceRMB", "quantity"];
     inputs.forEach((id) => {
       const el = document.getElementById(id);
@@ -30,7 +31,7 @@
       }
     });
 
-    // [新增] 圖片上傳監聽
+    // [新增] 圖片上傳監聽 (修正: 確保選取後觸發 handleFileSelect)
     const fileInput = document.getElementById("furniture-ref-image");
     if (fileInput) {
       fileInput.addEventListener("change", handleFileSelect);
@@ -47,13 +48,14 @@
   }
 
   /**
-   * [新增功能] 處理檔案選取與預覽顯示
+   * [核心功能] 處理檔案選取與預覽顯示
+   * 修正: 將 ID 調整為與 HTML 一致的 ref-preview-img 與 upload-label-trigger
    */
   function handleFileSelect(e) {
     const file = e.target.files[0];
     const previewContainer = document.getElementById("image-preview-container");
-    const previewImg = document.getElementById("preview-img-element");
-    const uploadLabel = document.getElementById("upload-label-box");
+    const previewImg = document.getElementById("ref-preview-img"); // 修正
+    const uploadLabel = document.getElementById("upload-label-trigger"); // 修正
 
     if (file) {
       // 檢查是否為圖片
@@ -64,25 +66,26 @@
 
       const reader = new FileReader();
       reader.onload = function (event) {
-        previewImg.src = event.target.result;
-        previewContainer.style.display = "block";
-        uploadLabel.style.display = "none"; // 隱藏原本的上傳按鈕
+        if (previewImg) previewImg.src = event.target.result;
+        if (previewContainer) previewContainer.style.display = "flex"; // 顯示容器
+        if (uploadLabel) uploadLabel.style.display = "none"; // 隱藏原本的上傳按鈕
       };
       reader.readAsDataURL(file);
     }
   }
 
   /**
-   * [新增功能] 清除預覽縮圖
+   * [核心功能] 清除預覽縮圖
+   * 修正: 將 ID 調整為與 HTML 一致
    */
-  window.clearPreviewImage = function () {
+  window.clearFurnitureImage = function () {
     const fileInput = document.getElementById("furniture-ref-image");
     const previewContainer = document.getElementById("image-preview-container");
-    const uploadLabel = document.getElementById("upload-label-box");
+    const uploadLabel = document.getElementById("upload-label-trigger");
 
-    fileInput.value = ""; // 清空檔案
-    previewContainer.style.display = "none";
-    uploadLabel.style.display = "flex";
+    if (fileInput) fileInput.value = ""; // 清空檔案
+    if (previewContainer) previewContainer.style.display = "none";
+    if (uploadLabel) uploadLabel.style.display = "flex";
   };
 
   async function fetchProcurementConfig() {
@@ -171,7 +174,6 @@
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
 
-    // 改用 FormData
     const formData = new FormData();
     formData.append(
       "factoryName",
@@ -192,7 +194,7 @@
     formData.append("note", document.getElementById("note").value.trim());
 
     const fileInput = document.getElementById("furniture-ref-image");
-    if (fileInput.files[0]) {
+    if (fileInput && fileInput.files[0]) {
       formData.append("refImage", fileInput.files[0]); // 加入檔案
     }
 
@@ -200,7 +202,7 @@
       const res = await fetch(`${API_BASE_URL}/api/furniture/apply`, {
         method: "POST",
         headers: {
-          // 注意：FormData 提交時不需設定 Content-Type，由瀏覽器自動處理 boundary
+          // 注意：FormData 提交時不需設定 Content-Type
           Authorization: `Bearer ${
             localStorage.getItem("token") || window.dashboardToken
           }`,
@@ -211,7 +213,7 @@
       if (data.success) {
         showSubmissionSuccessModal();
         document.getElementById("furniture-form").reset();
-        clearPreviewImage(); // 重設圖片預覽
+        clearFurnitureImage(); // 重設圖片預覽
         calculateTotal();
         await loadFurnitureHistory();
       } else {
@@ -317,7 +319,6 @@
     const subtotalRMB = (order.priceRMB * order.quantity).toFixed(2);
     const serviceFeeRMB = (order.serviceFeeRMB || 0).toFixed(2);
 
-    // 建立詳情彈窗
     const detailModalHtml = `
       <div id="order-detail-modal" class="modal-overlay" style="display: flex; z-index: 10001; background: rgba(0,0,0,0.7);">
         <div class="modal-content animate-pop-in" style="max-width: 500px; width: 90%; padding: 0; border-radius: 16px; overflow: hidden;">

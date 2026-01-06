@@ -122,9 +122,9 @@
         color: var(--p-primary);
       }
 
-      /* [新增] 圖片預覽容器樣式 */
+      /* [優化新增] 圖片預覽容器樣式 */
       #image-preview-container {
-        display: none;
+        display: none; /* 初始隱藏，由 JS 控制顯示 */
         margin-top: 12px;
         justify-content: center;
       }
@@ -136,13 +136,16 @@
         border-radius: var(--radius-md);
         overflow: hidden;
         border: 2px solid var(--p-primary-light);
-        box-shadow: var(--shadow-1);
+        box-shadow: var(--shadow-2);
+        background: #f8f9fa;
       }
 
       .preview-wrapper img {
         width: 100%;
         height: auto;
         display: block;
+        max-height: 300px;
+        object-fit: contain;
       }
 
       .preview-remove-btn {
@@ -161,6 +164,7 @@
         justify-content: center;
         transition: all 0.2s ease;
         z-index: 10;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
       }
 
       .preview-remove-btn:hover {
@@ -395,6 +399,7 @@
                   </div>
                 </div>
               </div>
+
               <div class="form-group full">
                 <label><i class="fas fa-camera"></i> 商品參考照片 (選填)</label>
                 <div class="upload-zone-wrapper">
