@@ -1,5 +1,5 @@
 // backend/controllers/furnitureController.js
-// V2026.1.10 - 旗艦終極版：完整保留 V2026.1.9 功能，強化數值驗證與錯誤處理，確保與 Schema 完美同步
+// V2026.1.11 - 旗艦終極修復版：完美整合 Cloudinary 雲端儲存，解決破圖問題，保留 V2026.1.10 全部數值驗證邏輯
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
@@ -16,8 +16,9 @@ const createFurnitureOrder = async (req, res) => {
       req.body;
     const userId = req.user.id;
 
-    // 接收來自 Multer 中間件處理後的檔案路徑 (對應 refImage 欄位)
-    const refImageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    // [核心修復] 接收來自 Cloudinary 的完整 HTTPS 網址 (req.file.path)
+    // 不再使用硬編碼的 "/uploads/" 路徑，避免與雲端網址衝突導致破圖
+    const refImageUrl = req.file ? req.file.path : null;
 
     if (!factoryName || !productName || !quantity || !priceRMB) {
       return res
@@ -93,7 +94,7 @@ const createFurnitureOrder = async (req, res) => {
         serviceFeeRate,
         totalAmountTWD,
         note,
-        refImageUrl, // 參考截圖路徑
+        refImageUrl, // 儲存 Cloudinary 完整圖片連結
         status: "PENDING",
       },
     });
@@ -166,10 +167,8 @@ const adminUpdateOrder = async (req, res) => {
     const { id } = req.params;
     const { status, adminRemark, invoiceUrl } = req.body;
 
-    // 處理管理員透過檔案上傳的正式發票檔案 (invoiceFile)
-    const uploadedInvoiceUrl = req.file
-      ? `/uploads/${req.file.filename}`
-      : invoiceUrl;
+    // [核心修復] 處理管理員透過 Cloudinary 上傳的正式發票檔案 (直接使用完整路徑)
+    const uploadedInvoiceUrl = req.file ? req.file.path : invoiceUrl;
 
     // 檢查訂單是否存在
     const existingOrder = await prisma.furnitureOrder.findUnique({

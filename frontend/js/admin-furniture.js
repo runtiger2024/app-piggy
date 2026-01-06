@@ -1,5 +1,5 @@
 // frontend/js/admin-furniture.js
-// V2026.1.9 - 終極修復版：修正截圖路徑前綴、整合 CRUD、批量操作與安全刪除機制
+// V2026.1.11 - 終極修復版：修正截圖路徑邏輯，完美相容 Cloudinary 雲端與本地路徑，確保處理彈窗圖片顯示正常
 
 document.addEventListener("DOMContentLoaded", () => {
   const adminToken = localStorage.getItem("admin_token");
@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 開啟訂單彈窗 (修正：解決圖片路徑導致破圖問題)
+   * 開啟訂單彈窗 (修正：智能判定 Cloudinary 路徑，解決破圖問題)
    */
   window.openOrderModal = function (orderStr) {
     try {
@@ -320,12 +320,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // [核心修正] 處理參考截圖顯示 (加上 API_BASE_URL 避免相對路徑破圖)
+      // [核心修正] 處理參考截圖顯示 (判定是否為 Cloudinary 的 HTTPS 網址)
       const imgDisplay = document.getElementById("modal-refImage-display");
       if (imgDisplay) {
         if (order.refImageUrl) {
-          // 拼接 API 基底網址，確保正確存取後端 uploads 目錄
-          const fullImgUrl = `${API_BASE_URL}${order.refImageUrl}`;
+          // 若路徑以 http 開頭則視為雲端網址，否則拼上 API 基底網址
+          const fullImgUrl = order.refImageUrl.startsWith("http")
+            ? order.refImageUrl
+            : `${API_BASE_URL}${order.refImageUrl}`;
+
           imgDisplay.innerHTML = `
             <div class="mt-2">
                 <span class="d-block small text-secondary mb-1">參考截圖：</span>

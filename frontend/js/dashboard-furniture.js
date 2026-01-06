@@ -1,5 +1,5 @@
 // frontend/js/dashboard-furniture.js
-// V2026.1.9 - 旗艦優化版：修正圖片路徑引用 (補上 API_BASE_URL)、整合商品網址與精準計算
+// V2026.1.11 - 旗艦終極修復版：完美相容 Cloudinary 雲端與本地路徑，徹底解決詳情彈窗破圖問題
 
 (function () {
   let procurementConfig = {
@@ -314,6 +314,7 @@
 
   /**
    * [詳情彈窗功能] 強化：補上 API_BASE_URL 修正破圖問題
+   * [最新優化] 自動判定 Cloudinary (HTTPS) 或本地路徑，防止二次拼接導致破圖
    */
   window.viewOrderDetail = function (id) {
     const order = cachedOrders.find((o) => o.id === id);
@@ -321,6 +322,14 @@
 
     const subtotalRMB = (order.priceRMB * order.quantity).toFixed(2);
     const serviceFeeRMB = (order.serviceFeeRMB || 0).toFixed(2);
+
+    // [核心修正] 判定圖片路徑是否已包含完整的雲端通訊協定 (http/https)
+    // 若為 Cloudinary 網址則直接使用，否則才拼上 API_BASE_URL
+    const displayImgUrl = order.refImageUrl
+      ? order.refImageUrl.startsWith("http")
+        ? order.refImageUrl
+        : `${API_BASE_URL}${order.refImageUrl}`
+      : null;
 
     const detailModalHtml = `
       <div id="order-detail-modal" class="modal-overlay" style="display: flex; z-index: 10001; background: rgba(0,0,0,0.7);">
@@ -370,12 +379,12 @@
               } x ${order.quantity} 件</p>
               
               ${
-                order.refImageUrl
+                displayImgUrl
                   ? `
               <div style="margin-top:12px;">
                 <span style="color:#666; font-size:0.85rem;">參考截圖:</span>
                 <div style="margin-top:5px; border-radius:8px; border:1px solid #ddd; overflow:hidden;">
-                    <img src="${API_BASE_URL}${order.refImageUrl}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open(this.src)">
+                    <img src="${displayImgUrl}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open(this.src)">
                 </div>
               </div>
               `
