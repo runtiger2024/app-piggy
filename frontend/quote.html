@@ -3,37 +3,74 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>小跑豬運費估價單</title>
+    <title>小跑豬運費估價單 - 官方線上核價</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+
     <link rel="stylesheet" href="css/modals-unified.css" />
+    <link rel="stylesheet" href="css/quote-rich.css" />
     <script src="js/styleLoader.js"></script>
   </head>
-  <body>
-    <div class="container">
-      <img src="assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+  <body class="quote-page">
+    <div class="quote-wrapper">
+      <header class="quote-header">
+        <div class="brand-info">
+          <img src="assets/logo.png" alt="小跑豬 LOGO" class="logo" />
+          <div class="brand-text">
+            <h1>小跑豬國際物流</h1>
+            <span>專業大型家具海運專線</span>
+          </div>
+        </div>
+        <div class="quote-badge">官方估價單</div>
+      </header>
 
-      <div id="loading-spinner">
-        <div class="spinner"></div>
-        <p>正在從後端載入估價單...</p>
-      </div>
+      <main class="quote-content">
+        <div id="loading-spinner" class="state-container">
+          <div class="spinner"></div>
+          <p>正在從雲端安全載入估價資料...</p>
+        </div>
 
-      <div
-        id="error-message"
-        class="alert alert-error"
-        style="display: none"
-      ></div>
+        <div
+          id="error-message"
+          class="alert alert-error"
+          style="display: none"
+        ></div>
 
-      <div id="results-container" style="display: none"></div>
+        <div
+          id="results-container"
+          class="results-grid"
+          style="display: none"
+        ></div>
+      </main>
 
-      <hr />
-      <a
-        href="index.html"
-        class="btn btn-primary"
-        style="text-decoration: none; text-align: center"
-      >
-        返回試算器
-      </a>
+      <footer class="quote-footer">
+        <div class="notice-box">
+          <h4><i class="fas fa-info-circle"></i> 重要提醒</h4>
+          <ul>
+            <li>此估價根據您提供的尺寸計算，實際費用以倉庫入庫測量為準。</li>
+            <li>海運運送時效約 14-21 個工作天，實際天數依航運狀況而定。</li>
+            <li>若貨物單件超過 100kg 或長度超過 300cm，將加收額外手續費。</li>
+            <li>
+              請確保台灣收貨端具備收貨條件，如需拆木架等服務請提前聯絡客服。
+            </li>
+          </ul>
+        </div>
+
+        <div class="action-group">
+          <a href="index.html" class="btn-back">
+            <i class="fas fa-redo"></i> 返回試算器
+          </a>
+          <button class="btn-print" onclick="window.print()">
+            <i class="fas fa-print"></i> 列印估價單
+          </button>
+        </div>
+      </footer>
     </div>
+
     <script src="js/apiConfig.js"></script>
     <script src="js/quote.js"></script>
   </body>

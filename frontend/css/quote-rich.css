@@ -1,0 +1,387 @@
+/* frontend/css/quote-rich.css */
+:root {
+  --primary-color: #ff6b01;
+  --secondary-color: #0056b3;
+  --bg-gray: #f8f9fa;
+  --text-dark: #333;
+  --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+body.quote-page {
+  background-color: #eff2f5;
+  font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+.quote-wrapper {
+  max-width: 900px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+/* Header 樣式 */
+.quote-header {
+  background: linear-gradient(135deg, #fff 0%, #fff5ed 100%);
+  padding: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #eee;
+}
+
+.brand-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.brand-info .logo {
+  height: 60px;
+}
+.brand-text h1 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--secondary-color);
+}
+.brand-text span {
+  font-size: 14px;
+  color: #888;
+}
+
+.quote-badge {
+  background: var(--primary-color);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+/* 商品卡片優化 */
+.result-detail-card {
+  background: white;
+  border: 1px solid #eef0f2;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  padding: 20px;
+  transition: transform 0.2s;
+}
+
+.result-detail-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 12px;
+  margin-bottom: 15px;
+}
+
+.detail-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #444;
+}
+
+/* 費用總結卡片 */
+.result-summary-card {
+  background: #2c3e50;
+  color: white;
+  border-radius: 12px;
+  padding: 30px;
+  margin-top: 30px;
+}
+
+.summary-total {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+  padding-top: 20px;
+  font-size: 32px;
+  text-align: right;
+  color: #ff9f43;
+  font-weight: 800;
+}
+
+.summary-total small {
+  font-size: 14px;
+  color: #bdc3c7;
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* 響應式 */
+@media (max-width: 600px) {
+  .quote-wrapper {
+    margin: 10px;
+    border-radius: 0;
+  }
+  .quote-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+}
+/* frontend/css/quote-rich.css */
+:root {
+  --primary-color: #ff6b01;
+  --secondary-color: #0056b3;
+  --bg-gray: #f8f9fa;
+  --text-dark: #333;
+  --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --notice-bg: #fff9f0;
+  --notice-border: #ff9f43;
+}
+
+body.quote-page {
+  background-color: #eff2f5;
+  font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+.quote-wrapper {
+  max-width: 900px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+/* --- Header 樣式 --- */
+.quote-header {
+  background: linear-gradient(135deg, #fff 0%, #fff5ed 100%);
+  padding: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #eee;
+}
+
+.brand-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.brand-info .logo {
+  height: 60px;
+}
+.brand-text h1 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--secondary-color);
+}
+.brand-text span {
+  font-size: 14px;
+  color: #888;
+}
+
+.quote-badge {
+  background: var(--primary-color);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+/* --- 商品卡片優化 --- */
+.result-detail-card {
+  background: white;
+  border: 1px solid #eef0f2;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  padding: 20px;
+  transition: transform 0.2s;
+}
+
+.result-detail-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 12px;
+  margin-bottom: 15px;
+}
+
+.detail-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #444;
+}
+
+/* --- 費用總結卡片 --- */
+.result-summary-card {
+  background: #2c3e50;
+  color: white;
+  border-radius: 12px;
+  padding: 30px;
+  margin-top: 30px;
+}
+
+.summary-total {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+  padding-top: 20px;
+  font-size: 32px;
+  text-align: right;
+  color: #ff9f43;
+  font-weight: 800;
+}
+
+.summary-total small {
+  font-size: 14px;
+  color: #bdc3c7;
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* --- [頁尾美化區塊 - 新增] --- */
+.quote-footer {
+  padding: 30px;
+  background-color: #fcfcfc;
+  border-top: 1px solid #eee;
+}
+
+/* 重要提醒區塊 */
+.notice-box {
+  background-color: var(--notice-bg);
+  border-left: 4px solid var(--notice-border);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.notice-box h4 {
+  margin: 0 0 12px 0;
+  color: #e67e22;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+}
+
+.notice-box ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: none;
+}
+
+.notice-box ul li {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.7;
+  position: relative;
+  margin-bottom: 6px;
+}
+
+/* 使用自定義清單圖示 */
+.notice-box ul li::before {
+  content: "\f058"; /* FontAwesome check-circle */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--notice-border);
+  position: absolute;
+  left: -22px;
+  font-size: 12px;
+}
+
+/* 按鈕群組 */
+.action-group {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.btn-back,
+.btn-print {
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+}
+
+/* 返回試算器按鈕 */
+.btn-back {
+  background-color: white;
+  color: #555;
+  border: 1px solid #ddd;
+}
+
+.btn-back:hover {
+  background-color: #f8f9fa;
+  border-color: #bbb;
+  color: var(--text-dark);
+}
+
+/* 列印估價單按鈕 */
+.btn-print {
+  background-color: var(--secondary-color);
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 86, 179, 0.2);
+}
+
+.btn-print:hover {
+  background-color: #004494;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 86, 179, 0.3);
+}
+
+/* --- 響應式調整 --- */
+@media (max-width: 600px) {
+  .quote-wrapper {
+    margin: 10px;
+    border-radius: 0;
+  }
+  .quote-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  .action-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-back,
+  .btn-print {
+    width: 100%;
+    justify-content: center;
+  }
+  .notice-box {
+    padding: 15px;
+  }
+}
+
+/* --- 列印優化 (隱藏按鈕) --- */
+@media print {
+  .action-group,
+  .quote-badge {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  .quote-wrapper {
+    box-shadow: none;
+    margin: 0;
+    max-width: 100%;
+  }
+}
