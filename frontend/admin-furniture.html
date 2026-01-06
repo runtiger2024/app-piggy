@@ -50,6 +50,14 @@
         width: 40px;
         text-align: center;
       }
+      /* 優化：採購參考區樣式 */
+      #admin-ref-info-section {
+        border-left: 4px solid var(--p-primary) !important;
+        transition: all 0.2s;
+      }
+      #admin-ref-info-section:hover {
+        background: #f1f8ff !important;
+      }
     </style>
   </head>
   <body>
@@ -266,6 +274,23 @@
                 </div>
               </div>
 
+              <div
+                id="admin-ref-info-section"
+                class="mb-4 p-3 border rounded"
+                style="background: #f8f9fa"
+              >
+                <label class="small font-weight-bold text-primary">
+                  <i class="fas fa-search-plus mr-1"></i> 採購人員參考資訊
+                  (網址與截圖)
+                </label>
+                <div id="modal-productUrl-display" class="mb-2"></div>
+                <div
+                  id="modal-refImage-display"
+                  class="text-center"
+                  style="max-width: 100%; overflow: hidden"
+                ></div>
+              </div>
+
               <div class="row mb-4">
                 <div class="col-md-4">
                   <label class="small font-weight-bold">人民幣單價 (¥)</label>
@@ -459,9 +484,21 @@
                 </div>
               </div>
 
+              <div class="form-group mb-3">
+                <label class="small font-weight-bold"
+                  >4. 商品參考連結 (選填)</label
+                >
+                <input
+                  type="url"
+                  id="create-productUrl"
+                  class="form-control"
+                  placeholder="請貼上淘寶/天貓/京東商品連結"
+                />
+              </div>
+
               <div class="row">
                 <div class="col-md-4 form-group mb-3">
-                  <label class="small font-weight-bold">4. 數量</label>
+                  <label class="small font-weight-bold">5. 數量</label>
                   <input
                     type="number"
                     id="create-quantity"
@@ -473,7 +510,7 @@
                 </div>
                 <div class="col-md-4 form-group mb-3">
                   <label class="small font-weight-bold"
-                    >5. 人民幣單價 (¥)</label
+                    >6. 人民幣單價 (¥)</label
                   >
                   <input
                     type="number"
@@ -484,7 +521,7 @@
                   />
                 </div>
                 <div class="col-md-4 form-group mb-3">
-                  <label class="small font-weight-bold">6. 匯率</label>
+                  <label class="small font-weight-bold">7. 匯率</label>
                   <input
                     type="number"
                     id="create-exchangeRate"

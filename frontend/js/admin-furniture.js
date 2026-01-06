@@ -1,5 +1,5 @@
 // frontend/js/admin-furniture.js
-// V2026.1.7 - 終極進化版：整合 CRUD、多選批量操作、安全刪除機制與會員關聯
+// V2026.1.8 - 終極進化版：整合商品網址顯示、參考圖預覽、CRUD、批量操作與安全刪除機制
 
 document.addEventListener("DOMContentLoaded", () => {
   const adminToken = localStorage.getItem("admin_token");
@@ -273,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 開啟訂單彈窗
+   * 開啟訂單彈窗 (優化：顯示商品網址與參考圖)
    */
   window.openOrderModal = function (orderStr) {
     try {
@@ -303,6 +303,38 @@ document.addEventListener("DOMContentLoaded", () => {
       setVal("modal-exchangeRate", order.exchangeRate);
       setVal("modal-serviceRate", order.serviceRate || 5);
       setVal("modal-adminNote", order.adminNote || "");
+
+      // [優化新增] 處理商品網址顯示
+      const urlDisplay = document.getElementById("modal-productUrl-display");
+      if (urlDisplay) {
+        if (order.productUrl) {
+          urlDisplay.innerHTML = `
+            <div class="alert alert-info py-2 px-3 mb-0">
+                <i class="fas fa-link"></i> 商品連結：
+                <a href="${order.productUrl}" target="_blank" class="font-weight-bold text-truncate d-inline-block" style="max-width: 80%; vertical-align: bottom;">
+                    ${order.productUrl}
+                </a>
+            </div>`;
+        } else {
+          urlDisplay.innerHTML =
+            '<span class="text-muted small">客戶未提供商品網址</span>';
+        }
+      }
+
+      // [優化新增] 處理參考截圖顯示
+      const imgDisplay = document.getElementById("modal-refImage-display");
+      if (imgDisplay) {
+        if (order.refImageUrl) {
+          imgDisplay.innerHTML = `
+            <div class="mt-2">
+                <span class="d-block small text-secondary mb-1">參考截圖：</span>
+                <img src="${order.refImageUrl}" class="img-thumbnail" style="cursor: zoom-in; max-height: 250px;" onclick="window.open(this.src)">
+            </div>`;
+        } else {
+          imgDisplay.innerHTML =
+            '<span class="text-muted small">客戶未上傳參考圖片</span>';
+        }
+      }
 
       calculateFees();
       modal.style.display = "flex";
@@ -368,7 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * [新增] 處理手動建單提交
+   * [新增] 處理手動建單提交 (優化：包含 productUrl)
    */
   async function handleCreateSubmit(e) {
     e.preventDefault();
@@ -377,6 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
       userId: document.getElementById("create-userId").value,
       factoryName: document.getElementById("create-factoryName").value,
       productName: document.getElementById("create-productName").value,
+      productUrl: document.getElementById("create-productUrl")?.value || "", // [新增]
       quantity: document.getElementById("create-quantity").value,
       priceRMB: document.getElementById("create-priceRMB").value,
       exchangeRate: document.getElementById("create-exchangeRate").value,

@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// V15.2 - 旗艦完整版：新增家具代採購參考圖欄位 (解決 PrismaClientValidationError)
+// V15.3 - 旗艦完整版：新增家具代採購商品網址欄位 (productUrl) 以優化採購精準度
 
 generator client {
   provider = "prisma-client-js"
@@ -248,6 +248,10 @@ model FurnitureOrder {
   // 代採購資訊
   factoryName     String
   productName     String
+  
+  // [新增] 商品參考網址：用於存放商品在淘寶、天貓或工廠官網的連結
+  productUrl      String?  @db.Text
+
   quantity        Int
   priceRMB        Float
   
@@ -262,7 +266,7 @@ model FurnitureOrder {
   note            String?  @db.Text
   adminRemark     String?  @db.Text
 
-  // [修正新增] 參考截圖欄位：用於存放客戶上傳的商品或報價單縮圖路徑
+  // 參考截圖欄位：用於存放客戶上傳的商品或報價單縮圖路徑
   refImageUrl     String?  @db.Text
 
   invoiceUrl      String?  @db.Text // 管理員提供的正式發票網址

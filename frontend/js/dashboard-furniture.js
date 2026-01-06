@@ -1,5 +1,5 @@
 // frontend/js/dashboard-furniture.js
-// V2026.1.7 - 修正圖片預覽 ID 匹配、保留旗艦版計算與 FormData 邏輯
+// V2026.1.8 - 旗艦優化版：整合商品參考網址 (Product URL)、支援圖片上傳與精準計算
 
 (function () {
   let procurementConfig = {
@@ -31,7 +31,7 @@
       }
     });
 
-    // [新增] 圖片上傳監聽 (修正: 確保選取後觸發 handleFileSelect)
+    // 圖片上傳監聽
     const fileInput = document.getElementById("furniture-ref-image");
     if (fileInput) {
       fileInput.addEventListener("change", handleFileSelect);
@@ -49,16 +49,14 @@
 
   /**
    * [核心功能] 處理檔案選取與預覽顯示
-   * 修正: 將 ID 調整為與 HTML 一致的 ref-preview-img 與 upload-label-trigger
    */
   function handleFileSelect(e) {
     const file = e.target.files[0];
     const previewContainer = document.getElementById("image-preview-container");
-    const previewImg = document.getElementById("ref-preview-img"); // 修正
-    const uploadLabel = document.getElementById("upload-label-trigger"); // 修正
+    const previewImg = document.getElementById("ref-preview-img");
+    const uploadLabel = document.getElementById("upload-label-trigger");
 
     if (file) {
-      // 檢查是否為圖片
       if (!file.type.startsWith("image/")) {
         alert("請上傳圖片格式檔案");
         return;
@@ -67,8 +65,8 @@
       const reader = new FileReader();
       reader.onload = function (event) {
         if (previewImg) previewImg.src = event.target.result;
-        if (previewContainer) previewContainer.style.display = "flex"; // 顯示容器
-        if (uploadLabel) uploadLabel.style.display = "none"; // 隱藏原本的上傳按鈕
+        if (previewContainer) previewContainer.style.display = "flex";
+        if (uploadLabel) uploadLabel.style.display = "none";
       };
       reader.readAsDataURL(file);
     }
@@ -76,14 +74,13 @@
 
   /**
    * [核心功能] 清除預覽縮圖
-   * 修正: 將 ID 調整為與 HTML 一致
    */
   window.clearFurnitureImage = function () {
     const fileInput = document.getElementById("furniture-ref-image");
     const previewContainer = document.getElementById("image-preview-container");
     const uploadLabel = document.getElementById("upload-label-trigger");
 
-    if (fileInput) fileInput.value = ""; // 清空檔案
+    if (fileInput) fileInput.value = "";
     if (previewContainer) previewContainer.style.display = "none";
     if (uploadLabel) uploadLabel.style.display = "flex";
   };
@@ -165,7 +162,7 @@
   }
 
   /**
-   * [修改功能] 升級為支援檔案上傳的 FormData 模式
+   * [核心功能] 提交代採購申請 (包含網址與檔案)
    */
   async function handleFormSubmit(e) {
     e.preventDefault();
@@ -183,6 +180,13 @@
       "productName",
       document.getElementById("productName").value.trim()
     );
+
+    // [新增] 獲取並傳送商品連結
+    const productUrlInput = document.getElementById("productUrl");
+    if (productUrlInput) {
+      formData.append("productUrl", productUrlInput.value.trim());
+    }
+
     formData.append(
       "quantity",
       parseInt(document.getElementById("quantity").value)
@@ -195,14 +199,13 @@
 
     const fileInput = document.getElementById("furniture-ref-image");
     if (fileInput && fileInput.files[0]) {
-      formData.append("refImage", fileInput.files[0]); // 加入檔案
+      formData.append("refImage", fileInput.files[0]);
     }
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/furniture/apply`, {
         method: "POST",
         headers: {
-          // 注意：FormData 提交時不需設定 Content-Type
           Authorization: `Bearer ${
             localStorage.getItem("token") || window.dashboardToken
           }`,
@@ -213,7 +216,7 @@
       if (data.success) {
         showSubmissionSuccessModal();
         document.getElementById("furniture-form").reset();
-        clearFurnitureImage(); // 重設圖片預覽
+        clearFurnitureImage();
         calculateTotal();
         await loadFurnitureHistory();
       } else {
@@ -310,7 +313,7 @@
   }
 
   /**
-   * [詳情彈窗功能] 強化：顯示用戶上傳的參考圖片
+   * [詳情彈窗功能] 強化：顯示商品連結與參考截圖
    */
   window.viewOrderDetail = function (id) {
     const order = cachedOrders.find((o) => o.id === id);
@@ -348,6 +351,20 @@
               <p style="margin: 5px 0;"><strong>品名：</strong>${
                 order.productName
               }</p>
+              
+              ${
+                order.productUrl
+                  ? `
+              <p style="margin: 5px 0;">
+                <strong>商品網址：</strong>
+                <a href="${order.productUrl}" target="_blank" style="color: var(--p-primary); text-decoration: underline; word-break: break-all;">
+                  <i class="fas fa-external-link-alt"></i> 開啟商品頁面
+                </a>
+              </p>
+              `
+                  : ""
+              }
+
               <p style="margin: 5px 0;"><strong>單價：</strong>¥ ${
                 order.priceRMB
               } x ${order.quantity} 件</p>

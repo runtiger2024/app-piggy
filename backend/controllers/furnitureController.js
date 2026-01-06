@@ -1,5 +1,5 @@
 // backend/controllers/furnitureController.js
-// V2026.1.8 - 旗艦完整版：支援會員參考圖、管理員發票上傳，並與資料庫 Schema 完全同步
+// V2026.1.9 - 旗艦優化版：新增商品參考網址 (productUrl)，支援會員參考圖、管理員發票上傳，並與 Schema 完全同步
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
@@ -11,7 +11,9 @@ const createNotification = require("../utils/createNotification.js");
  */
 const createFurnitureOrder = async (req, res) => {
   try {
-    const { factoryName, productName, quantity, priceRMB, note } = req.body;
+    // [優化新增] 接收來自前端的 productUrl (商品參考網址)
+    const { factoryName, productName, quantity, priceRMB, note, productUrl } =
+      req.body;
     const userId = req.user.id;
 
     // [核心優化] 接收來自 Multer 中間件處理後的檔案路徑
@@ -73,6 +75,7 @@ const createFurnitureOrder = async (req, res) => {
         userId,
         factoryName,
         productName,
+        productUrl, // [同步新增] 儲存商品參考網址
         quantity: parseInt(quantity),
         priceRMB: parseFloat(priceRMB),
         // 儲存當時的費率與計算結果
@@ -81,7 +84,7 @@ const createFurnitureOrder = async (req, res) => {
         serviceFeeRate,
         totalAmountTWD,
         note,
-        refImageUrl, // 這裡已在 Schema V15.2 中定義，不會再報錯 Unknown argument
+        refImageUrl, // 已在 Schema 中定義
         status: "PENDING",
       },
     });
@@ -152,7 +155,7 @@ const adminUpdateOrder = async (req, res) => {
     const { id } = req.params;
     const { status, adminRemark, invoiceUrl } = req.body;
 
-    // [優化] 處理管理員上傳的正式發票檔案 (若路由有配置 upload.single("invoiceFile"))
+    // [優化] 處理管理員上傳的正式發票檔案
     const uploadedInvoiceUrl = req.file
       ? `/uploads/${req.file.filename}`
       : invoiceUrl;
