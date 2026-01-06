@@ -99,6 +99,15 @@ document.addEventListener("DOMContentLoaded", () => {
       btnBulkDelete.addEventListener("click", performBulkDelete);
     }
 
+    // 退回按鈕監聽 (修正點擊無作用問題)
+    const btnReturn = document.getElementById("btn-return-shipment");
+    if (btnReturn) {
+      btnReturn.addEventListener("click", () => {
+        const id = document.getElementById("edit-shipment-id").value;
+        if (id) window.handleReturnShipment(id);
+      });
+    }
+
     // 點擊 Modal 外部遮罩關閉
     window.onclick = function (event) {
       const sm = document.getElementById("shipment-modal");
@@ -288,12 +297,12 @@ document.addEventListener("DOMContentLoaded", () => {
       safeSetText("m-user", s.user?.name || s.user?.email);
       safeSetText("m-piggy-id", s.user?.piggyId ? `(${s.user.piggyId})` : "");
 
-      // 2. [核心修復] 渲染「包裹詳細清單」表格內容
+      // 2. [重點修復] 渲染「包裹詳細清單」表格內容 (修正照片、單號、規格、費用不顯示的問題)
       const listBody = document.getElementById("m-packages-list-body");
       if (listBody) {
         listBody.innerHTML = (s.packages || [])
           .map((p) => {
-            // A. 照片處理 (解析 productImages 陣列)
+            // A. 照片渲染：自動判斷路徑開頭
             let imgHtml = '<i class="fas fa-box-open text-muted fa-2x"></i>';
             if (p.productImages && p.productImages.length > 0) {
               const url = p.productImages[0].startsWith("http")
@@ -302,14 +311,14 @@ document.addEventListener("DOMContentLoaded", () => {
               imgHtml = `<img src="${url}" class="pkg-thumb" onclick="window.open('${url}', '_blank')">`;
             }
 
-            // B. 規格處理 (解析 arrivedBoxesJson)
+            // B. 規格渲染：遍歷 arrivedBoxesJson 單箱數據
             const boxes = p.arrivedBoxesJson || [];
             const specHtml =
               boxes.length > 0
                 ? boxes
                     .map(
                       (box, idx) => `
-                  <div class="box-spec-tag">
+                  <div class="box-spec-tag" style="background:#e9ecef; padding:2px 6px; border-radius:3px; margin:2px; font-size:11px; display:inline-block;">
                     箱${idx + 1}: ${box.length}*${box.width}*${
                         box.height
                       }cm / ${box.weight}kg
@@ -319,22 +328,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     .join("")
                 : `<span class="text-muted">未有測量數據</span>`;
 
-            // C. 購買連結處理
+            // C. 購買連結渲染
             const linkHtml = p.productUrl
-              ? `<a href="${p.productUrl}" target="_blank" class="btn btn-xs btn-link text-primary"><i class="fas fa-external-link-alt"></i> 查看</a>`
+              ? `<a href="${p.productUrl}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px;"><i class="fas fa-external-link-alt"></i> 查看</a>`
               : '<span class="text-muted">無連結</span>';
 
             return `
               <tr>
                 <td class="text-center">${imgHtml}</td>
                 <td>
-                  <div class="font-weight-bold">${
+                  <div class="font-weight-bold" style="font-size:13px;">${
                     p.productName || "未命名商品"
                   }</div>
                   <small class="text-muted">${p.trackingNumber}</small>
                 </td>
                 <td class="text-center">${linkHtml}</td>
-                <td>${specHtml}</td>
+                <td style="font-size:12px;">${specHtml}</td>
                 <td class="text-danger font-weight-bold">NT$ ${Math.round(
                   p.totalCalculatedFee || 0
                 )}</td>
@@ -359,7 +368,7 @@ document.addEventListener("DOMContentLoaded", () => {
           : "";
       }
 
-      // 4. [新功能] 自動切換「管理員審核區塊」顯示狀態
+      // 4. 自動顯示/隱藏「管理員審核區塊」
       const auditSection = document.getElementById("audit-action-section");
       if (auditSection) {
         if (s.status === "AWAITING_REVIEW") {
@@ -371,7 +380,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // 5. 改價鎖定邏輯
+      // 5. 發票鎖定邏輯
       const costInput = document.getElementById("m-cost");
       if (costInput) {
         const isIssued = s.invoiceStatus === "ISSUED" && s.invoiceNumber;
@@ -379,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
         costInput.style.backgroundColor = isIssued ? "#f8f9fa" : "";
       }
 
-      // 6. 付款憑證快照
+      // 6. 付款憑證快照 (支援 Cloudinary HTTPS)
       const proofDiv = document.getElementById("m-proof");
       if (proofDiv) {
         if (s.paymentProof === "WALLET_PAY") {
@@ -395,6 +404,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // 7. 退回按鈕顯示邏輯
+      const btnReturn = document.getElementById("btn-return-shipment");
+      if (btnReturn) {
+        btnReturn.style.display =
+          s.status !== "CANCELLED" && s.status !== "RETURNED"
+            ? "inline-block"
+            : "none";
+      }
+
       renderInvoiceSection(s);
       modal.style.display = "flex";
     } catch (err) {
@@ -402,7 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // [新功能] 審核通過操作
+  // [新增] 審核通過操作函式
   window.approveShipment = async function () {
     const id = document.getElementById("edit-shipment-id").value;
     const totalCost = document.getElementById("m-audit-cost").value;
@@ -414,7 +432,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/shipments/${id}/approve`,
         {
-          method: "POST",
+          method: "PUT", // 根據後端路由定義使用 PUT
           headers: {
             Authorization: `Bearer ${adminToken}`,
             "Content-Type": "application/json",
@@ -424,7 +442,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       const data = await res.json();
       if (res.ok) {
-        alert("審核通過！已更新狀態並發送付款通知。");
+        alert("審核通過！訂單已轉為待付款狀態。");
         document.getElementById("shipment-modal").style.display = "none";
         loadShipments();
       } else {
@@ -447,6 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
         '<div class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> 解析數據中...</div>';
 
     try {
+      // 呼叫單一詳情 API
       const res = await fetch(
         `${API_BASE_URL}/api/admin/shipments/${id}/detail`,
         {
@@ -457,7 +476,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) throw new Error(data.message);
 
       const s = data.shipment;
-      // 這裡假設後端 detail API 會返回計算後的 costBreakdown (若無，則根據 arrivedBoxes 簡單渲染)
       safeSetText("sd-id", s.id.toUpperCase());
       safeSetText("sd-status", s.status);
       safeSetText("sd-date", new Date(s.createdAt).toLocaleString());
@@ -466,19 +484,19 @@ document.addEventListener("DOMContentLoaded", () => {
       safeSetText("sd-address", s.shippingAddress);
       safeSetText("sd-trackingTW", s.trackingNumberTW || "尚未產生");
 
-      // 簡單物理統計 (此處範例，實際可由後端提供 physicalStats)
+      // 物理統計計算
       let totalW = 0;
       s.packages.forEach((p) => {
         const boxes = p.arrivedBoxesJson || [];
         boxes.forEach((b) => (totalW += parseFloat(b.weight || 0)));
       });
       safeSetText("sd-total-weight", totalW.toFixed(2));
-      safeSetText("sd-total-cbm", (totalW / 200).toFixed(2)); // 示例換算
-      safeSetText("sd-total-cai", (totalW / 5).toFixed(1)); // 示例換算
+      safeSetText("sd-total-cbm", (totalW / 200).toFixed(2));
+      safeSetText("sd-total-cai", (totalW / 5).toFixed(1));
 
       if (feeContainer) {
         feeContainer.innerHTML =
-          '<div class="alert alert-success m-3">深度稽核數據已同步至管理界面，請參閱各包裹明細。</div>';
+          '<div class="alert alert-success m-3"><i class="fas fa-check"></i> 深度稽核數據已同步，請參閱包裹清單。</div>';
       }
     } catch (err) {
       if (feeContainer)
@@ -486,27 +504,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // --- [其餘管理功能一字不漏保留] ---
-
+  // --- [Amego 發票系統] ---
   function renderInvoiceSection(s) {
     const section = document.getElementById("invoice-management-section");
     if (!section) return;
     let html = `<h5 class="mt-4 mb-2" style="font-size:14px; border-left:3px solid #007bff; padding-left:8px;">發票管理 (Amego 系統)</h5>`;
     if (s.invoiceStatus === "ISSUED" && s.invoiceNumber) {
-      html += `<div class="bg-success text-white p-2 rounded d-flex justify-content-between"><span>已開立: ${s.invoiceNumber}</span><button type="button" class="btn btn-dark btn-sm" onclick="window.handleVoidInvoice('${s.id}', '${s.invoiceNumber}')">作廢發票</button></div>`;
+      html += `<div class="bg-success text-white p-2 rounded d-flex justify-content-between align-items-center"><span>已開立: ${s.invoiceNumber}</span><button type="button" class="btn btn-dark btn-sm" onclick="window.handleVoidInvoice('${s.id}', '${s.invoiceNumber}')">作廢發票</button></div>`;
     } else if (s.invoiceStatus === "VOID") {
-      html += `<div class="alert alert-danger py-2 small">發票已作廢 (${s.invoiceNumber})</div>`;
+      html += `<div class="alert alert-danger py-2 small m-0"><i class="fas fa-ban"></i> 發票已作廢 (${s.invoiceNumber})</div>`;
     } else {
       html +=
         s.paymentProof === "WALLET_PAY"
-          ? `<div class="alert alert-warning py-2 small">錢包訂單：已於儲值時開立。</div>`
+          ? `<div class="alert alert-warning py-2 small m-0"><i class="fas fa-info-circle"></i> 錢包訂單：發票已於儲值時開立。</div>`
           : `<div class="border p-2 rounded d-flex justify-content-between align-items-center"><span>尚未開立電子發票</span><button type="button" class="btn btn-success btn-sm" onclick="window.handleIssueInvoice('${s.id}')">立即開立</button></div>`;
     }
     section.innerHTML = html;
   }
 
   window.handleIssueInvoice = async function (id) {
-    if (!confirm("確定要申請開立發票嗎？")) return;
+    if (!confirm("確定要向 Amego 系統申請開立發票嗎？")) return;
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/shipments/${id}/invoice/issue`,
@@ -530,7 +547,10 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.handleVoidInvoice = async function (id, invNum) {
-    const reason = prompt(`確定作廢發票 ${invNum}？請輸入原因：`, "訂單異動");
+    const reason = prompt(
+      `確定要作廢發票 ${invNum} 嗎？請輸入原因：`,
+      "訂單取消/內容異動"
+    );
     if (!reason) return;
     try {
       const res = await fetch(
@@ -545,15 +565,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       );
       if (res.ok) {
-        alert("發票已作廢");
+        alert("發票已作廢，金額限制已解除。");
         loadShipments();
         document.getElementById("shipment-modal").style.display = "none";
+      } else {
+        const d = await res.json();
+        alert(d.message);
       }
     } catch (e) {
       alert("API 異常");
     }
   };
 
+  // --- [基礎功能操作] ---
   async function handleUpdate(e) {
     e.preventDefault();
     const id = document.getElementById("edit-shipment-id").value;
@@ -564,8 +588,7 @@ document.addEventListener("DOMContentLoaded", () => {
       trackingNumberTW: document.getElementById("m-tracking-tw").value,
       taxId: document.getElementById("m-tax-id").value.trim(),
       invoiceTitle: document.getElementById("m-invoice-title").value.trim(),
-      loadingDate:
-        document.getElementById("m-loading-date")?.value || undefined,
+      loadingDate: document.getElementById("m-loading-date")?.value || null,
       note: document.getElementById("m-note").value,
     };
     btn.disabled = true;
@@ -579,22 +602,22 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(data),
       });
       if (res.ok) {
-        alert("更新成功");
+        alert("資料更新成功");
         document.getElementById("shipment-modal").style.display = "none";
         loadShipments();
       } else {
         const d = await res.json();
-        alert(d.message);
+        alert("更新失敗：" + d.message);
       }
     } catch (e) {
-      alert("錯誤");
+      alert("連線錯誤");
     } finally {
       btn.disabled = false;
     }
   }
 
   window.impersonateUser = async function (userId, name) {
-    if (!confirm(`確定模擬登入「${name}」？`)) return;
+    if (!confirm(`安全警告：即將以「${name}」身份模擬登入會員前台？`)) return;
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/users/${userId}/impersonate`,
@@ -613,7 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
             win.location.href = "dashboard.html";
           }
         }, 600);
-      } else alert(data.message);
+      } else alert("模擬失敗：" + data.message);
     } catch (e) {
       alert("請求出錯");
     }
@@ -632,7 +655,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("adjust-new-price").value
     );
     const reason = document.getElementById("adjust-reason").value;
-    if (isNaN(newPrice) || !reason) return alert("請填寫金額與原因");
+    if (isNaN(newPrice) || !reason)
+      return alert("請填寫有效金額與改價原因以便稽核");
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/shipments/${id}/price`,
@@ -646,7 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       );
       if (res.ok) {
-        alert("調整成功");
+        alert("調整成功！系統已完成多退少補邏輯。");
         document.getElementById("adjust-price-modal").style.display = "none";
         loadShipments();
       } else {
@@ -654,10 +678,11 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(d.message);
       }
     } catch (e) {
-      alert("失敗");
+      alert("執行改價出錯");
     }
   };
 
+  // --- [批量處理與全選] ---
   function toggleSelection(id, checked) {
     if (checked) selectedIds.add(id);
     else selectedIds.delete(id);
@@ -678,7 +703,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function performBulkAction(status) {
-    if (!confirm(`確定將選中的筆數改為已收款？`)) return;
+    if (!confirm(`確定將選中的 ${selectedIds.size} 筆訂單改為 ${status} 嗎？`))
+      return;
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/shipments/bulk-status`,
@@ -692,8 +718,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       );
       if (res.ok) {
-        alert("批量操作成功");
+        alert("批量更新成功");
         loadShipments();
+      } else {
+        const d = await res.json();
+        alert(d.message);
       }
     } catch (e) {
       alert("請求錯誤");
@@ -701,7 +730,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function performBulkDelete() {
-    if (prompt("輸入 DELETE 確認永久刪除：") !== "DELETE") return;
+    if (
+      prompt("【警告】這將釋放包裹並永久刪除單據。請輸入 DELETE 確認：") !==
+      "DELETE"
+    )
+      return;
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/shipments/bulk-delete`,
@@ -715,11 +748,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       );
       if (res.ok) {
-        alert("已刪除");
+        alert("批量刪除完成");
         loadShipments();
       }
     } catch (e) {
-      alert("連線錯誤");
+      alert("刪除請求失敗");
     }
   }
 
@@ -728,3 +761,38 @@ document.addEventListener("DOMContentLoaded", () => {
     if (id) window.open(`shipment-print.html?id=${id}`, "_blank");
   };
 });
+
+// --- [全域退回函式] ---
+window.handleReturnShipment = async function (id) {
+  const reason = prompt(
+    "請輸入退回原因（客戶在前台可見）：",
+    "資料不齊全，請修正後重新提交"
+  );
+  if (reason === null) return;
+
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/admin/shipments/${id}/reject`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ returnReason: reason }),
+      }
+    );
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("訂單已成功退回，包裹已釋放回入庫狀態。");
+      document.getElementById("shipment-modal").style.display = "none";
+      // 因為函式在 DOMContentLoaded 外，需手動調用 location.reload 或確保 loadShipments 全域可用
+      location.reload();
+    } else {
+      alert("退回失敗：" + (data.message || "未知錯誤"));
+    }
+  } catch (e) {
+    alert("伺服器連線異常");
+  }
+};
