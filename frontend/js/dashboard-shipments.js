@@ -3,7 +3,7 @@
 // [New] 修復「常用地址」按鈕聯動邏輯，確保正確開啟收件人選擇器
 // [Optimization] 整合費用明細、傢俱類型顯示、超重警告與一鍵複製
 // [Fixed] 解決銀行轉帳憑證上傳 404 錯誤 (修正 API 路徑與 PUT 方法)
-// [Stability] 增加訂單詳情載入安全檢查與錯誤追蹤日誌
+// [Added] 新增憑證上傳時的發票資訊聯動與強制驗證邏輯
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
@@ -733,19 +733,45 @@ window.copyText = function (elementId) {
   });
 };
 
-// 銀行轉帳上傳憑證修復
+/**
+ * [新增] 監聽統編輸入邏輯
+ */
+window.handleTaxIdChange = function (input) {
+  const star = document.getElementById("title-required-star");
+  if (star) {
+    star.style.display = input.value.trim().length > 0 ? "inline" : "none";
+  }
+};
+
+// 銀行轉帳上傳憑證修復 (整合發票資訊與驗證)
 window.submitBankProof = async function () {
   const shipmentId = window.lastCreatedShipmentId;
   const fileInput = document.getElementById("bank-transfer-proof");
   const file = fileInput ? fileInput.files[0] : null;
 
+  // [新增] 獲取發票資訊
+  const taxId = document.getElementById("bank-tax-id")?.value.trim() || "";
+  const invoiceTitle =
+    document.getElementById("bank-invoice-title")?.value.trim() || "";
+
   if (!shipmentId || !file) return alert("資訊不完整，請選擇照片");
+
+  // [新增] 強制驗證邏輯：填寫統編時，抬頭為必填
+  if (taxId.length > 0 && invoiceTitle.length === 0) {
+    alert("填寫統一編號時，公司抬頭為必填項目");
+    const titleInput = document.getElementById("bank-invoice-title");
+    if (titleInput) titleInput.focus();
+    return;
+  }
 
   const btn = document.getElementById("btn-bank-submit-proof");
   if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
 
   const fd = new FormData();
   fd.append("paymentProof", file); // 與後端 upload.single("paymentProof") 一致
+  // [新增] 附加發票資訊至 FormData
+  fd.append("taxId", taxId);
+  fd.append("invoiceTitle", invoiceTitle);
 
   try {
     // [重要修復] API 路徑與 PUT 方法
@@ -759,7 +785,7 @@ window.submitBankProof = async function () {
     );
 
     if (res.ok) {
-      alert("憑證上傳成功！");
+      alert("憑證與發票資訊上傳成功！");
       document.getElementById("bank-info-modal").style.display = "none";
       window.loadMyShipments();
     } else {
@@ -795,9 +821,20 @@ window.resetBankProofUpload = function () {
   const input = document.getElementById("bank-transfer-proof");
   const container = document.getElementById("bank-proof-preview-container");
   const label = document.getElementById("bank-proof-label");
+
+  // [新增] 重置發票欄位
+  const taxInput = document.getElementById("bank-tax-id");
+  const titleInput = document.getElementById("bank-invoice-title");
+  const star = document.getElementById("title-required-star");
+
   if (input) input.value = "";
   if (container) container.style.display = "none";
   if (label) label.style.display = "flex";
+
+  // [新增] 清空輸入值與重置必填標記
+  if (taxInput) taxInput.value = "";
+  if (titleInput) titleInput.value = "";
+  if (star) star.style.display = "none";
 };
 
 window.openUploadProof = function (id) {

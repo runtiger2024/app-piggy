@@ -108,6 +108,74 @@
         </div>
       </div>
 
+      <div
+        class="invoice-info-section"
+        style="
+          margin-bottom: 20px;
+          padding: 15px;
+          background: #fff9f0;
+          border-radius: 8px;
+          border: 1px solid #ffe8cc;
+        "
+      >
+        <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #e67e22">
+          <i class="fas fa-file-invoice"></i> 發票開立資訊 (選填)
+        </h4>
+        <div class="form-group" style="margin-bottom: 10px">
+          <label
+            style="
+              font-size: 13px;
+              color: #666;
+              display: block;
+              margin-bottom: 4px;
+            "
+            >統一編號</label
+          >
+          <input
+            type="text"
+            id="bank-tax-id"
+            class="form-control"
+            placeholder="若需開立統編請在此填寫"
+            maxlength="8"
+            oninput="handleTaxIdChange(this)"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+            "
+          />
+        </div>
+        <div class="form-group">
+          <label
+            id="label-invoice-title"
+            style="
+              font-size: 13px;
+              color: #666;
+              display: block;
+              margin-bottom: 4px;
+            "
+          >
+            公司抬頭
+            <span id="title-required-star" style="color: red; display: none"
+              >* 必填</span
+            >
+          </label>
+          <input
+            type="text"
+            id="bank-invoice-title"
+            class="form-control"
+            placeholder="填寫統編時，公司抬頭為必填"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+            "
+          />
+        </div>
+      </div>
+
       <div class="form-group">
         <label
           style="
@@ -256,6 +324,18 @@
 
 <script>
   /**
+   * [新增] 監聽統編輸入邏輯
+   */
+  function handleTaxIdChange(input) {
+    const star = document.getElementById("title-required-star");
+    if (input.value.trim().length > 0) {
+      star.style.display = "inline";
+    } else {
+      star.style.display = "none";
+    }
+  }
+
+  /**
    * 圖片預覽處理邏輯
    */
   function handleBankProofPreview(input) {
@@ -292,35 +372,52 @@
   }
 
   /**
-   * 提交憑證邏輯
+   * 提交憑證邏輯 (含統編與抬頭驗證)
    */
   async function submitBankProof() {
     const shipmentId = window.lastCreatedShipmentId; // 抓取剛建立的單號
     const fileInput = document.getElementById("bank-transfer-proof");
     const file = fileInput.files[0];
 
+    // [新增] 抓取發票資訊
+    const taxId = document.getElementById("bank-tax-id").value.trim();
+    const invoiceTitle = document
+      .getElementById("bank-invoice-title")
+      .value.trim();
+
     if (!shipmentId) return alert("找不到對應訂單");
     if (!file) return alert("請先選擇照片");
+
+    // [新增] 強制驗證邏輯：填寫統編時，抬頭為必填
+    if (taxId.length > 0 && invoiceTitle.length === 0) {
+      alert("填寫統一編號時，公司抬頭為必填項目");
+      document.getElementById("bank-invoice-title").focus();
+      return;
+    }
 
     const btn = document.getElementById("btn-bank-submit-proof");
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
 
     const fd = new FormData();
-    fd.append("proof", file);
+    // 注意：根據後端 shipmentController.js 的定義，欄位名稱應為 "paymentProof"
+    fd.append("paymentProof", file);
+    fd.append("taxId", taxId);
+    fd.append("invoiceTitle", invoiceTitle);
 
     try {
+      // 根據 dashboard-shipments.js 的修復，路徑應為 /payment 並使用 PUT 方法以確保穩定
       const res = await fetch(
-        `${API_BASE_URL}/api/shipments/${shipmentId}/upload-proof`,
+        `${API_BASE_URL}/api/shipments/${shipmentId}/payment`,
         {
-          method: "POST",
+          method: "PUT",
           headers: { Authorization: `Bearer ${window.dashboardToken}` },
           body: fd,
         }
       );
 
       if (res.ok) {
-        alert("憑證上傳成功！管理員將儘速審核。");
+        alert("憑證與發票資訊上傳成功！管理員將儘速審核。");
         document.getElementById("bank-info-modal").style.display = "none";
         if (typeof window.loadMyShipments === "function")
           window.loadMyShipments();
