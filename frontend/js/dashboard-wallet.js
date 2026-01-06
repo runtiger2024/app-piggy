@@ -1,6 +1,6 @@
 /**
  * dashboard-wallet.js
- * V30.0_Enhanced - 旗艦優化版 (整合完整功能與卡片 UI)
+ * V31.0_Enhanced_Preview - 旗艦優化預覽版 (整合完整功能、卡片 UI 與憑證預覽)
  */
 
 window.rawTransactions = []; // 快取數據供過濾使用
@@ -228,6 +228,12 @@ window.openDepositModal = function () {
 
   if (form) form.reset();
 
+  // --- 新增：開啟時重置預覽 UI 狀態 ---
+  const previewWrapper = document.getElementById("dep-preview-wrapper");
+  const uploadZone = document.querySelector(".deposit-upload-zone");
+  if (previewWrapper) previewWrapper.style.display = "none";
+  if (uploadZone) uploadZone.style.display = "flex";
+
   // 自動帶入個人預設值
   if (window.currentUser) {
     const tInput = document.getElementById("dep-taxId");
@@ -312,4 +318,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const formDep = document.getElementById("deposit-form");
   if (formDep) formDep.addEventListener("submit", handleDepositSubmit);
+
+  // --- 新增：處理憑證圖片即時預覽邏輯 ---
+  const inputProof = document.getElementById("dep-proof");
+  if (inputProof) {
+    inputProof.addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      const previewWrapper = document.getElementById("dep-preview-wrapper");
+      const previewImg = document.getElementById("dep-preview-img");
+      const uploadZone = document.querySelector(".deposit-upload-zone");
+
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          if (previewImg) previewImg.src = event.target.result;
+          if (previewWrapper) previewWrapper.style.display = "block";
+          if (uploadZone) uploadZone.style.display = "none"; // 隱藏虛線框，顯示預覽圖
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // --- 新增：處理預覽區域的「重新上傳」按鈕 ---
+  const btnResetProof = document.getElementById("btn-reset-proof");
+  if (btnResetProof) {
+    btnResetProof.addEventListener("click", () => {
+      const input = document.getElementById("dep-proof");
+      const wrapper = document.getElementById("dep-preview-wrapper");
+      const zone = document.querySelector(".deposit-upload-zone");
+      if (input) input.value = ""; // 清空 input 檔案
+      if (wrapper) wrapper.style.display = "none";
+      if (zone) zone.style.display = "flex";
+    });
+  }
 });

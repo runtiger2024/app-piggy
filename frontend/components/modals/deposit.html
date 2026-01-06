@@ -65,6 +65,41 @@
             <i class="fas fa-cloud-upload-alt"></i>
             <span>點擊或拖放照片至此</span>
           </label>
+
+          <div
+            id="dep-preview-wrapper"
+            style="display: none; margin-top: 10px; text-align: center"
+          >
+            <img
+              id="dep-preview-img"
+              src=""
+              style="
+                max-width: 100%;
+                max-height: 250px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                display: block;
+                margin: 0 auto 10px;
+              "
+            />
+            <button
+              type="button"
+              id="btn-reset-proof"
+              class="btn btn-sm"
+              style="
+                background: #ef4444;
+                color: white;
+                border: none;
+                padding: 5px 15px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+              "
+            >
+              <i class="fas fa-redo"></i> 重新上傳
+            </button>
+          </div>
+
           <input
             type="file"
             id="dep-proof"
