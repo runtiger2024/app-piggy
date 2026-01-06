@@ -1,5 +1,5 @@
 // frontend/js/admin-parcels.js
-// V2026.Fixed.Pro - 正式商用高韌性版本：保留所有業務邏輯並徹底修復載入掛起
+// V2026.Enhanced.Pro - 正式商用高韌性增強版：保留所有業務邏輯並新增圖片預覽與費用明細
 
 document.addEventListener("DOMContentLoaded", () => {
   const adminToken = localStorage.getItem("admin_token");
@@ -53,6 +53,14 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
+    // [新增] 倉庫照片上傳預覽監聽
+    const warehouseImageInput = document.getElementById(
+      "modal-warehouseImages"
+    );
+    if (warehouseImageInput) {
+      warehouseImageInput.addEventListener("change", handleNewImagePreview);
+    }
+
     // 全選功能
     if (selectAll) {
       selectAll.addEventListener("change", (e) => {
@@ -94,6 +102,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 最後執行載入數據
     loadParcels();
+  }
+
+  // --- [新增] 處理新圖片上傳後的本地預覽 ---
+  function handleNewImagePreview(e) {
+    const files = Array.from(e.target.files);
+    // 先渲染伺服器已有的圖片
+    renderImages(currentExistingImages);
+
+    // 追加入本地預覽
+    const container = document.getElementById("modal-warehouse-images-preview");
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const div = document.createElement("div");
+        div.style.position = "relative";
+        div.innerHTML = `
+          <img src="${event.target.result}" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:2px solid #28a745;">
+          <div style="position:absolute; bottom:0; width:100%; background:rgba(40,167,69,0.8); color:white; font-size:10px; text-align:center;">新上傳</div>
+        `;
+        container.appendChild(div);
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   // --- 更新下拉選單數字 (保留原邏輯) ---
@@ -531,7 +562,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateFeesOnInput();
   };
 
-  // --- 費率計算 (完整保留材積取大邏輯) ---
+  // --- [關鍵優化] 費率計算 (加入超重/超長判定與明細顯示) ---
   function updateFeesOnInput() {
     const rows = document.querySelectorAll("#sub-package-list > div");
     const RATES = window.RATES || {};
@@ -540,8 +571,13 @@ document.addEventListener("DOMContentLoaded", () => {
       MINIMUM_CHARGE: 2000,
       OVERSIZED_LIMIT: 300,
       OVERWEIGHT_LIMIT: 100,
+      OVERSIZED_FEE: 500, // 預設超長費
+      OVERWEIGHT_FEE: 500, // 預設超重費
     };
-    let total = 0;
+
+    let baseTotal = 0;
+    let extraOversizedTotal = 0;
+    let extraOverweightTotal = 0;
     let hasValidBox = false;
 
     rows.forEach((row, idx) => {
@@ -568,19 +604,55 @@ document.addEventListener("DOMContentLoaded", () => {
         const cai = Math.ceil(rawCai);
         const volFee = Math.round(cai * rate.volumeRate);
         const wtFee = Math.round((Math.ceil(w * 10) / 10) * rate.weightRate);
-        const fee = Math.max(volFee, wtFee);
-        total += fee;
+
+        // 基礎費用
+        const boxBaseFee = Math.max(volFee, wtFee);
+        baseTotal += boxBaseFee;
+
+        // 判定超標狀況
+        let boxAlerts = "";
+        if (
+          l >= CONSTANTS.OVERSIZED_LIMIT ||
+          wd >= CONSTANTS.OVERSIZED_LIMIT ||
+          h >= CONSTANTS.OVERSIZED_LIMIT
+        ) {
+          extraOversizedTotal += parseFloat(CONSTANTS.OVERSIZED_FEE || 0);
+          boxAlerts += `<span style="color:#dc3545; font-weight:bold; margin-left:8px;">⚠️ 超長 (+$${CONSTANTS.OVERSIZED_FEE})</span>`;
+        }
+        if (w >= CONSTANTS.OVERWEIGHT_LIMIT) {
+          extraOverweightTotal += parseFloat(CONSTANTS.OVERWEIGHT_FEE || 0);
+          boxAlerts += `<span style="color:#fd7e14; font-weight:bold; margin-left:8px;">⚠️ 超重 (+$${CONSTANTS.OVERWEIGHT_FEE})</span>`;
+        }
+
         if (displayDiv)
-          displayDiv.innerHTML = `實重: $${wtFee} | 材積: $${volFee}`;
+          displayDiv.innerHTML = `<small>實重: $${wtFee} | 材積: $${volFee}${boxAlerts}</small>`;
       }
     });
 
+    const subTotal = baseTotal + extraOversizedTotal + extraOverweightTotal;
     const finalTotal = Math.max(
-      total,
-      total > 0 ? CONSTANTS.MINIMUM_CHARGE : 0
+      subTotal,
+      subTotal > 0 ? CONSTANTS.MINIMUM_CHARGE : 0
     );
+
     const feeInput = document.getElementById("modal-shippingFee");
     if (feeInput) feeInput.value = finalTotal;
+
+    // 更新明細提示
+    const tipEl = document.getElementById("modal-fee-tips");
+    if (tipEl) {
+      let detailStr = `基礎: $${baseTotal}`;
+      if (extraOversizedTotal > 0)
+        detailStr += ` + 超長費 $${extraOversizedTotal}`;
+      if (extraOverweightTotal > 0)
+        detailStr += ` + 超重費 $${extraOverweightTotal}`;
+      if (subTotal > 0 && subTotal < CONSTANTS.MINIMUM_CHARGE) {
+        detailStr += ` (未達低消補差額 $${
+          CONSTANTS.MINIMUM_CHARGE - subTotal
+        })`;
+      }
+      tipEl.textContent = `明細：${detailStr}`;
+    }
 
     const statusSelect = document.getElementById("modal-status");
     if (hasValidBox && statusSelect && statusSelect.value === "PENDING") {
