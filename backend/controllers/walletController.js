@@ -1,30 +1,174 @@
-// backend/controllers/admin/walletController.js
-// V2.1 - 強化審核工作流與資信透明化版 (保留 V2.0 全部功能並新增批量處理與統計)
+// backend/controllers/walletController.js
+// V2.2 - 最終整合版 (用戶端 V1.8 + 管理端 V2.1)
+// 特色：修正 Cloudinary HTTPS 破圖、強化統編驗證、新增管理員批量審核與財務儀表板統計
 
-const prisma = require("../../config/db.js");
-const createLog = require("../../utils/createLog.js");
-const createNotification = require("../../utils/createNotification.js");
-const invoiceHelper = require("../../utils/invoiceHelper.js");
+const prisma = require("../config/db.js");
+const createLog = require("../utils/createLog.js");
+const createNotification = require("../utils/createNotification.js");
+const invoiceHelper = require("../utils/invoiceHelper.js");
+const fs = require("fs");
+// 引入 Email 通知
+const { sendDepositRequestNotification } = require("../utils/sendEmail.js");
+
+// ==========================================
+// 1. 用戶端功能 (User Functions)
+// ==========================================
 
 /**
- * 1. 取得全體會員錢包概覽 (管理員檢閱功能)
- * 支援搜尋 PiggyID, Email, Name 以及餘額區間篩選
+ * 取得我的錢包資訊與近期交易紀錄
+ * @route GET /api/wallet/my
+ */
+const getMyWallet = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const wallet = await prisma.wallet.upsert({
+      where: { userId: userId },
+      update: {},
+      create: {
+        userId: userId,
+        balance: 0,
+      },
+      include: {
+        transactions: {
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        },
+      },
+    });
+
+    res.status(200).json({ success: true, wallet });
+  } catch (error) {
+    console.error("取得錢包失敗:", error);
+    res.status(500).json({ success: false, message: "伺服器錯誤" });
+  }
+};
+
+/**
+ * 提交儲值申請 (用戶端)
+ * [V1.8 優化] 修復 Cloudinary 圖片 HTTPS 協議、強化統編抬頭驗證
+ * @route POST /api/wallet/deposit
+ */
+const requestDeposit = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { amount, description, taxId, invoiceTitle } = req.body;
+    const proofFile = req.file;
+
+    if (!amount || amount <= 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "請輸入有效的儲值金額" });
+    }
+    if (!proofFile) {
+      return res
+        .status(400)
+        .json({ success: false, message: "請上傳轉帳憑證" });
+    }
+
+    // [Fix] 優化路徑處理邏輯，確保圖片不破圖
+    let proofImagePath;
+
+    // 檢查是否為 Cloudinary 網址 (http 或 https 開頭)
+    if (
+      proofFile.path &&
+      (proofFile.path.startsWith("http") || proofFile.path.startsWith("https"))
+    ) {
+      // 強制將 http 取代為 https，避免 Mixed Content 導致圖片無法顯示
+      proofImagePath = proofFile.path.replace(/^http:\/\//i, "https://");
+    } else if (proofFile.filename) {
+      // 本地模式 (fallback)：若 Cloudinary 上傳失敗或未設定，回退到本地 uploads
+      proofImagePath = `/uploads/${proofFile.filename}`;
+    } else {
+      proofImagePath = "";
+    }
+
+    // [Backend Validation] 統編與抬頭的一致性檢查
+    if (
+      taxId &&
+      taxId.trim() !== "" &&
+      (!invoiceTitle || invoiceTitle.trim() === "")
+    ) {
+      // 驗證失敗：若為本地檔案則刪除
+      if (proofFile.path && !proofFile.path.startsWith("http")) {
+        fs.unlink(proofFile.path, (err) => {
+          if (err) console.warn("刪除暫存檔案失敗:", err.message);
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: "填寫統一編號時，公司抬頭為必填項目",
+      });
+    }
+
+    // 確保錢包存在
+    await prisma.wallet.upsert({
+      where: { userId },
+      update: {},
+      create: { userId, balance: 0 },
+    });
+
+    // 建立交易紀錄
+    const transaction = await prisma.transaction.create({
+      data: {
+        wallet: { connect: { userId } },
+        amount: parseFloat(amount),
+        type: "DEPOSIT",
+        status: "PENDING",
+        description: description || "會員申請儲值",
+        proofImage: proofImagePath, // 使用修正後的 HTTPS 路徑
+        taxId: taxId || null,
+        invoiceTitle: invoiceTitle || null,
+      },
+    });
+
+    await createLog(
+      userId,
+      "WALLET_DEPOSIT_REQUEST",
+      transaction.id,
+      `申請儲值 $${amount} ${taxId ? "(含統編)" : ""}`
+    );
+
+    // 觸發 Email 通知 (異步處理不阻塞響應)
+    sendDepositRequestNotification(transaction, req.user).catch((e) => {
+      console.warn("Email通知發送失敗 (Deposit):", e.message);
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "儲值申請已提交，請等待管理員審核",
+      transaction,
+    });
+  } catch (error) {
+    // 發生錯誤時的清理邏輯 (僅限本地檔案)
+    if (req.file && req.file.path && !req.file.path.startsWith("http")) {
+      fs.unlink(req.file.path, () => {});
+    }
+    console.error("儲值申請失敗:", error);
+    res.status(500).json({ success: false, message: "伺服器錯誤" });
+  }
+};
+
+// ==========================================
+// 2. 管理端功能 (Admin Functions)
+// ==========================================
+
+/**
+ * 取得全體會員錢包概覽 (管理員檢閱)
  */
 const getWalletsOverview = async (req, res) => {
   try {
     const { search, minBalance, maxBalance } = req.query;
-
     const where = {};
     if (search) {
       where.user = {
         OR: [
+          { piggyId: { contains: search, mode: "insensitive" } },
           { email: { contains: search, mode: "insensitive" } },
           { name: { contains: search, mode: "insensitive" } },
-          { piggyId: { contains: search, mode: "insensitive" } },
         ],
       };
     }
-
     if (minBalance || maxBalance) {
       where.balance = {};
       if (minBalance) where.balance.gte = parseFloat(minBalance);
@@ -47,22 +191,18 @@ const getWalletsOverview = async (req, res) => {
       },
       orderBy: { balance: "desc" },
     });
-
     res.status(200).json({ success: true, wallets });
   } catch (error) {
-    console.error("Admin getWalletsOverview error:", error);
     res.status(500).json({ success: false, message: "無法取得錢包概覽" });
   }
 };
 
 /**
- * [新增] 2. 取得特定會員錢包詳情與完整交易歷史
- * 用於管理員深入調查特定客戶的資信狀況
+ * 取得特定會員錢包詳情與完整交易歷史
  */
 const getWalletDetail = async (req, res) => {
   try {
     const { userId } = req.params;
-
     const wallet = await prisma.wallet.findUnique({
       where: { userId },
       include: {
@@ -75,17 +215,13 @@ const getWalletDetail = async (req, res) => {
             phone: true,
           },
         },
-        transactions: {
-          orderBy: { createdAt: "desc" },
-        },
+        transactions: { orderBy: { createdAt: "desc" } },
       },
     });
-
     if (!wallet)
       return res
         .status(404)
-        .json({ success: false, message: "找不到該會員的錢包" });
-
+        .json({ success: false, message: "找不到該會員錢包" });
     res.status(200).json({ success: true, wallet });
   } catch (error) {
     res.status(500).json({ success: false, message: "讀取詳情失敗" });
@@ -93,7 +229,7 @@ const getWalletDetail = async (req, res) => {
 };
 
 /**
- * 3. 取得交易紀錄列表 (支援篩選與分頁)
+ * 取得交易紀錄列表 (支援篩選與分頁)
  */
 const getTransactions = async (req, res) => {
   try {
@@ -105,14 +241,13 @@ const getTransactions = async (req, res) => {
     const where = {};
     if (status) where.status = status;
     if (type) where.type = type;
-
     if (search) {
       where.wallet = {
         user: {
           OR: [
+            { piggyId: { contains: search, mode: "insensitive" } },
             { email: { contains: search, mode: "insensitive" } },
             { name: { contains: search, mode: "insensitive" } },
-            { piggyId: { contains: search, mode: "insensitive" } },
           ],
         },
       };
@@ -141,20 +276,18 @@ const getTransactions = async (req, res) => {
       ...tx,
       user: tx.wallet.user,
     }));
-
     res.status(200).json({
       success: true,
       transactions: formatted,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error("Admin getTransactions error:", error);
     res.status(500).json({ success: false, message: "伺服器錯誤" });
   }
 };
 
 /**
- * 4. 審核單筆交易 (同意儲值 / 駁回)
+ * 審核單筆交易 (同意/駁回)
  */
 const reviewTransaction = async (req, res) => {
   try {
@@ -166,26 +299,20 @@ const reviewTransaction = async (req, res) => {
       include: { wallet: { include: { user: true } } },
     });
 
-    if (!tx) return res.status(404).json({ message: "找不到交易紀錄" });
-    if (tx.status !== "PENDING")
-      return res.status(400).json({ message: "此交易已處理過，無法再次審核" });
+    if (!tx || tx.status !== "PENDING")
+      return res.status(400).json({ message: "交易不存在或已處理" });
 
     if (action === "APPROVE") {
       let invoiceResult = null;
-      let invoiceMsg = "";
-
       if (tx.type === "DEPOSIT" && tx.amount > 0) {
         invoiceResult = await invoiceHelper.createDepositInvoice(
           tx,
           tx.wallet.user
         );
-        invoiceMsg = invoiceResult.success
-          ? ` (發票:${invoiceResult.invoiceNumber})`
-          : ` (發票失敗)`;
       }
 
-      await prisma.$transaction(async (prismaTx) => {
-        await prismaTx.transaction.update({
+      await prisma.$transaction(async (ptx) => {
+        await ptx.transaction.update({
           where: { id },
           data: {
             status: "COMPLETED",
@@ -199,8 +326,7 @@ const reviewTransaction = async (req, res) => {
               : null,
           },
         });
-
-        await prismaTx.wallet.update({
+        await ptx.wallet.update({
           where: { id: tx.walletId },
           data: { balance: { increment: tx.amount } },
         });
@@ -209,7 +335,7 @@ const reviewTransaction = async (req, res) => {
       await createNotification(
         tx.wallet.userId,
         "儲值成功",
-        `您申請的 $${tx.amount.toLocaleString()} 儲值已核准並入帳。`,
+        `您的 $${tx.amount.toLocaleString()} 儲值已核准並入帳。`,
         "WALLET",
         "tab-wallet"
       );
@@ -217,9 +343,9 @@ const reviewTransaction = async (req, res) => {
         req.user.id,
         "APPROVE_DEPOSIT",
         id,
-        `核准儲值 $${tx.amount}${invoiceMsg}`
+        `核准儲值 $${tx.amount}`
       );
-      res.status(200).json({ success: true, message: `核准成功${invoiceMsg}` });
+      res.status(200).json({ success: true, message: "核准成功" });
     } else {
       await prisma.transaction.update({
         where: { id },
@@ -230,111 +356,69 @@ const reviewTransaction = async (req, res) => {
           })`,
         },
       });
-
       await createNotification(
         tx.wallet.userId,
         "儲值申請已駁回",
-        `您的儲值申請已被駁回，原因：${rejectReason || "資料不符"}。`,
+        `原因：${rejectReason || "資料不符"}`,
         "WALLET",
         "tab-wallet"
       );
-      await createLog(
-        req.user.id,
-        "REJECT_DEPOSIT",
-        id,
-        `駁回儲值申請，原因：${rejectReason || "無"}`
-      );
-      res.status(200).json({ success: true, message: "已駁回申請" });
+      await createLog(req.user.id, "REJECT_DEPOSIT", id, "駁回儲值");
+      res.status(200).json({ success: true, message: "已駁回" });
     }
   } catch (error) {
-    console.error("Review error:", error);
     res.status(500).json({ success: false, message: "處理失敗" });
   }
 };
 
 /**
- * [新增] 5. 批量處理審核 (Bulk Review)
- * 提升管理員效率，一次處理多筆 PENDING 儲值
+ * 批量處理審核 (Bulk Review)
  */
 const bulkReviewTransactions = async (req, res) => {
   try {
     const { ids, action, rejectReason } = req.body;
     if (!Array.isArray(ids) || ids.length === 0)
-      return res.status(400).json({ message: "無效的 ID 列表" });
+      return res.status(400).json({ message: "無效列表" });
 
-    const results = { success: 0, failed: 0 };
-
-    // 為了安全起見，使用循環處理，確保每一筆的發票與通知都能獨立完成
+    let successCount = 0;
     for (const id of ids) {
       try {
-        // 直接調用單筆審核邏輯的簡化版
-        const tx = await prisma.transaction.findUnique({
-          where: { id },
-          include: { wallet: { include: { user: true } } },
-        });
-
-        if (!tx || tx.status !== "PENDING") {
-          results.failed++;
-          continue;
-        }
-
-        if (action === "APPROVE") {
-          // 批量審核目前不自動開票(建議手動補開)以防超時，或在此調用單筆審核
-          await prisma.$transaction(async (ptx) => {
-            await ptx.transaction.update({
-              where: { id },
-              data: { status: "COMPLETED" },
-            });
-            await ptx.wallet.update({
-              where: { id: tx.walletId },
-              data: { balance: { increment: tx.amount } },
-            });
-          });
-          results.success++;
-        } else {
-          await prisma.transaction.update({
-            where: { id },
-            data: { status: "REJECTED" },
-          });
-          results.success++;
+        const tx = await prisma.transaction.findUnique({ where: { id } });
+        if (tx && tx.status === "PENDING") {
+          const fakeReq = {
+            params: { id },
+            body: { action, rejectReason },
+            user: req.user,
+          };
+          const fakeRes = { status: () => ({ json: () => {} }) };
+          await reviewTransaction(fakeReq, fakeRes);
+          successCount++;
         }
       } catch (e) {
-        results.failed++;
+        console.error(`Bulk item ${id} failed:`, e);
       }
     }
-
-    await createLog(
-      req.user.id,
-      "BULK_REVIEW_WALLET",
-      null,
-      `批量審核交易: 成功 ${results.success}, 失敗 ${results.failed}`
-    );
-    res.json({ success: true, results });
+    res.json({
+      success: true,
+      message: `批量審核完成，成功 ${successCount} 筆`,
+    });
   } catch (error) {
-    res.status(500).json({ message: "批量處理出錯" });
+    res.status(500).json({ message: "批量出錯" });
   }
 };
 
 /**
- * 6. 手動修改交易紀錄 (CRUD - Update)
- * 用於修正統編、抬頭或備註，限非完成狀態
+ * 手動修改交易紀錄 (限非完成狀態)
  */
 const updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const { amount, description, taxId, invoiceTitle } = req.body;
-
     const tx = await prisma.transaction.findUnique({ where: { id } });
-    if (!tx) return res.status(404).json({ message: "交易不存在" });
-    if (tx.status === "COMPLETED")
-      return res
-        .status(400)
-        .json({
-          message:
-            "已完成交易不可修改金額，請使用「人工調整」功能進行補款或扣款",
-        });
+    if (!tx || tx.status === "COMPLETED")
+      return res.status(400).json({ message: "無法修改" });
 
-    const updatedTx = await prisma.transaction.update({
+    const updated = await prisma.transaction.update({
       where: { id },
       data: {
         amount: amount ? parseFloat(amount) : undefined,
@@ -343,54 +427,37 @@ const updateTransaction = async (req, res) => {
         invoiceTitle,
       },
     });
-
-    await createLog(
-      req.user.id,
-      "UPDATE_TRANSACTION",
-      id,
-      `修改交易內容: ${id}`
-    );
-    res.json({ success: true, transaction: updatedTx });
+    await createLog(req.user.id, "UPDATE_TRANSACTION", id, `修改交易紀錄`);
+    res.json({ success: true, transaction: updated });
   } catch (error) {
     res.status(500).json({ success: false, message: "更新失敗" });
   }
 };
 
 /**
- * 7. 刪除交易紀錄 (CRUD - Delete)
+ * 刪除交易紀錄
  */
 const deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const tx = await prisma.transaction.findUnique({ where: { id } });
-
-    if (!tx) return res.status(404).json({ message: "找不到紀錄" });
-    if (tx.status === "COMPLETED")
-      return res
-        .status(400)
-        .json({ message: "已完成交易不可刪除，以免造成財務帳目不一致" });
-
+    if (!tx || tx.status === "COMPLETED")
+      return res.status(400).json({ message: "不可刪除" });
     await prisma.transaction.delete({ where: { id } });
-    await createLog(
-      req.user.id,
-      "DELETE_TRANSACTION",
-      id,
-      `刪除交易紀錄: ${id}`
-    );
-    res.json({ success: true, message: "交易紀錄已刪除" });
+    await createLog(req.user.id, "DELETE_TRANSACTION", id, `刪除紀錄`);
+    res.json({ success: true, message: "已刪除" });
   } catch (error) {
     res.status(500).json({ success: false, message: "刪除失敗" });
   }
 };
 
 /**
- * 8. 手動調整會員餘額 (人工加扣款)
+ * 手動調整會員餘額 (人工加扣款)
  */
 const manualAdjust = async (req, res) => {
   try {
     const { userId, amount, note } = req.body;
     const adjustAmount = parseFloat(amount);
-
     if (!userId || isNaN(adjustAmount) || adjustAmount === 0)
       return res.status(400).json({ message: "參數錯誤" });
 
@@ -399,29 +466,25 @@ const manualAdjust = async (req, res) => {
       update: {},
       create: { userId, balance: 0 },
     });
-
-    await prisma.$transaction(async (prismaTx) => {
-      await prismaTx.transaction.create({
+    await prisma.$transaction(async (ptx) => {
+      await ptx.transaction.create({
         data: {
           walletId: wallet.id,
           amount: adjustAmount,
           type: "ADJUST",
           status: "COMPLETED",
-          description: note || "管理員手動調整",
+          description: note || "管理員調整",
         },
       });
-      await prismaTx.wallet.update({
+      await ptx.wallet.update({
         where: { id: wallet.id },
         data: { balance: { increment: adjustAmount } },
       });
     });
-
     await createNotification(
       userId,
-      "錢包餘額變動",
-      `管理員執行了人工調整 $${Math.abs(
-        adjustAmount
-      ).toLocaleString()}，備註：${note || "無"}。`,
+      "餘額變動",
+      `調整 $${Math.abs(adjustAmount)}`,
       "WALLET",
       "tab-wallet"
     );
@@ -429,16 +492,16 @@ const manualAdjust = async (req, res) => {
       req.user.id,
       "MANUAL_ADJUST",
       userId,
-      `手動調整金額: ${adjustAmount}`
+      `調整: ${adjustAmount}`
     );
-    res.status(200).json({ success: true, message: "餘額調整成功" });
+    res.status(200).json({ success: true, message: "調整成功" });
   } catch (error) {
     res.status(500).json({ success: false, message: "調整失敗" });
   }
 };
 
 /**
- * 9. 手動補開發票
+ * 手動補開發票
  */
 const manualIssueDepositInvoice = async (req, res) => {
   try {
@@ -447,13 +510,8 @@ const manualIssueDepositInvoice = async (req, res) => {
       where: { id },
       include: { wallet: { include: { user: true } } },
     });
-
-    if (!tx || tx.type !== "DEPOSIT" || tx.status !== "COMPLETED") {
-      return res
-        .status(400)
-        .json({ message: "不符合補開條件（僅限已完成的儲值交易）" });
-    }
-
+    if (!tx || tx.type !== "DEPOSIT" || tx.status !== "COMPLETED")
+      return res.status(400).json({ message: "不符條件" });
     const result = await invoiceHelper.createDepositInvoice(tx, tx.wallet.user);
     if (result.success) {
       await prisma.transaction.update({
@@ -465,17 +523,7 @@ const manualIssueDepositInvoice = async (req, res) => {
           invoiceStatus: "ISSUED",
         },
       });
-      await createLog(
-        req.user.id,
-        "MANUAL_INVOICE",
-        id,
-        `補開儲值發票: ${result.invoiceNumber}`
-      );
-      return res.json({
-        success: true,
-        message: "補開成功",
-        invoiceNumber: result.invoiceNumber,
-      });
+      return res.json({ success: true, message: "補開成功" });
     }
     res.status(400).json({ success: false, message: result.message });
   } catch (error) {
@@ -484,21 +532,18 @@ const manualIssueDepositInvoice = async (req, res) => {
 };
 
 /**
- * [新增] 10. 財務統計數據
- * 用於管理員儀表板，顯示系統資金概況
+ * 財務統計儀表板
  */
 const getFinanceStats = async (req, res) => {
   try {
     const totalBalance = await prisma.wallet.aggregate({
       _sum: { balance: true },
     });
-    const pendingDeposits = await prisma.transaction.aggregate({
+    const pending = await prisma.transaction.aggregate({
       where: { type: "DEPOSIT", status: "PENDING" },
       _sum: { amount: true },
       _count: true,
     });
-
-    // 今日收入 (已完成的儲值)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayIncome = await prisma.transaction.aggregate({
@@ -509,13 +554,12 @@ const getFinanceStats = async (req, res) => {
       },
       _sum: { amount: true },
     });
-
     res.json({
       success: true,
       stats: {
         systemTotalBalance: totalBalance._sum.balance || 0,
-        pendingDepositAmount: pendingDeposits._sum.amount || 0,
-        pendingDepositCount: pendingDeposits._count || 0,
+        pendingDepositAmount: pending._sum.amount || 0,
+        pendingDepositCount: pending._count || 0,
         todayIncome: todayIncome._sum.amount || 0,
       },
     });
@@ -525,14 +569,16 @@ const getFinanceStats = async (req, res) => {
 };
 
 module.exports = {
+  getMyWallet,
+  requestDeposit,
   getWalletsOverview,
-  getWalletDetail, // 新增
+  getWalletDetail,
   getTransactions,
   reviewTransaction,
-  bulkReviewTransactions, // 新增
+  bulkReviewTransactions,
   updateTransaction,
   deleteTransaction,
   manualAdjust,
   manualIssueDepositInvoice,
-  getFinanceStats, // 新增
+  getFinanceStats,
 };
