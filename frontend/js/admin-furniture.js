@@ -1,5 +1,5 @@
 // frontend/js/admin-furniture.js
-// V2026.1.8 - 終極進化版：整合商品網址顯示、參考圖預覽、CRUD、批量操作與安全刪除機制
+// V2026.1.9 - 終極修復版：修正截圖路徑前綴、整合 CRUD、批量操作與安全刪除機制
 
 document.addEventListener("DOMContentLoaded", () => {
   const adminToken = localStorage.getItem("admin_token");
@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentStatus = "";
   let currentSearch = "";
 
-  // [新增] 多選管理
+  // 多選管理
   let selectedIds = new Set();
 
   // 系統配置預設值
@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loadOrders();
     });
 
-    // 4. [新增] 彈窗開啟/關閉委派
+    // 4. 彈窗開啟/關閉委派
     document.addEventListener("click", (e) => {
       // 關閉任何彈窗
       if (e.target.closest(".modal-close-btn")) {
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // 6. [新增] 會員搜尋功能
+    // 6. 會員搜尋功能
     document.body.addEventListener("click", async (e) => {
       if (e.target.id === "btn-search-user") {
         const keyword = document.getElementById("create-user-search").value;
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // 7. [新增] 全選邏輯
+    // 7. 全選邏輯
     document.body.addEventListener("change", (e) => {
       if (e.target.id === "check-all") {
         const checkboxes = document.querySelectorAll(".order-checkbox");
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.target.id === "create-order-form") handleCreateSubmit(e);
     });
 
-    // 9. [新增] 批量操作按鈕
+    // 9. 批量操作按鈕
     document
       .getElementById("btn-bulk-update")
       ?.addEventListener("click", handleBulkStatusUpdate);
@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .getElementById("btn-bulk-delete")
       ?.addEventListener("click", () => handleDeletion(null, true));
 
-    // 10. [新增] 編輯窗內的單筆刪除
+    // 10. 編輯窗內的單筆刪除
     document
       .getElementById("btn-delete-order")
       ?.addEventListener("click", () => {
@@ -162,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderTable(data.orders || []);
       renderPagination(data.pagination);
-      updateBulkBar(); // 確保重新渲染後維持勾選狀態
+      updateBulkBar();
     } catch (e) {
       tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger p-4">載入錯誤: ${e.message}</td></tr>`;
     }
@@ -222,7 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * [新增] 更新批量工具列顯示狀態
+   * 更新批量工具列顯示狀態
    */
   function updateBulkBar() {
     const bar = document.getElementById("bulk-bar");
@@ -235,7 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       bar.style.display = "none";
     }
-    // 同步 CheckAll 狀態
     const checkboxes = document.querySelectorAll(".order-checkbox");
     const checkAll = document.getElementById("check-all");
     if (checkAll && checkboxes.length > 0) {
@@ -273,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 開啟訂單彈窗 (優化：顯示商品網址與參考圖)
+   * 開啟訂單彈窗 (修正：解決圖片路徑導致破圖問題)
    */
   window.openOrderModal = function (orderStr) {
     try {
@@ -304,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setVal("modal-serviceRate", order.serviceRate || 5);
       setVal("modal-adminNote", order.adminNote || "");
 
-      // [優化新增] 處理商品網址顯示
+      // [優化] 處理商品網址顯示
       const urlDisplay = document.getElementById("modal-productUrl-display");
       if (urlDisplay) {
         if (order.productUrl) {
@@ -321,14 +320,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // [優化新增] 處理參考截圖顯示
+      // [核心修正] 處理參考截圖顯示 (加上 API_BASE_URL 避免相對路徑破圖)
       const imgDisplay = document.getElementById("modal-refImage-display");
       if (imgDisplay) {
         if (order.refImageUrl) {
+          // 拼接 API 基底網址，確保正確存取後端 uploads 目錄
+          const fullImgUrl = `${API_BASE_URL}${order.refImageUrl}`;
           imgDisplay.innerHTML = `
             <div class="mt-2">
                 <span class="d-block small text-secondary mb-1">參考截圖：</span>
-                <img src="${order.refImageUrl}" class="img-thumbnail" style="cursor: zoom-in; max-height: 250px;" onclick="window.open(this.src)">
+                <img src="${fullImgUrl}" class="img-thumbnail" style="cursor: zoom-in; max-height: 250px;" onclick="window.open(this.src)">
             </div>`;
         } else {
           imgDisplay.innerHTML =
@@ -373,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * [新增] 處理會員搜尋
+   * 處理會員搜尋
    */
   async function handleUserSearch(keyword) {
     const select = document.getElementById("create-userId");
@@ -400,7 +401,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * [新增] 處理手動建單提交 (優化：包含 productUrl)
+   * 處理手動建單提交
    */
   async function handleCreateSubmit(e) {
     e.preventDefault();
@@ -409,7 +410,7 @@ document.addEventListener("DOMContentLoaded", () => {
       userId: document.getElementById("create-userId").value,
       factoryName: document.getElementById("create-factoryName").value,
       productName: document.getElementById("create-productName").value,
-      productUrl: document.getElementById("create-productUrl")?.value || "", // [新增]
+      productUrl: document.getElementById("create-productUrl")?.value || "",
       quantity: document.getElementById("create-quantity").value,
       priceRMB: document.getElementById("create-priceRMB").value,
       exchangeRate: document.getElementById("create-exchangeRate").value,
@@ -493,7 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * [新增] 批量更新狀態
+   * 批量更新狀態
    */
   async function handleBulkStatusUpdate() {
     const status = document.getElementById("bulk-status-select").value;
@@ -522,7 +523,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * [新增+核心要求] 處理刪除功能 (含 DELETE 驗證)
+   * 處理刪除功能 (含 DELETE 驗證)
    */
   async function handleDeletion(id, isBulk = false) {
     const targetText = isBulk ? `這 ${selectedIds.size} 筆訂單` : "這筆訂單";
@@ -539,7 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let url = isBulk
         ? `${API_BASE_URL}/api/admin/furniture/bulk-delete`
         : `${API_BASE_URL}/api/admin/furniture/${id}`;
-      let method = isBulk ? "POST" : "DELETE"; // 批量刪除後端通常使用 POST
+      let method = isBulk ? "POST" : "DELETE";
       let body = isBulk
         ? JSON.stringify({ ids: Array.from(selectedIds) })
         : null;

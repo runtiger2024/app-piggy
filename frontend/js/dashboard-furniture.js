@@ -1,5 +1,5 @@
 // frontend/js/dashboard-furniture.js
-// V2026.1.8 - 旗艦優化版：整合商品參考網址 (Product URL)、支援圖片上傳與精準計算
+// V2026.1.9 - 旗艦優化版：修正圖片路徑引用 (補上 API_BASE_URL)、整合商品網址與精準計算
 
 (function () {
   let procurementConfig = {
@@ -313,7 +313,7 @@
   }
 
   /**
-   * [詳情彈窗功能] 強化：顯示商品連結與參考截圖
+   * [詳情彈窗功能] 強化：補上 API_BASE_URL 修正破圖問題
    */
   window.viewOrderDetail = function (id) {
     const order = cachedOrders.find((o) => o.id === id);
@@ -375,7 +375,7 @@
               <div style="margin-top:12px;">
                 <span style="color:#666; font-size:0.85rem;">參考截圖:</span>
                 <div style="margin-top:5px; border-radius:8px; border:1px solid #ddd; overflow:hidden;">
-                    <img src="${order.refImageUrl}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open(this.src)">
+                    <img src="${API_BASE_URL}${order.refImageUrl}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open(this.src)">
                 </div>
               </div>
               `
