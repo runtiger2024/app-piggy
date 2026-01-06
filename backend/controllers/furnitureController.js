@@ -1,5 +1,5 @@
 // backend/controllers/furnitureController.js
-// V2026.1.1 - 傢俱代採購服務核心邏輯 (修復費率鍵值一致性與最低服務費判斷)
+// V2026.1.2 - 傢俱代採購服務核心邏輯 (新增支援使用者上傳參考圖片路徑儲存)
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
@@ -13,6 +13,9 @@ const createFurnitureOrder = async (req, res) => {
   try {
     const { factoryName, productName, quantity, priceRMB, note } = req.body;
     const userId = req.user.id;
+
+    // [新增] 處理上傳的參考圖片檔案
+    const refImageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!factoryName || !productName || !quantity || !priceRMB) {
       return res
@@ -77,6 +80,7 @@ const createFurnitureOrder = async (req, res) => {
         serviceFeeRate,
         totalAmountTWD,
         note,
+        refImageUrl, // [新增] 儲存使用者上傳的參考截圖路徑
         status: "PENDING",
       },
     });

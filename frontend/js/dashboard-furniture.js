@@ -1,5 +1,5 @@
 // frontend/js/dashboard-furniture.js
-// V2026.1.4 - 完善「詳情」查看功能，整合詳情彈窗邏輯
+// V2026.1.6 - 新增圖片預覽縮圖功能與 FormData 提交邏輯
 
 (function () {
   let procurementConfig = {
@@ -7,7 +7,7 @@
     serviceFeeRate: 0.05,
     minServiceFee: 500,
   };
-  let cachedOrders = []; // [新增] 用於存放載入後的紀錄，方便詳情快速讀取
+  let cachedOrders = [];
 
   async function initFurniturePage() {
     await fetchProcurementConfig();
@@ -30,6 +30,12 @@
       }
     });
 
+    // [新增] 圖片上傳監聽
+    const fileInput = document.getElementById("furniture-ref-image");
+    if (fileInput) {
+      fileInput.addEventListener("change", handleFileSelect);
+    }
+
     const form = document.getElementById("furniture-form");
     if (form) form.addEventListener("submit", handleFormSubmit);
   }
@@ -39,6 +45,45 @@
   } else {
     initFurniturePage();
   }
+
+  /**
+   * [新增功能] 處理檔案選取與預覽顯示
+   */
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    const previewContainer = document.getElementById("image-preview-container");
+    const previewImg = document.getElementById("preview-img-element");
+    const uploadLabel = document.getElementById("upload-label-box");
+
+    if (file) {
+      // 檢查是否為圖片
+      if (!file.type.startsWith("image/")) {
+        alert("請上傳圖片格式檔案");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        previewImg.src = event.target.result;
+        previewContainer.style.display = "block";
+        uploadLabel.style.display = "none"; // 隱藏原本的上傳按鈕
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  /**
+   * [新增功能] 清除預覽縮圖
+   */
+  window.clearPreviewImage = function () {
+    const fileInput = document.getElementById("furniture-ref-image");
+    const previewContainer = document.getElementById("image-preview-container");
+    const uploadLabel = document.getElementById("upload-label-box");
+
+    fileInput.value = ""; // 清空檔案
+    previewContainer.style.display = "none";
+    uploadLabel.style.display = "flex";
+  };
 
   async function fetchProcurementConfig() {
     try {
@@ -116,6 +161,9 @@
       totalDisplay.textContent = `$ ${totalTWD.toLocaleString()}`;
   }
 
+  /**
+   * [修改功能] 升級為支援檔案上傳的 FormData 模式
+   */
   async function handleFormSubmit(e) {
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -123,29 +171,47 @@
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
 
-    const formData = {
-      factoryName: document.getElementById("factoryName").value.trim(),
-      productName: document.getElementById("productName").value.trim(),
-      quantity: parseInt(document.getElementById("quantity").value),
-      priceRMB: parseFloat(document.getElementById("priceRMB").value),
-      note: document.getElementById("note").value.trim(),
-    };
+    // 改用 FormData
+    const formData = new FormData();
+    formData.append(
+      "factoryName",
+      document.getElementById("factoryName").value.trim()
+    );
+    formData.append(
+      "productName",
+      document.getElementById("productName").value.trim()
+    );
+    formData.append(
+      "quantity",
+      parseInt(document.getElementById("quantity").value)
+    );
+    formData.append(
+      "priceRMB",
+      parseFloat(document.getElementById("priceRMB").value)
+    );
+    formData.append("note", document.getElementById("note").value.trim());
+
+    const fileInput = document.getElementById("furniture-ref-image");
+    if (fileInput.files[0]) {
+      formData.append("refImage", fileInput.files[0]); // 加入檔案
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/furniture/apply`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          // 注意：FormData 提交時不需設定 Content-Type，由瀏覽器自動處理 boundary
           Authorization: `Bearer ${
             localStorage.getItem("token") || window.dashboardToken
           }`,
         },
-        body: JSON.stringify(formData),
+        body: formData,
       });
       const data = await res.json();
       if (data.success) {
         showSubmissionSuccessModal();
         document.getElementById("furniture-form").reset();
+        clearPreviewImage(); // 重設圖片預覽
         calculateTotal();
         await loadFurnitureHistory();
       } else {
@@ -192,7 +258,7 @@
       });
       const data = await res.json();
       if (data.success && data.orders) {
-        cachedOrders = data.orders; // [關鍵] 存入緩存以供詳情查看
+        cachedOrders = data.orders;
         tbody.innerHTML = data.orders
           .map((order) => {
             const totalRMB = (order.priceRMB * order.quantity).toFixed(2);
@@ -242,7 +308,7 @@
   }
 
   /**
-   * [核心功能實作] 查看訂單詳情
+   * [詳情彈窗功能] 強化：顯示用戶上傳的參考圖片
    */
   window.viewOrderDetail = function (id) {
     const order = cachedOrders.find((o) => o.id === id);
@@ -284,6 +350,19 @@
               <p style="margin: 5px 0;"><strong>單價：</strong>¥ ${
                 order.priceRMB
               } x ${order.quantity} 件</p>
+              
+              ${
+                order.refImageUrl
+                  ? `
+              <div style="margin-top:12px;">
+                <span style="color:#666; font-size:0.85rem;">參考截圖:</span>
+                <div style="margin-top:5px; border-radius:8px; border:1px solid #ddd; overflow:hidden;">
+                    <img src="${order.refImageUrl}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open(this.src)">
+                </div>
+              </div>
+              `
+                  : ""
+              }
             </div>
 
             <div style="margin-bottom: 20px;">
