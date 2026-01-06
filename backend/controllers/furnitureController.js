@@ -1,5 +1,5 @@
 // backend/controllers/furnitureController.js
-// V2026.1.9 - 旗艦優化版：新增商品參考網址 (productUrl)，支援會員參考圖、管理員發票上傳，並與 Schema 完全同步
+// V2026.1.10 - 旗艦終極版：完整保留 V2026.1.9 功能，強化數值驗證與錯誤處理，確保與 Schema 完美同步
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
@@ -11,13 +11,12 @@ const createNotification = require("../utils/createNotification.js");
  */
 const createFurnitureOrder = async (req, res) => {
   try {
-    // [優化新增] 接收來自前端的 productUrl (商品參考網址)
+    // 1. 接收並初步驗證參數
     const { factoryName, productName, quantity, priceRMB, note, productUrl } =
       req.body;
     const userId = req.user.id;
 
-    // [核心優化] 接收來自 Multer 中間件處理後的檔案路徑
-    // 對應前端「點擊上傳商品或報價單截圖」功能
+    // 接收來自 Multer 中間件處理後的檔案路徑 (對應 refImage 欄位)
     const refImageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!factoryName || !productName || !quantity || !priceRMB) {
@@ -26,7 +25,17 @@ const createFurnitureOrder = async (req, res) => {
         .json({ success: false, message: "請填寫完整代採購資訊" });
     }
 
-    // 1. 取得系統設定中的代採購配置 (與 calculatorController 保持一致使用 "furniture_config")
+    // [強健性優化] 強制轉換數值並檢查有效性，防止 NaN 導致資料庫 500 錯誤
+    const parsedQuantity = parseInt(quantity);
+    const parsedPriceRMB = parseFloat(priceRMB);
+
+    if (isNaN(parsedQuantity) || isNaN(parsedPriceRMB)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "數量或單價格式不正確" });
+    }
+
+    // 2. 取得系統設定中的代採購配置 (furniture_config)
     const configSetting = await prisma.systemSetting.findUnique({
       where: { key: "furniture_config" },
     });
@@ -50,46 +59,46 @@ const createFurnitureOrder = async (req, res) => {
       }
     }
 
-    const exchangeRate = parseFloat(config.exchangeRate);
-    const serviceFeeRate = parseFloat(config.serviceFeeRate);
+    const exchangeRate = parseFloat(config.exchangeRate) || 4.65;
+    const serviceFeeRate = parseFloat(config.serviceFeeRate) || 0.05;
     const minServiceFee = parseFloat(config.minServiceFee || 500);
 
-    // 2. 計算費用
-    const totalRMB = parseFloat(priceRMB) * parseInt(quantity);
+    // 3. 費用計算邏輯
+    const totalRMB = parsedPriceRMB * parsedQuantity;
 
     // 計算初步服務費 (TWD)
     const rawServiceFeeTWD = totalRMB * exchangeRate * serviceFeeRate;
 
-    // [修正] 判斷是否低於最低服務費
+    // 判斷是否低於最低服務費
     const finalServiceFeeTWD = Math.max(rawServiceFeeTWD, minServiceFee);
 
     // 貨值轉換台幣
     const productAmountTWD = totalRMB * exchangeRate;
 
-    // 總金額 (台幣) = 貨值 TWD + 服務費 TWD (無條件進位)
+    // 總金額 (台幣) = 貨值 TWD + 服務費 TWD (採無條件進位)
     const totalAmountTWD = Math.ceil(productAmountTWD + finalServiceFeeTWD);
 
-    // 3. 建立訂單 (欄位名稱必須與 schema.prisma 完全匹配)
+    // 4. 建立訂單 (欄位名稱與 schema.prisma 完全匹配)
     const furnitureOrder = await prisma.furnitureOrder.create({
       data: {
         userId,
         factoryName,
         productName,
-        productUrl, // [同步新增] 儲存商品參考網址
-        quantity: parseInt(quantity),
-        priceRMB: parseFloat(priceRMB),
+        productUrl, // 儲存商品參考網址
+        quantity: parsedQuantity,
+        priceRMB: parsedPriceRMB,
         // 儲存當時的費率與計算結果
         serviceFeeRMB: finalServiceFeeTWD / exchangeRate,
         exchangeRate,
         serviceFeeRate,
         totalAmountTWD,
         note,
-        refImageUrl, // 已在 Schema 中定義
+        refImageUrl, // 參考截圖路徑
         status: "PENDING",
       },
     });
 
-    // 4. 記錄日誌
+    // 5. 記錄操作日誌
     await createLog(
       userId,
       "CREATE_FURNITURE_ORDER",
@@ -104,9 +113,11 @@ const createFurnitureOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("建立傢俱訂單錯誤:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "伺服器處理申請時發生錯誤" });
+    res.status(500).json({
+      success: false,
+      message: "伺服器處理申請時發生錯誤",
+      error: error.message,
+    });
   }
 };
 
@@ -155,12 +166,12 @@ const adminUpdateOrder = async (req, res) => {
     const { id } = req.params;
     const { status, adminRemark, invoiceUrl } = req.body;
 
-    // [優化] 處理管理員上傳的正式發票檔案
+    // 處理管理員透過檔案上傳的正式發票檔案 (invoiceFile)
     const uploadedInvoiceUrl = req.file
       ? `/uploads/${req.file.filename}`
       : invoiceUrl;
 
-    // 先檢查訂單是否存在
+    // 檢查訂單是否存在
     const existingOrder = await prisma.furnitureOrder.findUnique({
       where: { id },
     });
@@ -204,7 +215,7 @@ const adminUpdateOrder = async (req, res) => {
 };
 
 /**
- * @description 客戶刪除待處理訂單
+ * @description 客戶刪除/撤回待處理訂單
  * @route DELETE /api/furniture/:id
  */
 const deleteOrder = async (req, res) => {
@@ -214,14 +225,18 @@ const deleteOrder = async (req, res) => {
       where: { id, userId: req.user.id },
     });
 
-    if (!order)
-      return res.status(404).json({ success: false, message: "找不到訂單" });
-
-    // 只有 PENDING 狀態可以刪除
-    if (order.status !== "PENDING") {
+    if (!order) {
       return res
-        .status(400)
-        .json({ success: false, message: "訂單處理中或已完成，無法刪除" });
+        .status(404)
+        .json({ success: false, message: "找不到該筆申請紀錄" });
+    }
+
+    // 限制：只有 PENDING (待審核) 狀態可以刪除
+    if (order.status !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: "訂單處理中或已完成，無法刪除或撤回",
+      });
     }
 
     await prisma.furnitureOrder.delete({ where: { id } });
@@ -233,7 +248,7 @@ const deleteOrder = async (req, res) => {
       `使用者撤回了代採購申請: ${order.productName}`
     );
 
-    res.json({ success: true, message: "申請已撤回" });
+    res.json({ success: true, message: "申請已成功撤回" });
   } catch (error) {
     console.error("刪除代採購訂單失敗:", error);
     res.status(500).json({ success: false, message: "操作失敗" });
