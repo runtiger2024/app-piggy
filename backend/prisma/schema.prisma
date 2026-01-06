@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// V15.0 - 旗艦穩定修復版：統一時控欄位 (updatedAt) 邏輯
+// V15.1 - 強化審核工作流與資信透明化版 (保留 V15.0 全部功能)
 
 generator client {
   provider = "prisma-client-js"
@@ -96,9 +96,15 @@ model Shipment {
   taxId                 String?
   invoiceTitle          String?
   note                  String?
+  // [新增] 管理員審核備註：專用於記錄改價、審核意見，與客戶備註分開
+  adminNote             String?   @db.Text
+  
   additionalServices    Json?      @default("{}")
   deliveryLocationRate  Float?
-  status                String    @default("PENDING_PAYMENT")
+  
+  // [優化] 預設狀態調整為 AWAITING_REVIEW，強制執行後台審核流程
+  status                String    @default("AWAITING_REVIEW")
+  
   totalCost             Float?
   trackingNumberTW      String?
   paymentProof          String?

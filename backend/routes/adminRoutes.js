@@ -1,5 +1,5 @@
 // backend/routes/adminRoutes.js
-// V15.0 - 整合傢俱代採購管理模組與權限控制
+// V15.1 - 強化集運單審核工作流與資信檢閱功能
 
 const express = require("express");
 const router = express.Router();
@@ -171,6 +171,24 @@ router
     shipmentController.getAllShipments
   );
 
+// [新增] 集運單詳細資訊 API (含包裹物流單、照片、連結、計費參數)
+router
+  .route("/shipments/:id/detail")
+  .get(
+    protect,
+    checkPermission("SHIPMENT_VIEW"),
+    shipmentController.getShipmentDetail
+  );
+
+// [新增] 集運單審核通過 API (支持手動調整最終金額)
+router
+  .route("/shipments/:id/approve")
+  .put(
+    protect,
+    checkPermission("SHIPMENT_PROCESS"),
+    shipmentController.approveShipment
+  );
+
 router
   .route("/shipments/:id/invoice/issue")
   .post(
@@ -187,7 +205,7 @@ router
     shipmentController.manualVoidInvoice
   );
 
-// 人工改價 API
+// 人工改價 API (保持原功能)
 router
   .route("/shipments/:id/price")
   .put(
@@ -316,7 +334,7 @@ router
   );
 
 // ==========================================
-// 7. 傢俱代採購管理 [新增模組]
+// 7. 傢俱代採購管理
 // ==========================================
 router
   .route("/furniture/list")
@@ -331,7 +349,7 @@ router
     protect,
     checkPermission("FURNITURE_EDIT"),
     furnitureAdminController.createFurnitureOrder
-  ); // 新增
+  );
 router
   .route("/furniture/update/:id")
   .put(
@@ -345,14 +363,14 @@ router
     protect,
     checkPermission("FURNITURE_DELETE"),
     furnitureAdminController.bulkDeleteFurniture
-  ); // 新增
+  );
 router
   .route("/furniture/bulk-status")
   .put(
     protect,
     checkPermission("FURNITURE_EDIT"),
     furnitureAdminController.bulkUpdateFurnitureStatus
-  ); // 新增
+  );
 router
   .route("/furniture/:id")
   .delete(

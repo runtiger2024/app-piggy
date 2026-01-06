@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/admin-modern.css" />
     <link rel="stylesheet" href="css/modals-unified.css" />
     <style>
-      /* --- [核心修復] 補上 Modal 定位樣式，確保視窗能出現在螢幕中央 --- */
+      /* --- [核心修復] 補上 Modal 定位樣式 --- */
       .modal {
         display: none;
         position: fixed;
@@ -21,7 +21,7 @@
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.6);
-        z-index: 9999; /* 確保在最上層 */
+        z-index: 9999;
         align-items: center;
         justify-content: center;
       }
@@ -32,15 +32,51 @@
         max-height: 90vh;
         overflow-y: auto;
       }
+
+      /* --- [優化] 包裹詳情表格樣式 --- */
+      .package-detail-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .package-detail-table th {
+        background: #f8f9fa;
+        padding: 8px;
+        border: 1px solid #eee;
+        text-align: left;
+      }
+      .package-detail-table td {
+        padding: 8px;
+        border: 1px solid #eee;
+        vertical-align: middle;
+      }
+      .pkg-thumb {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+        cursor: pointer;
+        border: 1px solid #ddd;
+      }
+      .box-spec-tag {
+        display: inline-block;
+        background: #e9ecef;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin: 2px;
+        font-size: 11px;
+      }
+
       .package-list-box {
         border: 1px solid #eee;
-        padding: 10px;
+        padding: 0;
         background: #fcfcfc;
         border-radius: 6px;
-        max-height: 150px;
+        max-height: 350px; /* 加高以容納更多資信 */
         overflow-y: auto;
       }
-      /* 狀態標籤顏色保持不變 */
+
+      /* 狀態標籤 */
       .status-badge {
         padding: 4px 8px;
         border-radius: 4px;
@@ -52,11 +88,11 @@
         color: #e65100;
         border: 1px solid #ffb74d;
       }
-      .status-PENDING_REVIEW {
+      .status-AWAITING_REVIEW {
         background: #f3e5f5;
         color: #7b1fa2;
         border: 1px solid #ce93d8;
-      }
+      } /* 審核中 */
       .status-PROCESSING {
         background: #e0f7fa;
         color: #006064;
@@ -77,6 +113,14 @@
         background: #ffebee;
         color: #b71c1c;
         border: 1px solid #ffcdd2;
+      }
+
+      /* 審核區塊強調 */
+      .audit-section {
+        background: #fff9db;
+        border: 2px dashed #fab005;
+        padding: 15px;
+        border-radius: 8px;
       }
     </style>
   </head>
@@ -100,14 +144,14 @@
                 type="text"
                 id="search-input"
                 class="form-control"
-                placeholder="搜尋訂單號 / 會員 Email / 收件人..."
+                placeholder="搜尋訂單號 / 會員 Email / 收件人 / 台灣單號..."
               />
             </div>
             <div style="flex: 0 0 200px">
               <select id="status-filter" class="form-control">
                 <option value="">所有狀態</option>
+                <option value="AWAITING_REVIEW">待審核(合併中)</option>
                 <option value="PENDING_PAYMENT">待付款</option>
-                <option value="PENDING_REVIEW">已付款(待審核)</option>
                 <option value="PROCESSING">已收款(處理中)</option>
                 <option value="SHIPPED">已裝櫃</option>
                 <option value="CUSTOMS_CHECK">海關查驗中</option>
@@ -186,14 +230,23 @@
       </div>
 
       <div id="shipment-modal" class="modal">
-        <div class="modal-content card" style="width: 750px; max-width: 95%">
-          <div class="card-header">
-            <span id="modal-title">集運單詳細管理</span>
-            <button type="button" class="modal-close-btn">&times;</button>
+        <div class="modal-content card" style="width: 900px; max-width: 95%">
+          <div class="card-header d-flex justify-content-between">
+            <span id="modal-title" class="font-weight-bold"
+              ><i class="fas fa-search-plus"></i> 集運單深度檢閱</span
+            >
+            <button
+              type="button"
+              class="modal-close-btn border-0 bg-transparent"
+              style="font-size: 24px"
+            >
+              &times;
+            </button>
           </div>
           <div class="card-body">
             <form id="edit-shipment-form">
               <input type="hidden" id="edit-shipment-id" />
+
               <div class="info-grid mb-3">
                 <div class="info-item">
                   <strong>收件人:</strong> <span id="m-recipient"></span>
@@ -201,57 +254,126 @@
                 <div class="info-item">
                   <strong>電話:</strong> <span id="m-phone"></span>
                 </div>
+                <div class="info-item">
+                  <strong>會員帳號:</strong> <span id="m-user"></span>
+                  <small id="m-piggy-id" class="text-muted ml-2"></small>
+                </div>
+                <div class="info-item">
+                  <strong>身分證/稅號:</strong> <span id="m-id"></span>
+                </div>
                 <div class="info-item full-width">
-                  <strong>地址:</strong> <span id="m-address"></span>
-                </div>
-                <div class="info-item">
-                  <strong>身分證:</strong> <span id="m-id"></span>
-                </div>
-                <div class="info-item">
-                  <strong>會員:</strong> <span id="m-user"></span>
-                </div>
-              </div>
-
-              <div class="section-box mb-3 border p-2 rounded">
-                <label class="font-weight-bold text-primary"
-                  ><i class="fas fa-file-invoice"></i> 發票與稅務</label
-                >
-                <div class="row">
-                  <div class="col">
-                    <small>統一編號</small>
-                    <input
-                      type="text"
-                      id="m-tax-id"
-                      class="form-control form-control-sm"
-                      placeholder="8碼數字"
-                    />
-                  </div>
-                  <div class="col">
-                    <small>發票抬頭</small>
-                    <input
-                      type="text"
-                      id="m-invoice-title"
-                      class="form-control form-control-sm"
-                      placeholder="抬頭全銜"
-                    />
-                  </div>
+                  <strong>配送地址:</strong> <span id="m-address"></span>
                 </div>
               </div>
 
               <div class="mb-3">
-                <label class="font-weight-bold">📦 包裹內容</label>
-                <div id="m-packages" class="package-list-box"></div>
+                <label class="font-weight-bold text-dark"
+                  ><i class="fas fa-cubes"></i> 包含包裹明細 (打包前資訊)</label
+                >
+                <div id="m-packages-container" class="package-list-box">
+                  <table class="package-detail-table">
+                    <thead>
+                      <tr>
+                        <th>照片</th>
+                        <th>物流單號/品名</th>
+                        <th>購買連結</th>
+                        <th>單箱規格 (長*寬*高/重)</th>
+                        <th>預估費用</th>
+                      </tr>
+                    </thead>
+                    <tbody id="m-packages-list-body"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div
+                id="audit-action-section"
+                class="audit-section mb-3"
+                style="display: none"
+              >
+                <h6 class="font-weight-bold text-warning">
+                  <i class="fas fa-gavel"></i> 管理員審核與定價
+                </h6>
+                <div class="row">
+                  <div class="col-md-4">
+                    <label>最終核定金額 (NT$)</label>
+                    <input
+                      type="number"
+                      id="m-audit-cost"
+                      class="form-control border-warning"
+                      placeholder="請輸入最終費用"
+                    />
+                  </div>
+                  <div class="col-md-8">
+                    <label>審核備註 (客戶可見)</label>
+                    <input
+                      type="text"
+                      id="m-audit-note"
+                      class="form-control border-warning"
+                      placeholder="例如：超材重調整、木架費另計"
+                    />
+                  </div>
+                </div>
+                <div class="text-right mt-2">
+                  <button
+                    type="button"
+                    class="btn btn-warning"
+                    onclick="window.approveShipment()"
+                  >
+                    <i class="fas fa-check-circle"></i> 審核通過並要求付款
+                  </button>
+                </div>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <div class="section-box border p-2 rounded h-100">
+                    <label class="font-weight-bold text-primary"
+                      ><i class="fas fa-file-invoice"></i> 發票抬頭資信</label
+                    >
+                    <div class="row">
+                      <div class="col-6">
+                        <small>統一編號</small>
+                        <input
+                          type="text"
+                          id="m-tax-id"
+                          class="form-control form-control-sm"
+                        />
+                      </div>
+                      <div class="col-6">
+                        <small>抬頭</small>
+                        <input
+                          type="text"
+                          id="m-invoice-title"
+                          class="form-control form-control-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="section-box border p-2 rounded h-100">
+                    <label class="text-info font-weight-bold"
+                      ><i class="fas fa-receipt"></i> 付款憑證</label
+                    >
+                    <div
+                      id="m-proof"
+                      class="text-center p-1 bg-white border"
+                      style="min-height: 60px"
+                    ></div>
+                  </div>
+                </div>
               </div>
 
               <div id="invoice-management-section" class="mb-3"></div>
 
-              <div class="section-box mb-3 bg-light p-3 rounded">
+              <div class="section-box mb-3 bg-light p-3 rounded border">
                 <div class="row">
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <label>訂單狀態</label>
                     <select id="m-status" class="form-control">
+                      <option value="AWAITING_REVIEW">待審核</option>
                       <option value="PENDING_PAYMENT">待付款</option>
-                      <option value="PENDING_REVIEW">已付款(待審核)</option>
                       <option value="PROCESSING">已收款(處理中)</option>
                       <option value="SHIPPED">已裝櫃</option>
                       <option value="CUSTOMS_CHECK">海關查驗中</option>
@@ -261,36 +383,34 @@
                       <option value="CANCELLED">已取消</option>
                     </select>
                   </div>
-                  <div class="col-md-6">
-                    <label>總金額 (NT$)</label>
+                  <div class="col-md-4">
+                    <label>修改總金額 (NT$)</label>
                     <input type="number" id="m-cost" class="form-control" />
                   </div>
-                </div>
-                <div class="row mt-2">
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <label>台灣端單號</label>
                     <input
                       type="text"
                       id="m-tracking-tw"
                       class="form-control"
+                      placeholder="黑貓/新竹單號"
                     />
                   </div>
+                </div>
+                <div class="row mt-2">
                   <div class="col-md-6">
-                    <label>🚢 裝櫃日期</label>
+                    <label>🚢 預計裝櫃日期</label>
                     <input
                       type="date"
                       id="m-loading-date"
                       class="form-control"
                     />
                   </div>
+                  <div class="col-md-6">
+                    <label>訂單一般備註</label>
+                    <input type="text" id="m-note" class="form-control" />
+                  </div>
                 </div>
-              </div>
-
-              <div class="section-box mb-3 border p-2 rounded">
-                <label class="text-warning"
-                  ><i class="fas fa-image"></i> 付款憑證</label
-                >
-                <div id="m-proof" class="text-center p-2 bg-white border"></div>
               </div>
 
               <div class="modal-footer d-flex justify-content-between">
@@ -299,7 +419,7 @@
                   id="btn-return-shipment"
                   class="btn btn-outline-danger"
                 >
-                  退回訂單
+                  <i class="fas fa-undo"></i> 退回訂單至包裹狀態
                 </button>
                 <div class="btn-group">
                   <button
@@ -307,10 +427,10 @@
                     class="btn btn-secondary"
                     onclick="window.printShipment()"
                   >
-                    列印
+                    <i class="fas fa-print"></i> 列印集運單
                   </button>
                   <button type="submit" class="btn btn-success">
-                    儲存更新
+                    <i class="fas fa-save"></i> 儲存所有更新
                   </button>
                 </div>
               </div>
@@ -322,15 +442,22 @@
       <div id="adjust-price-modal" class="modal">
         <div class="modal-content card" style="width: 450px">
           <div class="card-header bg-warning text-dark">
-            <span><i class="fas fa-edit"></i> 修改訂單總金額</span>
-            <button type="button" class="modal-close-btn">&times;</button>
+            <span
+              ><i class="fas fa-edit"></i> 修正訂單總金額 (含錢包多退少補)</span
+            >
+            <button
+              type="button"
+              class="modal-close-btn border-0 bg-transparent"
+            >
+              &times;
+            </button>
           </div>
           <div class="card-body">
             <form id="adjust-price-form">
               <input type="hidden" id="adjust-shipment-id" />
               <div class="form-group mb-3">
-                <label>目前金額</label
-                ><input
+                <label>目前金額</label>
+                <input
                   type="text"
                   id="adjust-original-price"
                   class="form-control"
@@ -338,8 +465,8 @@
                 />
               </div>
               <div class="form-group mb-3">
-                <label class="text-danger">新金額 (NT$)</label
-                ><input
+                <label class="text-danger">調整後新金額 (NT$)</label>
+                <input
                   type="number"
                   id="adjust-new-price"
                   class="form-control"
@@ -347,8 +474,8 @@
                 />
               </div>
               <div class="form-group mb-3">
-                <label>原因</label
-                ><textarea
+                <label>調整原因 (客戶與日誌將留存)</label>
+                <textarea
                   id="adjust-reason"
                   class="form-control"
                   rows="3"
@@ -364,7 +491,7 @@
                   class="btn btn-primary"
                   onclick="window.confirmAdjustPrice()"
                 >
-                  確認
+                  確認調整
                 </button>
               </div>
             </form>
@@ -372,6 +499,7 @@
         </div>
       </div>
     </div>
+
     <script src="js/apiConfig.js"></script>
     <script src="js/admin-layout.js"></script>
     <script src="js/admin-shipments.js"></script>

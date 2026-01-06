@@ -1,10 +1,9 @@
 // backend/controllers/admin/shipmentController.js
-// V14.0 - Added Manual Price Adjustment Feature
+// V15.0 - 強化審核機制與包裹資信透明化 (保留 V14.0 全部功能)
 
 const prisma = require("../../config/db.js");
 const createLog = require("../../utils/createLog.js");
 const createNotification = require("../../utils/createNotification.js");
-// 引入新的 Email 通知函數
 const { sendShipmentShippedNotification } = require("../../utils/sendEmail.js");
 const invoiceHelper = require("../../utils/invoiceHelper.js");
 const {
@@ -12,7 +11,7 @@ const {
   buildShipmentWhereClause,
 } = require("../../utils/adminHelpers.js");
 
-// [Helper] 內部使用的退款處理函數
+// [Helper] 內部使用的退款處理函數 (保留 V14.0)
 const processRefund = async (tx, shipment, description) => {
   if (shipment.paymentProof === "WALLET_PAY" && shipment.totalCost > 0) {
     await tx.transaction.create({
@@ -33,6 +32,7 @@ const processRefund = async (tx, shipment, description) => {
   return false;
 };
 
+// [優化] 獲取所有集運單：包含詳細包裹物理資訊、計費參數、購買連結等
 const getAllShipments = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -51,8 +51,27 @@ const getAllShipments = async (req, res) => {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          user: { select: { name: true, email: true } },
-          packages: { select: { productName: true, trackingNumber: true } },
+          user: {
+            select: {
+              name: true,
+              email: true,
+              piggyId: true, // [新增] 顯示會員識別碼
+            },
+          },
+          // [深度優化] 抓取打包前所有包裹核心資訊
+          packages: {
+            select: {
+              id: true,
+              productName: true,
+              trackingNumber: true,
+              productImages: true, // 商品照片
+              productUrl: true, // 購買連結
+              arrivedBoxesJson: true, // [關鍵] 包含每箱重量、長寬高、計費方式
+              totalCalculatedFee: true, // 系統初算費用
+              warehouseRemark: true,
+              status: true,
+            },
+          },
         },
       }),
       prisma.shipment.groupBy({
@@ -86,6 +105,68 @@ const getAllShipments = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: "伺服器錯誤" });
+  }
+};
+
+// [新增功能] 獲取單一集運單詳細資料 (專供管理後台詳細審核頁面使用)
+const getShipmentDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const shipment = await prisma.shipment.findUnique({
+      where: { id },
+      include: {
+        user: true,
+        packages: true,
+      },
+    });
+    if (!shipment)
+      return res.status(404).json({ success: false, message: "找不到訂單" });
+    res.json({ success: true, shipment });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "伺服器錯誤" });
+  }
+};
+
+// [新增功能] 審核集運單 (審核通過後才允許付款或安排裝櫃)
+const approveShipment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { totalCost, adminNote } = req.body;
+
+    const original = await prisma.shipment.findUnique({ where: { id } });
+    if (!original)
+      return res.status(404).json({ success: false, message: "訂單不存在" });
+
+    // 更新狀態為待付款，並允許在此時修正最終計費金額
+    const updated = await prisma.shipment.update({
+      where: { id },
+      data: {
+        status: "PENDING_PAYMENT",
+        totalCost:
+          totalCost !== undefined ? parseFloat(totalCost) : original.totalCost,
+        note: adminNote
+          ? `[管理員審核]: ${adminNote} | ${original.note || ""}`
+          : original.note,
+      },
+    });
+
+    await createNotification(
+      original.userId,
+      "訂單審核完成",
+      `您的訂單 ${id.slice(-8)} 已審核通過，請確認最終金額並完成支付。`,
+      "SHIPMENT",
+      id
+    );
+
+    await createLog(
+      req.user.id,
+      "APPROVE_SHIPMENT",
+      id,
+      `審核通過, 金額設定為: ${totalCost}`
+    );
+    res.json({ success: true, shipment: updated });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "審核操作失敗" });
   }
 };
 
@@ -214,7 +295,7 @@ const bulkUpdateShipmentStatus = async (req, res) => {
         }
       });
 
-      const msg = refundCount > 0 ? ` (含退雪 ${refundCount} 筆)` : "";
+      const msg = refundCount > 0 ? ` (含退款 ${refundCount} 筆)` : "";
       await createLog(
         req.user.id,
         "BULK_UPDATE_SHIPMENT",
@@ -225,13 +306,11 @@ const bulkUpdateShipmentStatus = async (req, res) => {
         .status(200)
         .json({ success: true, message: `批量取消成功${msg}` });
     } else {
-      // SHIPPED, COMPLETED 等其他狀態
       await prisma.shipment.updateMany({
         where: { id: { in: ids } },
         data: { status },
       });
 
-      // 批量通知 & Email
       const shipments = await prisma.shipment.findMany({
         where: { id: { in: ids } },
         select: {
@@ -240,10 +319,11 @@ const bulkUpdateShipmentStatus = async (req, res) => {
           recipientName: true,
           trackingNumberTW: true,
         },
-        include: { user: true }, // 需要 User 來發 Email
+        include: { user: true },
       });
 
       const statusMsgs = {
+        AWAITING_REVIEW: "待管理員審核",
         SHIPPED: "已裝櫃出貨",
         CUSTOMS_CHECK: "海關查驗中",
         UNSTUFFING: "正在拆櫃派送",
@@ -253,7 +333,6 @@ const bulkUpdateShipmentStatus = async (req, res) => {
       if (statusMsgs[status]) {
         await Promise.all(
           shipments.map(async (s) => {
-            // 1. 站內通知
             await createNotification(
               s.userId,
               `訂單狀態更新：${statusMsgs[status]}`,
@@ -261,7 +340,6 @@ const bulkUpdateShipmentStatus = async (req, res) => {
               "SHIPMENT",
               s.id
             );
-            // 2. [New] 如果是 SHIPPED，發送 Email
             if (status === "SHIPPED") {
               await sendShipmentShippedNotification(s, s.user);
             }
@@ -357,6 +435,7 @@ const updateShipmentStatus = async (req, res) => {
       taxId,
       invoiceTitle,
       loadingDate,
+      note,
     } = req.body;
 
     const originalShipment = await prisma.shipment.findUnique({
@@ -392,6 +471,7 @@ const updateShipmentStatus = async (req, res) => {
       dataToUpdate.trackingNumberTW = trackingNumberTW;
     if (taxId !== undefined) dataToUpdate.taxId = taxId;
     if (invoiceTitle !== undefined) dataToUpdate.invoiceTitle = invoiceTitle;
+    if (note !== undefined) dataToUpdate.note = note;
 
     if (loadingDate !== undefined) {
       dataToUpdate.loadingDate = loadingDate ? new Date(loadingDate) : null;
@@ -471,6 +551,7 @@ const updateShipmentStatus = async (req, res) => {
     });
 
     const statusMsgs = {
+      AWAITING_REVIEW: "訂單正在審核中",
       PROCESSING: "訂單已收款，正在處理中",
       SHIPPED: "訂單已裝櫃出貨",
       CUSTOMS_CHECK: "訂單海關查驗中",
@@ -478,7 +559,6 @@ const updateShipmentStatus = async (req, res) => {
       COMPLETED: "訂單已完成",
     };
     if (status && statusMsgs[status]) {
-      // 1. 站內通知
       await createNotification(
         originalShipment.userId,
         statusMsgs[status],
@@ -486,7 +566,6 @@ const updateShipmentStatus = async (req, res) => {
         "SHIPMENT",
         id
       );
-      // 2. [New] 如果是 SHIPPED，發送 Email
       if (status === "SHIPPED") {
         await sendShipmentShippedNotification(updated, originalShipment.user);
       }
@@ -712,25 +791,21 @@ const manualVoidInvoice = async (req, res) => {
   }
 };
 
-// [新增功能] 人工調整訂單價格 (含錢包多退少補邏輯)
 const adjustShipmentPrice = async (req, res) => {
   try {
     const { id } = req.params;
     const { newPrice, reason } = req.body;
 
-    // 1. 基本驗證
     if (newPrice === undefined || newPrice < 0) {
       return res
         .status(400)
         .json({ success: false, message: "請提供有效的新價格 (newPrice)" });
     }
     if (!reason || reason.trim() === "") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "為了稽核安全，請務必填寫「調整原因」",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "為了稽核安全，請務必填寫「調整原因」",
+      });
     }
 
     const shipment = await prisma.shipment.findUnique({
@@ -742,7 +817,6 @@ const adjustShipmentPrice = async (req, res) => {
       return res.status(404).json({ success: false, message: "找不到訂單" });
     }
 
-    // 2. 發票防呆：若已開立發票，必須先作廢才能改價
     if (shipment.invoiceStatus === "ISSUED" && shipment.invoiceNumber) {
       return res.status(400).json({
         success: false,
@@ -753,26 +827,21 @@ const adjustShipmentPrice = async (req, res) => {
 
     const oldPrice = shipment.totalCost || 0;
     const targetPrice = parseFloat(newPrice);
-    const diff = oldPrice - targetPrice; // 正數代表降價(需退款)，負數代表漲價(需補扣)
+    const diff = oldPrice - targetPrice;
     const isWalletPay = shipment.paymentProof === "WALLET_PAY";
 
-    // 若價格無變動則直接返回
     if (Math.abs(diff) < 0.01) {
       return res.status(200).json({ success: true, message: "價格無變動" });
     }
 
-    // 3. 開始資料庫交易 (確保金額與錢包一致性)
     await prisma.$transaction(async (tx) => {
-      // 3.1 更新訂單金額
       await tx.shipment.update({
         where: { id },
         data: { totalCost: targetPrice },
       });
 
-      // 3.2 若已使用錢包支付，需處理多退少補
       if (isWalletPay) {
         if (diff > 0) {
-          // === 降價：退還差額給客戶 ===
           await tx.wallet.update({
             where: { userId: shipment.userId },
             data: { balance: { increment: diff } },
@@ -791,10 +860,7 @@ const adjustShipmentPrice = async (req, res) => {
             },
           });
         } else {
-          // === 漲價：補扣客戶餘額 ===
           const chargeAmount = Math.abs(diff);
-
-          // 檢查餘額是否足夠
           const wallet = await tx.wallet.findUnique({
             where: { userId: shipment.userId },
           });
@@ -802,7 +868,7 @@ const adjustShipmentPrice = async (req, res) => {
             throw new Error(
               `用戶錢包餘額不足，無法調漲價格 (需補扣 $${chargeAmount}，目前餘額 $${
                 wallet?.balance || 0
-              })。請先請用戶儲值或將訂單改為未付款狀態。`
+              })。`
             );
           }
 
@@ -815,7 +881,7 @@ const adjustShipmentPrice = async (req, res) => {
             data: {
               wallet: { connect: { userId: shipment.userId } },
               amount: chargeAmount,
-              type: "ADJUST", // 使用 ADJUST 或 PAYMENT
+              type: "ADJUST",
               status: "COMPLETED",
               description: `訂單改價補扣 #${
                 shipment.trackingNumberTW || shipment.id.slice(-6)
@@ -827,7 +893,6 @@ const adjustShipmentPrice = async (req, res) => {
       }
     });
 
-    // 4. 寫入操作日誌 (Audit Log)
     await createLog(
       req.user.id,
       "ADJUST_PRICE",
@@ -835,13 +900,10 @@ const adjustShipmentPrice = async (req, res) => {
       `價格調整: $${oldPrice} -> $${targetPrice}, 原因: ${reason}`
     );
 
-    // 5. 發送通知給用戶
     await createNotification(
       shipment.userId,
       "訂單金額調整通知",
-      `您的訂單 ${id.slice(
-        -8
-      )} 金額已由系統管理員調整為 $${targetPrice}。原因：${reason}`,
+      `您的訂單 ${id.slice(-8)} 金額已調整為 $${targetPrice}。原因：${reason}`,
       "SHIPMENT",
       id
     );
@@ -857,7 +919,6 @@ const adjustShipmentPrice = async (req, res) => {
           : ""),
     });
   } catch (e) {
-    console.error("Adjust Price Error:", e);
     res
       .status(500)
       .json({ success: false, message: e.message || "調整價格失敗" });
@@ -866,6 +927,8 @@ const adjustShipmentPrice = async (req, res) => {
 
 module.exports = {
   getAllShipments,
+  getShipmentDetail,
+  approveShipment,
   exportShipments,
   bulkUpdateShipmentStatus,
   bulkDeleteShipments,
