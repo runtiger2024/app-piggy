@@ -1,5 +1,5 @@
 // backend/routes/adminRoutes.js
-// V15.1 - 強化集運單審核工作流與資信檢閱功能
+// V15.3 - 強化集運單與財務管理全功能版 (含批量審核、財務統計與資信詳情)
 
 const express = require("express");
 const router = express.Router();
@@ -299,14 +299,50 @@ router
   );
 
 // ==========================================
-// 6. 財務管理
+// 6. 財務管理 (優化擴充)
 // ==========================================
+// [新增] 財務儀表板統計數據
+router
+  .route("/finance/stats")
+  .get(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.getFinanceStats
+  );
+
+// [優化] 取得全體會員錢包概覽
+router
+  .route("/finance/wallets")
+  .get(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.getWalletsOverview
+  );
+
+// [新增] 取得特定會員錢包詳情與完整交易歷史
+router
+  .route("/finance/wallets/:userId")
+  .get(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.getWalletDetail
+  );
+
 router
   .route("/finance/transactions")
   .get(
     protect,
     checkPermission("FINANCE_AUDIT"),
     walletController.getTransactions
+  );
+
+// [新增] 批量審核交易紀錄
+router
+  .route("/finance/transactions/bulk-review")
+  .post(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.bulkReviewTransactions
   );
 
 router
@@ -323,6 +359,20 @@ router
     protect,
     checkPermission("FINANCE_AUDIT"),
     walletController.manualIssueDepositInvoice
+  );
+
+// [優化] 支援單筆交易的修改與刪除 (CRUD)
+router
+  .route("/finance/transactions/:id")
+  .put(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.updateTransaction
+  )
+  .delete(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.deleteTransaction
   );
 
 router

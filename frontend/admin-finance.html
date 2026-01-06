@@ -35,11 +35,39 @@
       #user-search-results div:hover {
         background: #f0f7ff;
       }
+      /* [新增] 視圖切換按鈕樣式 */
+      .view-tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 15px;
+      }
+      .view-tabs .btn {
+        border-radius: 20px;
+        padding: 6px 20px;
+        font-weight: 500;
+      }
+      .view-tabs .btn.active {
+        background-color: var(--primary-color, #4a90e2);
+        color: #fff;
+        border-color: var(--primary-color, #4a90e2);
+      }
     </style>
   </head>
   <body>
     <div class="container-fluid">
       <h1 class="page-title">財務管理與審核</h1>
+
+      <div class="view-tabs">
+        <button
+          class="btn btn-outline-primary active"
+          id="btn-view-transactions"
+        >
+          <i class="fas fa-list-ul"></i> 交易紀錄
+        </button>
+        <button class="btn btn-outline-primary" id="btn-view-wallets">
+          <i class="fas fa-wallet"></i> 會員錢包總覽
+        </button>
+      </div>
 
       <div class="card mb-3">
         <div class="card-body">
@@ -57,7 +85,7 @@
                 type="text"
                 id="search-input"
                 class="form-control"
-                placeholder="搜尋會員姓名或 Email..."
+                placeholder="搜尋會員姓名、Email 或 Piggy ID..."
               />
             </div>
             <div style="flex: 0 0 150px">
@@ -88,7 +116,7 @@
 
       <div class="card">
         <div class="card-header">
-          <span><i class="fas fa-file-invoice-dollar"></i> 交易紀錄列表</span>
+          <span><i class="fas fa-file-invoice-dollar"></i> 數據清單</span>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -96,18 +124,18 @@
               <thead>
                 <tr>
                   <th>時間</th>
-                  <th>會員</th>
+                  <th>會員資訊</th>
                   <th>類型</th>
                   <th>金額</th>
                   <th>發票狀態</th>
                   <th>說明 / 憑證</th>
                   <th>狀態</th>
-                  <th>操作</th>
+                  <th class="text-right">操作</th>
                 </tr>
               </thead>
               <tbody id="transaction-list">
                 <tr>
-                  <td colspan="8" class="text-center p-3">載入中...</td>
+                  <td colspan="9" class="text-center p-3">載入中...</td>
                 </tr>
               </tbody>
             </table>
@@ -163,7 +191,7 @@
           <div class="card-body">
             <form id="adjust-form">
               <div class="form-group mb-3">
-                <label>搜尋會員 (Email/姓名)</label>
+                <label>目標會員 (已鎖定或搜尋)</label>
                 <div style="position: relative">
                   <input
                     type="text"
@@ -199,24 +227,72 @@
                   id="adjust-amount"
                   class="form-control"
                   required
-                  placeholder="正數加款，負數扣款"
+                  placeholder="正數加錢，負數扣錢"
                 />
                 <small class="text-danger"
-                  >例：輸入 1000 增加餘額；輸入 -500 扣除餘額。</small
+                  >例：輸入 1000 增加餘額；輸入 -500 扣除錢包。</small
                 >
               </div>
               <div class="form-group mb-3">
-                <label>備註說明</label>
+                <label>調整原因 / 備註</label>
                 <input
                   type="text"
                   id="adjust-note"
                   class="form-control"
                   required
-                  placeholder="例如：退還運費差額"
+                  placeholder="例如：人工補償、運費退回"
                 />
               </div>
               <button type="submit" class="btn btn-primary w-100">
-                確認調整並同步錢包
+                確認調整並更新餘額
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="edit-tx-modal" class="modal">
+        <div class="modal-card card" style="width: 500px; max-width: 90%">
+          <div class="card-header d-flex justify-content-between">
+            <span>編輯交易紀錄</span>
+            <button type="button" class="modal-close-btn btn btn-sm btn-danger">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="card-body">
+            <form id="edit-tx-form">
+              <div class="form-group mb-3">
+                <label>交易金額 (已完成交易不可修改)</label>
+                <input type="number" id="edit-tx-amount" class="form-control" />
+              </div>
+              <div class="form-group mb-3">
+                <label>統一編號 (選填)</label>
+                <input
+                  type="text"
+                  id="edit-tx-taxid"
+                  class="form-control"
+                  placeholder="8碼統編"
+                />
+              </div>
+              <div class="form-group mb-3">
+                <label>發票抬頭 (選填)</label>
+                <input
+                  type="text"
+                  id="edit-tx-title"
+                  class="form-control"
+                  placeholder="公司名稱"
+                />
+              </div>
+              <div class="form-group mb-3">
+                <label>備註說明</label>
+                <textarea
+                  id="edit-tx-desc"
+                  class="form-control"
+                  rows="3"
+                ></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary w-100">
+                儲存變更
               </button>
             </form>
           </div>
