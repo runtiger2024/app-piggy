@@ -1,5 +1,5 @@
 // backend/controllers/furnitureController.js
-// V2026.1.7 - 傢俱代採購服務核心邏輯 (旗艦完整版：支援會員參考圖與管理員憑證檔案上傳)
+// V2026.1.8 - 旗艦完整版：支援會員參考圖、管理員發票上傳，並與資料庫 Schema 完全同步
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
@@ -14,7 +14,8 @@ const createFurnitureOrder = async (req, res) => {
     const { factoryName, productName, quantity, priceRMB, note } = req.body;
     const userId = req.user.id;
 
-    // [核心優化] 處理會員上傳的參考圖片檔案 (對應前端預覽縮圖功能)
+    // [核心優化] 接收來自 Multer 中間件處理後的檔案路徑
+    // 對應前端「點擊上傳商品或報價單截圖」功能
     const refImageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!factoryName || !productName || !quantity || !priceRMB) {
@@ -66,7 +67,7 @@ const createFurnitureOrder = async (req, res) => {
     // 總金額 (台幣) = 貨值 TWD + 服務費 TWD (無條件進位)
     const totalAmountTWD = Math.ceil(productAmountTWD + finalServiceFeeTWD);
 
-    // 3. 建立訂單
+    // 3. 建立訂單 (欄位名稱必須與 schema.prisma 完全匹配)
     const furnitureOrder = await prisma.furnitureOrder.create({
       data: {
         userId,
@@ -75,12 +76,12 @@ const createFurnitureOrder = async (req, res) => {
         quantity: parseInt(quantity),
         priceRMB: parseFloat(priceRMB),
         // 儲存當時的費率與計算結果
-        serviceFeeRMB: finalServiceFeeTWD / exchangeRate, // 換算回 RMB 存檔(可選)
+        serviceFeeRMB: finalServiceFeeTWD / exchangeRate,
         exchangeRate,
         serviceFeeRate,
         totalAmountTWD,
         note,
-        refImageUrl, // 儲存使用者上傳的參考截圖路徑 (對應預覽縮圖)
+        refImageUrl, // 這裡已在 Schema V15.2 中定義，不會再報錯 Unknown argument
         status: "PENDING",
       },
     });
@@ -131,7 +132,7 @@ const adminGetAllOrders = async (req, res) => {
   try {
     const orders = await prisma.furnitureOrder.findMany({
       include: {
-        user: { select: { name: true, email: true } },
+        user: { select: { piggyId: true, name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -151,7 +152,7 @@ const adminUpdateOrder = async (req, res) => {
     const { id } = req.params;
     const { status, adminRemark, invoiceUrl } = req.body;
 
-    // [新增] 處理管理員上傳的正式發票或支付憑證檔案
+    // [優化] 處理管理員上傳的正式發票檔案 (若路由有配置 upload.single("invoiceFile"))
     const uploadedInvoiceUrl = req.file
       ? `/uploads/${req.file.filename}`
       : invoiceUrl;
@@ -171,7 +172,7 @@ const adminUpdateOrder = async (req, res) => {
       data: {
         status,
         adminRemark,
-        invoiceUrl: uploadedInvoiceUrl, // 使用新上傳的檔案路徑或原本的 URL
+        invoiceUrl: uploadedInvoiceUrl,
         updatedAt: new Date(),
       },
     });

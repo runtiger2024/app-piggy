@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// V15.1 - 強化審核工作流與資信透明化版 (保留 V15.0 全部功能)
+// V15.2 - 旗艦完整版：新增家具代採購參考圖欄位 (解決 PrismaClientValidationError)
 
 generator client {
   provider = "prisma-client-js"
@@ -14,21 +14,21 @@ datasource db {
 model User {
   id                  String   @id @default(cuid())
   
-  // [新增] 專屬會員標識碼：格式為 RP0000889
-  piggyId             String?  @unique
+  // 專屬會員標識碼：格式為 RP0000889
+  piggyId              String?  @unique
   
-  email               String   @unique
-  passwordHash        String
-  name                String?
-  phone               String?
-  defaultAddress      String?
+  email                String   @unique
+  passwordHash         String
+  name                 String?
+  phone                String?
+  defaultAddress       String?
 
   // 發票預設資料
-  defaultTaxId        String?
+  defaultTaxId         String?
   defaultInvoiceTitle String?
 
   // 權限控制
-  permissions         Json     @default("[]")
+  permissions          Json     @default("[]")
 
   // 帳號狀態
   isActive            Boolean  @default(true)
@@ -37,44 +37,43 @@ model User {
   resetPasswordToken  String?
   resetPasswordExpire DateTime?
 
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   // 關聯
   packages            Package[]
-  shipments           Shipment[]
+  shipments            Shipment[]
   activityLogs        ActivityLog[]
   recipients          Recipient[]
   wallet              Wallet?
-  notifications       Notification[]
+  notifications        Notification[]
   
   // 家具代採購關聯
-  furnitureOrders     FurnitureOrder[]
+  furnitureOrders      FurnitureOrder[]
 }
 
 // --- 2. 包裹 (預報) 資料模型 ---
 model Package {
   id                  String   @id @default(cuid())
   trackingNumber      String   @unique
-  productName         String
+  productName          String
   quantity            Int      @default(1)
   note                String?
   
   productUrl          String?   
 
-  productImages       Json     @default("[]")
-  warehouseImages     Json     @default("[]")
+  productImages        Json     @default("[]")
+  warehouseImages      Json     @default("[]")
   warehouseThumbnails Json     @default("[]")
   status              String   @default("PENDING")
-  arrivedBoxesJson    Json     @default("[]")
+  arrivedBoxesJson     Json     @default("[]")
   totalCalculatedFee  Float?
-  warehouseRemark     String?
+  warehouseRemark      String?
   claimProof          String?
-  exceptionStatus     String?
-  exceptionNote       String?
-  createdAt           DateTime @default(now())
-  // [大師修正] 移除 @default(now())，統一由 Prisma 自動處理更新時間
-  updatedAt           DateTime @updatedAt
+  exceptionStatus      String?
+  exceptionNote        String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   userId              String
   user                User     @relation(fields: [userId], references: [id])
@@ -96,13 +95,13 @@ model Shipment {
   taxId                 String?
   invoiceTitle          String?
   note                  String?
-  // [新增] 管理員審核備註：專用於記錄改價、審核意見，與客戶備註分開
+  // 管理員審核備註：專用於記錄改價、審核意見，與客戶備註分開
   adminNote             String?   @db.Text
   
   additionalServices    Json?      @default("{}")
   deliveryLocationRate  Float?
   
-  // [優化] 預設狀態調整為 AWAITING_REVIEW，強制執行後台審核流程
+  // 預設狀態調整為 AWAITING_REVIEW，強制執行後台審核流程
   status                String    @default("AWAITING_REVIEW")
   
   totalCost             Float?
@@ -126,7 +125,6 @@ model Shipment {
   transaction           Transaction? @relation(fields: [transactionId], references: [id])
 
   createdAt             DateTime  @default(now())
-  // [大師修正] 移除 @default(now())，統一由 Prisma 自動處理更新時間
   updatedAt             DateTime  @updatedAt
 
   userId                String
@@ -140,7 +138,7 @@ model Shipment {
 // --- 4. 估價單 ---
 model CalculationQuote {
   id                String   @id @default(cuid())
-  createdAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
   calculationResult Json
 }
 
@@ -217,12 +215,12 @@ model Wallet {
 
 // --- 10. 交易紀錄 ---
 model Transaction {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   walletId          String
-  wallet            Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  wallet            Wallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
   amount            Float
-  type              String   // DEPOSIT, PAYMENT, REFUND, ADJUST
-  status            String   // PENDING, COMPLETED, FAILED, REJECTED
+  type              String    // DEPOSIT, PAYMENT, REFUND, ADJUST
+  status            String    // PENDING, COMPLETED, FAILED, REJECTED
   description       String?
   proofImage        String?
 
@@ -234,8 +232,8 @@ model Transaction {
   invoiceStatus     String?  
 
   shipment          Shipment?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([walletId])
   @@index([status])
@@ -243,30 +241,34 @@ model Transaction {
 
 // --- 11. 家具代採購訂單模型 ---
 model FurnitureOrder {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // 代採購資訊
-  factoryName    String
-  productName    String
-  quantity       Int
-  priceRMB       Float
+  factoryName     String
+  productName     String
+  quantity        Int
+  priceRMB        Float
   
   // 計算結果與當時費率
-  serviceFeeRMB  Float    
-  exchangeRate   Float    
+  serviceFeeRMB   Float    
+  exchangeRate    Float    
   serviceFeeRate Float    
   totalAmountTWD Int      
   
   // 狀態與備註
-  status         String   @default("PENDING") 
-  note           String?  @db.Text
-  adminRemark    String?  @db.Text
-  invoiceUrl     String?  
+  status          String   @default("PENDING") 
+  note            String?  @db.Text
+  adminRemark     String?  @db.Text
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  // [修正新增] 參考截圖欄位：用於存放客戶上傳的商品或報價單縮圖路徑
+  refImageUrl     String?  @db.Text
+
+  invoiceUrl      String?  @db.Text // 管理員提供的正式發票網址
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
