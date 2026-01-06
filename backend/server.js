@@ -1,5 +1,5 @@
 // backend/server.js
-// V15 - 旗艦穩定修復版：強化 CORS 安全性與 App 環境支援
+// V15.1 - 旗艦穩定修復版：強化 CORS 安全性、App 環境支援與前端靜態連結
 
 const express = require("express");
 const dotenv = require("dotenv");
@@ -54,8 +54,14 @@ app.use(
 
 app.use(express.json());
 
-// 靜態檔案 (圖片)
+// --- 靜態檔案設定 ---
+
+// 1. 圖片上傳路徑 (保留原功能)
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
+
+// 2. [優化新增] 前端網頁路徑：解決 quote.html 等前端頁面無法讀取的問題
+// 這會讓 Express 嘗試從與 backend 併列的 frontend 資料夾中尋找檔案
+app.use(express.static(path.join(__dirname, "../frontend")));
 
 // --- 註冊 API 路由 (保留原功能) ---
 app.use("/api/auth", authRoutes);
@@ -73,7 +79,7 @@ app.use("/api/furniture", furnitureRoutes);
 
 app.get("/", (req, res) => {
   res.json({
-    message: "小跑豬後端伺服器 (System V15 - Production Ready)!",
+    message: "小跑豬後端伺服器 (System V15.1 - Production Ready)!",
   });
 });
 
@@ -86,4 +92,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`[啟動成功] 伺服器正在 http://localhost:${PORT} 上運行...`);
   console.log(`[CORS 狀態] 已啟用動態白名單保護`);
+  console.log(
+    `[靜態路由] 已連結至前端目錄: ${path.join(__dirname, "../frontend")}`
+  );
 });

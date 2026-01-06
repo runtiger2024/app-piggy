@@ -596,7 +596,14 @@ window.createShareLink = async function () {
     });
     if (!res.ok) throw new Error("無法建立分享連結 (API Error)");
     const data = await res.json();
-    const shareUrl = `${window.location.origin}/quote.html?id=${data.id}`;
+
+    // --- [核心修復：動態判斷路徑新功能] ---
+    // 自動獲取當前頁面的目錄路徑 (處理 /frontend/ 這種子目錄情況)
+    const currentPath = window.location.pathname
+      .replace("index.html", "")
+      .replace(/\/+$/, "");
+    const shareUrl = `${window.location.origin}${currentPath}/quote.html?id=${data.id}`;
+
     navigator.clipboard
       .writeText(shareUrl)
       .then(() => {
