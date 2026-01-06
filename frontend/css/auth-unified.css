@@ -32,13 +32,17 @@
 
 /* 標頭優化 */
 .auth-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 確保所有子元素水平居中 */
   text-align: center;
   margin-bottom: 35px;
 }
 
 .auth-logo {
+  display: block; /* 轉為塊級元素 */
+  margin: 0 auto 20px; /* 自動左右邊距達成置中，並保留下方間距 */
   height: 52px;
-  margin-bottom: 20px;
   transition: transform 0.3s;
 }
 
