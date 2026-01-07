@@ -36,6 +36,8 @@
   </div>
 
   <div class="modal-body" style="padding: 25px">
+    <div id="sd-timeline" class="mb-4"></div>
+
     <div class="grid-2 gap-20 mb-4">
       <div class="info-card-mini">
         <div class="label"><i class="fas fa-tag"></i> 當前狀態</div>
@@ -100,6 +102,18 @@
       </div>
     </div>
 
+    <div id="sd-services-section" class="detail-section" style="display: none">
+      <div class="section-title">
+        <i class="fas fa-concierge-bell"></i>
+        <span>加值服務需求</span>
+      </div>
+      <div
+        id="sd-services-list"
+        class="section-body info-grid"
+        style="padding: 15px 20px"
+      ></div>
+    </div>
+
     <div class="detail-section">
       <div class="section-title">
         <i class="fas fa-coins"></i>
@@ -123,14 +137,34 @@
     </div>
   </div>
 
-  <div class="modal-footer" style="background: #f8fafc">
-    <button
-      class="btn btn-secondary px-5"
-      onclick="document.getElementById('shipment-details-modal').style.display='none'"
-      style="border-radius: var(--radius-full)"
-    >
-      關閉詳情
-    </button>
+  <div
+    class="modal-footer"
+    style="
+      background: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    "
+  >
+    <div style="font-size: 12px; color: #999">
+      <i class="fas fa-info-circle"></i> 數據根據測量結果自動生成
+    </div>
+    <div class="d-flex gap-10">
+      <button
+        class="btn btn-outline-primary"
+        onclick="window.print()"
+        style="border-radius: var(--radius-full)"
+      >
+        <i class="fas fa-print"></i> 列印報告
+      </button>
+      <button
+        class="btn btn-secondary px-5"
+        onclick="document.getElementById('shipment-details-modal').style.display='none'"
+        style="border-radius: var(--radius-full)"
+      >
+        關閉詳情
+      </button>
+    </div>
   </div>
 </div>
 
@@ -163,7 +197,6 @@
     font-weight: 800;
   }
 
-  /* [新增] 數據統計卡片樣式 */
   .stat-card {
     background: #f8f9fa;
     padding: 12px;
@@ -226,7 +259,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 15px;
-    background: #fffbe6; /* 提醒色 */
+    background: #fffbe6;
     border-radius: 8px;
     margin-top: 5px;
     border: 1px solid #ffe58f;
@@ -261,14 +294,22 @@
     border-bottom: 1px solid #f5f5f5;
   }
 
+  /* 憑證顯示區域：解決破圖時的視覺排版 */
   .proof-upload-area {
     background: #fafafa;
-    min-height: 100px;
+    min-height: 120px;
     padding: 20px;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
+  }
+  .proof-upload-area img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid #eee;
   }
 
   @media (max-width: 600px) {
@@ -283,6 +324,26 @@
     }
     .info-value {
       text-align: left;
+    }
+    .modal-footer {
+      flex-direction: column;
+      gap: 15px;
+    }
+  }
+
+  /* 列印優化 */
+  @media print {
+    .modal-close,
+    .modal-footer button {
+      display: none;
+    }
+    .modal-overlay {
+      position: static;
+      background: white;
+    }
+    .modal-content {
+      box-shadow: none;
+      border: none;
     }
   }
 </style>

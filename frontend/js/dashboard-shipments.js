@@ -1,12 +1,13 @@
 // frontend/js/dashboard-shipments.js
-// V2026.01.Stable.Full - 旗艦版整合邏輯 (修復深度檢閱數據同步、統計顯示與憑證顯示)
+// V2026.01.Stable.Full - 旗艦整合邏輯 (修復深度檢閱數據同步、統計顯示與憑證顯示)
 // [New] 修復「常用地址」按鈕聯動邏輯，確保正確開啟收件人選擇器
 // [Optimization] 整合費用明細、傢俱類型顯示、超重警告與一鍵複製
 // [Fixed] 解決銀行轉帳憑證上傳 404 錯誤 (修正 API 路徑與 PUT 方法)
 // [Added] 新增憑證上傳時的發票資訊聯動與強制驗證邏輯
 // [Added] 深度檢閱報告數據同步：狀態同步、物理統計值、透明化報表渲染、防破圖憑證顯示
 
-/** * [修正] 全局狀態映射表 - 確保客戶端與後端狀態完全對齊
+/**
+ * [修正] 全局狀態映射表 - 確保客戶端與後端狀態完全對齊
  */
 window.SHIPMENT_STATUS_MAP = {
   AWAITING_REVIEW: "待管理員審核",
@@ -41,20 +42,18 @@ window.updateCheckoutBar = function () {
   const checkboxes = document.querySelectorAll(".package-checkbox:checked");
   const count = checkboxes.length;
 
-  // 1.1 更新件數文字
   if (countEl) countEl.textContent = count;
 
-  // 1.2 控制結算條容器的顯示與隱藏
   if (bar) {
     if (count > 0) {
-      bar.style.display = "flex"; // 有選中包裹時顯示
+      bar.style.display = "flex";
       if (btn) {
         btn.disabled = false;
         btn.classList.remove("btn-secondary");
         btn.classList.add("btn-primary");
       }
     } else {
-      bar.style.display = "none"; // 沒選中時隱藏
+      bar.style.display = "none";
       if (btn) {
         btn.disabled = true;
         btn.classList.add("btn-secondary");
@@ -72,20 +71,17 @@ window.handleCreateShipmentClick = async function () {
   if (selectedCheckboxes.length === 0) return;
 
   const selectedIds = Array.from(selectedCheckboxes).map((cb) => cb.dataset.id);
-  const selectedPackages = window.allPackagesData.filter((pkg) =>
+  const selectedPackages = (window.allPackagesData || []).filter((pkg) =>
     selectedIds.includes(pkg.id)
   );
 
-  // 更新件數
   const countEl = document.getElementById("checkout-total-count");
   if (countEl) countEl.textContent = selectedPackages.length;
 
-  // 檢查超重 (前端初步篩選顯示警告)
   const hasHeavyItem = selectedPackages.some((pkg) => pkg.isOverweight);
   const warningBox = document.getElementById("forklift-warning");
   if (warningBox) warningBox.style.display = hasHeavyItem ? "block" : "none";
 
-  // 渲染包裹清單 (左側清單)
   const listContainer = document.getElementById("shipment-package-list");
   if (listContainer) {
     listContainer.innerHTML = "";
@@ -106,15 +102,11 @@ window.handleCreateShipmentClick = async function () {
               pkg.trackingNumber
             }</div>
           </div>
-          <div class="cost" style="text-align: right; font-size: 13px; color: #555;">
-              <i class="fas fa-box"></i>
-          </div>
-        </div>
-      `;
+          <div class="cost" style="text-align: right; font-size: 13px; color: #555;"><i class="fas fa-box"></i></div>
+        </div>`;
     });
   }
 
-  // 自動填入收件人
   if (window.currentUser) {
     if (!document.getElementById("ship-name").value)
       document.getElementById("ship-name").value =
@@ -127,7 +119,6 @@ window.handleCreateShipmentClick = async function () {
         window.currentUser.defaultAddress || "";
   }
 
-  // [重要修復]：重新綁定「常用地址」按鈕，解決點擊無反應問題
   const btnSelectRecipient = document.getElementById("btn-select-recipient");
   if (btnSelectRecipient) {
     btnSelectRecipient.onclick = (e) => {
@@ -140,7 +131,6 @@ window.handleCreateShipmentClick = async function () {
     };
   }
 
-  // 重置付款方式
   const radioTransfer = document.getElementById("pay-transfer");
   if (radioTransfer) radioTransfer.checked = true;
   togglePaymentMethod("TRANSFER");
@@ -150,7 +140,6 @@ window.handleCreateShipmentClick = async function () {
   const modal = document.getElementById("create-shipment-modal");
   if (modal) modal.style.display = "flex";
 
-  // 立即觸發後端精確試算
   window.recalculateShipmentTotal();
 };
 
@@ -170,7 +159,6 @@ window.recalculateShipmentTotal = async function () {
   const packageIds = Array.from(selectedCheckboxes).map((cb) => cb.dataset.id);
   const rate = locationSelect.value || 0;
 
-  // 更新偏遠地區提示
   const remoteInfo = document.getElementById("ship-remote-area-info");
   const selectedOption = locationSelect.options[locationSelect.selectedIndex];
   if (rate > 0 && selectedOption) {
@@ -183,7 +171,6 @@ window.recalculateShipmentTotal = async function () {
     if (remoteInfo) remoteInfo.style.display = "none";
   }
 
-  // 顯示 Loading
   breakdownDiv.innerHTML =
     '<div class="text-center" style="padding:15px;"><i class="fas fa-circle-notch fa-spin"></i> 正在產生詳細費用報告...</div>';
   if (actualWeightEl) actualWeightEl.textContent = "...";
@@ -207,19 +194,16 @@ window.recalculateShipmentTotal = async function () {
       const p = data.preview;
       window.currentShipmentTotal = p.totalCost;
 
-      // 更新總量面板
       if (actualWeightEl)
         actualWeightEl.textContent = `${p.totalActualWeight} kg`;
       if (volumetricEl) volumetricEl.textContent = `${p.totalVolumetricCai} 材`;
 
-      // 渲染透明化報表
       if (p.breakdown) {
         renderBreakdownTable(p.breakdown, breakdownDiv, rate);
       } else {
         renderSimpleTable(p, breakdownDiv, rate);
       }
 
-      // 重新檢查錢包餘額
       const walletRadio = document.getElementById("pay-wallet");
       if (walletRadio && walletRadio.checked) togglePaymentMethod("WALLET");
     } else {
@@ -231,7 +215,6 @@ window.recalculateShipmentTotal = async function () {
   }
 };
 
-// 渲染詳細透明化報表 (保留原始名稱與邏輯)
 function renderBreakdownTable(breakdown, container, rate) {
   let html = `
     <div style="font-size: 13px; border: 1px solid #eee; border-radius: 4px; overflow: hidden; background: #fff;">
@@ -243,8 +226,7 @@ function renderBreakdownTable(breakdown, container, rate) {
             <th style="padding: 8px; text-align: right; font-weight: 600;">金額</th>
           </tr>
         </thead>
-        <tbody>
-  `;
+        <tbody>`;
 
   breakdown.packages.forEach((pkg) => {
     const isVol = pkg.calcMethod === "材積計費";
@@ -277,19 +259,15 @@ function renderBreakdownTable(breakdown, container, rate) {
       pkg.calcMethod
     }</span>
         </td>
-        <td style="padding: 8px; text-align: right; font-family: monospace;">
-          $${pkg.rawFee.toLocaleString()}
-        </td>
-      </tr>
-    `;
+        <td style="padding: 8px; text-align: right; font-family: monospace;">$${pkg.rawFee.toLocaleString()}</td>
+      </tr>`;
   });
 
   html += `
       <tr style="background-color: #fcfcfc;">
         <td colspan="2" style="padding: 8px; text-align: right; color: #555;">原始運費小計</td>
         <td style="padding: 8px; text-align: right; font-weight: bold;">$${breakdown.subtotal.toLocaleString()}</td>
-      </tr>
-  `;
+      </tr>`;
 
   if (breakdown.minChargeDiff > 0) {
     html += `
@@ -301,8 +279,7 @@ function renderBreakdownTable(breakdown, container, rate) {
           })
         </td>
         <td style="padding: 8px; text-align: right; color: #e67e22;">+$${breakdown.minChargeDiff.toLocaleString()}</td>
-      </tr>
-    `;
+      </tr>`;
   }
 
   breakdown.surcharges.forEach((s) => {
@@ -315,8 +292,7 @@ function renderBreakdownTable(breakdown, container, rate) {
     })</span>
         </td>
         <td style="padding: 8px; text-align: right; color: #d32f2f;">+$${s.amount.toLocaleString()}</td>
-      </tr>
-    `;
+      </tr>`;
   });
 
   html += `
@@ -326,32 +302,26 @@ function renderBreakdownTable(breakdown, container, rate) {
     <div style="margin-top: 15px; text-align: right;">
         <div style="font-size: 14px; color: #555;">總金額 (TWD)</div>
         <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">$${breakdown.finalTotal.toLocaleString()}</div>
-    </div>
-  `;
+    </div>`;
   container.innerHTML = html;
 }
 
-// 舊版渲染函式 (Fallback)
 function renderSimpleTable(p, container, rate) {
   let html = `<table style="width: 100%; font-size: 14px; margin-top: 5px;">`;
   html += `
     <tr>
         <td style="padding: 4px 0; color: #555;">基本海運費</td>
         <td style="padding: 4px 0; text-align: right; font-weight: bold;">$${p.baseCost.toLocaleString()}</td>
-    </tr>
-  `;
+    </tr>`;
   if (p.isMinimumChargeApplied) {
     html += `<tr><td colspan="2" style="text-align: right; font-size: 11px; color: #e67e22;">未達最低消費，以低消計算</td></tr>`;
   }
-  if (p.remoteFee > 0) {
+  if (p.remoteFee > 0)
     html += `<tr><td style="padding: 4px 0;">偏遠地區費</td><td style="text-align: right; color: #d35400;">+$${p.remoteFee.toLocaleString()}</td></tr>`;
-  }
-  if (p.oversizedFee > 0) {
+  if (p.oversizedFee > 0)
     html += `<tr><td style="padding: 4px 0; color: #d35400;">超長附加費</td><td style="text-align: right; color: #d35400;">+$${p.oversizedFee.toLocaleString()}</td></tr>`;
-  }
-  if (p.overweightFee > 0) {
+  if (p.overweightFee > 0)
     html += `<tr><td style="padding: 4px 0; color: #d35400;">超重附加費</td><td style="text-align: right; color: #d35400;">+$${p.overweightFee.toLocaleString()}</td></tr>`;
-  }
   html += `
     <tr style="border-top: 2px solid #eee;">
         <td style="padding: 10px 0; font-weight: bold;">總金額 (TWD)</td>
@@ -392,12 +362,10 @@ window.handleCreateShipmentSubmit = async function (e) {
     "deliveryLocationRate",
     document.getElementById("ship-delivery-location").value || 0
   );
-
   fd.append("idNumber", document.getElementById("ship-idNumber").value);
   fd.append("note", document.getElementById("ship-note").value);
   fd.append("paymentMethod", paymentMethod);
 
-  // 附加服務
   const services = {
     floor: {
       selected: document.getElementById("srv-floor").checked,
@@ -432,7 +400,6 @@ window.handleCreateShipmentSubmit = async function (e) {
     if (res.ok) {
       const modal = document.getElementById("create-shipment-modal");
       if (modal) modal.style.display = "none";
-
       window.lastCreatedShipmentId = data.shipment.id;
 
       if (paymentMethod === "WALLET") {
@@ -440,10 +407,7 @@ window.handleCreateShipmentSubmit = async function (e) {
       } else {
         setTimeout(() => {
           const bankModal = document.getElementById("bank-info-modal");
-          if (!bankModal) {
-            alert("訂單已建立，請前往列表查看匯款帳號。");
-            return;
-          }
+          if (!bankModal) return alert("訂單已建立，請前往列表查看匯款帳號。");
 
           if (window.BANK_INFO_CACHE) {
             const bName =
@@ -455,20 +419,17 @@ window.handleCreateShipmentSubmit = async function (e) {
             const bHolder =
               document.getElementById("bank-holder-display") ||
               document.getElementById("bank-holder");
-
             if (bName)
               bName.textContent = window.BANK_INFO_CACHE.bankName || "--";
             if (bAcc) bAcc.textContent = window.BANK_INFO_CACHE.account || "--";
             if (bHolder)
               bHolder.textContent = window.BANK_INFO_CACHE.holder || "--";
           }
-
           bankModal.style.display = "flex";
           if (typeof window.resetBankProofUpload === "function")
             window.resetBankProofUpload();
         }, 100);
       }
-
       window.loadMyShipments();
       window.loadMyPackages();
       if (typeof window.loadWalletData === "function") window.loadWalletData();
@@ -488,7 +449,6 @@ window.handleCreateShipmentSubmit = async function (e) {
   }
 };
 
-// --- 付款方式切換 ---
 window.togglePaymentMethod = function (method) {
   const walletBalanceInfo = document.getElementById("wallet-pay-info");
   const btnSubmit = document.querySelector(".btn-place-order");
@@ -497,7 +457,6 @@ window.togglePaymentMethod = function (method) {
     if (walletBalanceInfo) {
       walletBalanceInfo.style.display = "block";
       const currentTotal = window.currentShipmentTotal || 0;
-
       fetch(`${API_BASE_URL}/api/wallet/my`, {
         headers: { Authorization: `Bearer ${window.dashboardToken}` },
       })
@@ -524,7 +483,6 @@ window.togglePaymentMethod = function (method) {
   }
 };
 
-// --- 5. 載入我的集運單列表 ---
 window.loadMyShipments = async function () {
   const tbody = document.getElementById("shipments-table-body");
   if (!tbody) return;
@@ -543,7 +501,6 @@ window.loadMyShipments = async function () {
       data.shipments.forEach((s) => {
         const statusText = statusMap[s.status] || s.status;
         const statusClass = statusClasses[s.status] || "";
-
         let actionsHtml = `<button class="btn btn-sm btn-primary" onclick="window.openShipmentDetails('${s.id}')">詳情</button>`;
 
         if (s.status === "PENDING_PAYMENT") {
@@ -574,8 +531,7 @@ window.loadMyShipments = async function () {
                   s.totalCost || 0
                 ).toLocaleString()}</td>
                 <td><div style="display:flex; flex-direction:column; gap:5px;">${actionsHtml}</div></td>
-            </tr>
-        `;
+            </tr>`;
       });
     } else {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">尚未有集運單</td></tr>`;
@@ -588,6 +544,24 @@ window.loadMyShipments = async function () {
 // --- 7. 查看訂單詳情 (深度檢閱關鍵修復版) ---
 window.openShipmentDetails = async function (id) {
   try {
+    // 預先重置數值防止快照殘留
+    const resetList = [
+      "sd-status",
+      "sd-total-weight",
+      "sd-total-cbm",
+      "sd-total-cai",
+      "sd-name",
+      "sd-phone",
+      "sd-address",
+      "sd-trackingTW",
+    ];
+    resetList.forEach((rid) => {
+      if (document.getElementById(rid))
+        document.getElementById(rid).textContent = rid.includes("status")
+          ? "載入中..."
+          : "--";
+    });
+
     const res = await fetch(`${API_BASE_URL}/api/shipments/${id}`, {
       headers: { Authorization: `Bearer ${window.dashboardToken}` },
     });
@@ -602,7 +576,7 @@ window.openShipmentDetails = async function (id) {
     const dateEl = document.getElementById("sd-date");
     if (dateEl) dateEl.textContent = new Date(s.createdAt).toLocaleString();
 
-    // 2. 狀態同步顯示 (修復問題 1：同步後台最新狀態)
+    // 2. 狀態同步顯示 (關鍵修正：確保與後台狀態 100% 同步)
     const statusBox = document.getElementById("sd-status");
     if (statusBox) {
       if (s.status === "RETURNED") {
@@ -619,28 +593,70 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
-    // 3. 物理統計數據同步 (修復問題 2：數據為 0 的問題)
+    // 3. 物理統計數據同步 (關鍵修正：從 physicalStats 物件映射數據)
     if (s.physicalStats) {
-      const weightEl = document.getElementById("sd-total-weight");
-      if (weightEl) weightEl.textContent = s.physicalStats.totalWeight || 0;
-      const cbmEl = document.getElementById("sd-total-cbm");
-      if (cbmEl) cbmEl.textContent = s.physicalStats.totalCbm || 0;
-      const caiEl = document.getElementById("sd-total-cai");
-      if (caiEl) caiEl.textContent = s.physicalStats.totalCai || 0;
+      if (document.getElementById("sd-total-weight"))
+        document.getElementById("sd-total-weight").textContent =
+          s.physicalStats.totalWeight || 0;
+      if (document.getElementById("sd-total-cbm"))
+        document.getElementById("sd-total-cbm").textContent =
+          s.physicalStats.totalCbm || 0;
+      if (document.getElementById("sd-total-cai"))
+        document.getElementById("sd-total-cai").textContent =
+          s.physicalStats.totalCai || 0;
     }
 
-    // 4. 配送資訊 (修復：優先顯示台灣單號)
-    const nameEl = document.getElementById("sd-name");
-    if (nameEl) nameEl.textContent = s.recipientName || "--";
-    const phoneEl = document.getElementById("sd-phone");
-    if (phoneEl) phoneEl.textContent = s.phone || "--";
-    const addrEl = document.getElementById("sd-address");
-    if (addrEl) addrEl.textContent = s.shippingAddress || "--";
-    const trackingEl = document.getElementById("sd-trackingTW");
-    if (trackingEl)
-      trackingEl.textContent = s.trackingNumberTW || s.carrierId || "尚未產生";
+    // 4. 配送資訊
+    if (document.getElementById("sd-name"))
+      document.getElementById("sd-name").textContent = s.recipientName || "--";
+    if (document.getElementById("sd-phone"))
+      document.getElementById("sd-phone").textContent = s.phone || "--";
+    if (document.getElementById("sd-address"))
+      document.getElementById("sd-address").textContent =
+        s.shippingAddress || "--";
+    if (document.getElementById("sd-trackingTW"))
+      document.getElementById("sd-trackingTW").textContent =
+        s.trackingNumberTW || s.carrierId || "尚未產生";
 
-    // 5. 費用透明化報告渲染
+    // 5. 附加服務明細渲染 [新功能]
+    const servicesSection = document.getElementById("sd-services-section");
+    const servicesList = document.getElementById("sd-services-list");
+    if (servicesSection && servicesList && s.additionalServices) {
+      const services = s.additionalServices;
+      let hasService = false;
+      let svcHtml = "";
+      const svcMap = {
+        floor: "送貨上樓",
+        wood: "木架打框",
+        assembly: "家具組裝",
+        old: "舊家具清運",
+      };
+      Object.keys(svcMap).forEach((key) => {
+        if (services[key] && services[key].selected) {
+          hasService = true;
+          let noteStr = services[key].note ? ` (${services[key].note})` : "";
+          let elevatorStr =
+            key === "floor" && services.floor.hasElevator ? " - 有電梯" : "";
+          svcHtml += `
+            <div class="info-row">
+              <span class="info-label"><i class="fas fa-check-circle" style="color:#28a745;"></i> ${
+                svcMap[key]
+              }${elevatorStr}</span>
+              <span class="info-value" style="color:#666;">${
+                noteStr || "已選擇"
+              }</span>
+            </div>`;
+        }
+      });
+      if (hasService) {
+        servicesList.innerHTML = svcHtml;
+        servicesSection.style.display = "block";
+      } else {
+        servicesSection.style.display = "none";
+      }
+    }
+
+    // 6. 費用透明化報告渲染
     const breakdownDiv = document.getElementById("sd-fee-breakdown");
     if (breakdownDiv && s.costBreakdown) {
       renderBreakdownTable(
@@ -650,19 +666,18 @@ window.openShipmentDetails = async function (id) {
       );
     }
 
-    // 6. 支付憑證渲染 (修復問題 3：防破圖處理與統一路徑拼湊)
+    // 7. 支付憑證渲染 (防破圖修正版：嚴格校驗路徑)
     const proofImagesContainer = document.getElementById("sd-proof-images");
     if (proofImagesContainer) {
       if (s.paymentProof && s.paymentProof !== "WALLET_PAY") {
         let path = s.paymentProof;
-        // [修正] 如果路徑開頭已有斜槓，先移除，統由模板拼接
-        if (!path.startsWith("http") && path.startsWith("/")) {
+        // 修正路徑拼接：防止雙斜槓
+        if (!path.startsWith("http") && path.startsWith("/"))
           path = path.substring(1);
-        }
-
-        const fullUrl = path.startsWith("http")
-          ? path
-          : `${API_BASE_URL}/${path}`;
+        const baseUrl = API_BASE_URL.endsWith("/")
+          ? API_BASE_URL
+          : API_BASE_URL + "/";
+        const fullUrl = path.startsWith("http") ? path : `${baseUrl}${path}`;
 
         proofImagesContainer.innerHTML = `
           <div style="text-align:center; width: 100%;">
@@ -671,22 +686,20 @@ window.openShipmentDetails = async function (id) {
                    style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee;">
             </a>
             <p style="font-size: 11px; color: #999; margin-top: 10px;"><i class="fas fa-search-plus"></i> 點擊圖片可放大查看原圖</p>
-          </div>
-        `;
+          </div>`;
       } else if (s.paymentProof === "WALLET_PAY") {
         proofImagesContainer.innerHTML = `
           <div style="background: #e6f7ff; color: #1890ff; padding: 15px; border-radius: 8px; border: 1px solid #91d5ff;">
             <i class="fas fa-wallet"></i> <strong>餘額支付訂單</strong><br>
             <span style="font-size: 12px;">此訂單已通過錢包餘額結清，無需上傳線下轉帳憑證。</span>
-          </div>
-        `;
+          </div>`;
       } else {
         proofImagesContainer.innerHTML =
           '<span class="text-muted">暫無憑證數據</span>';
       }
     }
 
-    // 7. 進度條同步 (修復：包含待審核階段)
+    // 8. 進度條渲染 (放在最後，確保主數據先賦值)
     const timelineContainer = document.getElementById("sd-timeline");
     if (timelineContainer) renderTimeline(timelineContainer, s.status);
 
@@ -718,9 +731,6 @@ window.cancelShipment = async function (id) {
   }
 };
 
-/**
- * [修復] 進度條渲染邏輯 - 加入 AWAITING_REVIEW 待審核節點
- */
 function renderTimeline(container, currentStatus) {
   const steps = [
     { code: "AWAITING_REVIEW", label: "待審核" },
@@ -756,11 +766,10 @@ function renderTimeline(container, currentStatus) {
     }; font-size:24px; background:#fff; border-radius:50%;"></i>
             <div style="font-size:12px; margin-top:5px; color:${
               isCompleted ? "#333" : "#999"
-            }; font-weight:${idx === currentIndex ? "bold" : "normal"};">
-                ${step.label}
-            </div>
-        </div>
-    `;
+            }; font-weight:${idx === currentIndex ? "bold" : "normal"};">${
+      step.label
+    }</div>
+        </div>`;
   });
   html += `</div>`;
   container.innerHTML = html;
@@ -787,7 +796,6 @@ window.renderDeliveryLocations = function () {
   select.innerHTML = html;
 };
 
-// --- 全域事件初始化 ---
 document.addEventListener("DOMContentLoaded", () => {
   const toggles = {
     "srv-floor": "srv-floor-options",
@@ -795,32 +803,27 @@ document.addEventListener("DOMContentLoaded", () => {
     "srv-assembly": "srv-assembly-input",
     "srv-old": "srv-old-input",
   };
-
   Object.keys(toggles).forEach((id) => {
     const el = document.getElementById(id);
     const target = document.getElementById(toggles[id]);
-    if (el && target) {
+    if (el && target)
       el.addEventListener("change", (e) => {
         target.style.display = e.target.checked ? "block" : "none";
       });
-    }
   });
 
   const locationSelect = document.getElementById("ship-delivery-location");
-  if (locationSelect) {
+  if (locationSelect)
     locationSelect.addEventListener("change", () =>
       window.recalculateShipmentTotal()
     );
-  }
 });
 
-// 一鍵複製
 window.copyText = function (elementId) {
   const el = document.getElementById(elementId);
   if (!el) return;
   const text = el.innerText.trim();
   if (!text || text === "--") return;
-
   navigator.clipboard.writeText(text).then(() => {
     const btn = event.target;
     const original = btn.innerText;
@@ -833,34 +836,27 @@ window.copyText = function (elementId) {
   });
 };
 
-/**
- * [新增] 監聽統編輸入邏輯
- */
 window.handleTaxIdChange = function (input) {
   const star = document.getElementById("title-required-star");
-  if (star) {
+  if (star)
     star.style.display = input.value.trim().length > 0 ? "inline" : "none";
-  }
 };
 
-// 銀行轉帳上傳憑證修復 (整合發票資訊與驗證)
 window.submitBankProof = async function () {
   const shipmentId = window.lastCreatedShipmentId;
   const fileInput = document.getElementById("bank-transfer-proof");
   const file = fileInput ? fileInput.files[0] : null;
 
-  // [新增] 獲取發票資訊
   const taxId = document.getElementById("bank-tax-id")?.value.trim() || "";
   const invoiceTitle =
     document.getElementById("bank-invoice-title")?.value.trim() || "";
 
   if (!shipmentId || !file) return alert("資訊不完整，請選擇照片");
 
-  // [新增] 強制驗證邏輯：填寫統編時，抬頭為必填
   if (taxId.length > 0 && invoiceTitle.length === 0) {
     alert("填寫統一編號時，公司抬頭為必填項目");
-    const titleInput = document.getElementById("bank-invoice-title");
-    if (titleInput) titleInput.focus();
+    if (document.getElementById("bank-invoice-title"))
+      document.getElementById("bank-invoice-title").focus();
     return;
   }
 
@@ -868,13 +864,11 @@ window.submitBankProof = async function () {
   if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
 
   const fd = new FormData();
-  fd.append("paymentProof", file); // 與後端 upload.single("paymentProof") 一致
-  // [新增] 附加發票資訊至 FormData
+  fd.append("paymentProof", file);
   fd.append("taxId", taxId);
   fd.append("invoiceTitle", invoiceTitle);
 
   try {
-    // [重要修復] API 路徑與 PUT 方法
     const res = await fetch(
       `${API_BASE_URL}/api/shipments/${shipmentId}/payment`,
       {
@@ -886,7 +880,8 @@ window.submitBankProof = async function () {
 
     if (res.ok) {
       alert("憑證與發票資訊上傳成功！");
-      document.getElementById("bank-info-modal").style.display = "none";
+      if (document.getElementById("bank-info-modal"))
+        document.getElementById("bank-info-modal").style.display = "none";
       window.loadMyShipments();
     } else {
       const data = await res.json();
@@ -909,8 +904,8 @@ window.handleBankProofPreview = function (input) {
     const reader = new FileReader();
     reader.onload = (e) => {
       img.src = e.target.result;
-      container.style.display = "block";
-      label.style.display = "none";
+      if (container) container.style.display = "block";
+      if (label) label.style.display = "none";
       if (submitBtn) submitBtn.disabled = false;
     };
     reader.readAsDataURL(input.files[0]);
@@ -921,8 +916,6 @@ window.resetBankProofUpload = function () {
   const input = document.getElementById("bank-transfer-proof");
   const container = document.getElementById("bank-proof-preview-container");
   const label = document.getElementById("bank-proof-label");
-
-  // [新增] 重置發票欄位
   const taxInput = document.getElementById("bank-tax-id");
   const titleInput = document.getElementById("bank-invoice-title");
   const star = document.getElementById("title-required-star");
@@ -930,8 +923,6 @@ window.resetBankProofUpload = function () {
   if (input) input.value = "";
   if (container) container.style.display = "none";
   if (label) label.style.display = "flex";
-
-  // [新增] 清空輸入值與重置必填標記
   if (taxInput) taxInput.value = "";
   if (titleInput) titleInput.value = "";
   if (star) star.style.display = "none";

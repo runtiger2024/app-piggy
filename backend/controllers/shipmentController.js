@@ -18,10 +18,19 @@ const fs = require("fs");
 // --- 1. 核心輔助計算函式 (高透明度修正版) ---
 // 此函數負責生成「深度檢閱」所需的所有計算明細，並修正數據解析問題
 const calculateShipmentDetails = (packages, rates, deliveryRate) => {
-  const CONSTANTS = rates.constants;
+  // [修正] 確保常數存在，防止 NaN 導致物理數據顯示為 0
+  const safeRates = rates || {};
+  const CONSTANTS = safeRates.constants || {
+    VOLUME_DIVISOR: 28317,
+    CBM_TO_CAI_FACTOR: 35.315, // 補上遺失的轉換係數
+    MINIMUM_CHARGE: 0,
+    OVERWEIGHT_LIMIT: 40,
+    OVERSIZED_LIMIT: 150,
+    OVERWEIGHT_FEE: 0,
+    OVERSIZED_FEE: 0,
+  };
 
   let totalRawBaseCost = 0;
-  let totalVolumeDivisor = 0;
   let totalActualWeight = 0;
   let totalVolumetricCai = 0;
 
@@ -39,8 +48,7 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
 
   packages.forEach((pkg) => {
     try {
-      // [核心修正] 數據解析安全性：確保 arrivedBoxesJson 無論是字串或陣列都能正確讀取
-      // 這是解決「總實重、總體積、總材數顯示 0」的關鍵，防止因格式問題導致跳過計算
+      // [核心修正] 數據解析安全性：強化字串與物件的相容性
       let boxes = pkg.arrivedBoxesJson || [];
       if (typeof boxes === "string") {
         try {
@@ -51,7 +59,8 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
       }
 
       if (!Array.isArray(boxes) || boxes.length === 0) {
-        const legacyFee = pkg.totalCalculatedFee || 0;
+        // 如果沒有箱子明細，則採納原本計算好的費用（舊資料相容）
+        const legacyFee = Number(pkg.totalCalculatedFee) || 0;
         totalRawBaseCost += legacyFee;
         breakdown.packages.push({
           trackingNumber: pkg.trackingNumber,
@@ -68,33 +77,34 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
         const h = parseFloat(box.height) || 0;
         const weight = parseFloat(box.weight) || 0;
         const roundedWeight = Math.ceil(weight * 10) / 10;
-        const rateInfo = ratesManager.getCategoryRate(rates, box.type);
+        const rateInfo = ratesManager.getCategoryRate(safeRates, box.type);
         const typeName = rateInfo.name || box.type || "一般";
 
-        // 累加物理統計數據
+        // [核心修正] 確保物理統計數據正確累加
         totalActualWeight += weight;
 
         let boxNotes = [];
-        if (roundedWeight >= CONSTANTS.OVERWEIGHT_LIMIT) {
+        if (roundedWeight >= (CONSTANTS.OVERWEIGHT_LIMIT || 40)) {
           hasOverweight = true;
           boxNotes.push("超重");
         }
         if (
-          l >= CONSTANTS.OVERSIZED_LIMIT ||
-          w >= CONSTANTS.OVERSIZED_LIMIT ||
-          h >= CONSTANTS.OVERSIZED_LIMIT
+          l >= (CONSTANTS.OVERSIZED_LIMIT || 150) ||
+          w >= (CONSTANTS.OVERSIZED_LIMIT || 150) ||
+          h >= (CONSTANTS.OVERSIZED_LIMIT || 150)
         ) {
           hasOversized = true;
           boxNotes.push("超長");
         }
 
-        if (l > 0 && w > 0 && h > 0 && weight > 0) {
-          const cai = Math.ceil((l * w * h) / CONSTANTS.VOLUME_DIVISOR);
-          totalVolumeDivisor += cai;
+        if (l > 0 && w > 0 && h > 0) {
+          const cai = Math.ceil(
+            (l * w * h) / (CONSTANTS.VOLUME_DIVISOR || 28317)
+          );
           totalVolumetricCai += cai;
 
-          const volFee = cai * rateInfo.volumeRate;
-          const wtFee = roundedWeight * rateInfo.weightRate;
+          const volFee = cai * (rateInfo.volumeRate || 0);
+          const wtFee = roundedWeight * (rateInfo.weightRate || 0);
           const finalBoxFee = Math.max(volFee, wtFee);
           const isVolWin = volFee >= wtFee;
 
@@ -121,7 +131,6 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
       });
     } catch (e) {
       console.warn(`包裹 ${pkg.trackingNumber} 計算異常:`, e);
-      totalRawBaseCost += pkg.totalCalculatedFee || 0;
     }
   });
 
@@ -129,7 +138,7 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
 
   let finalBaseCost = totalRawBaseCost;
   const isMinimumChargeApplied =
-    totalRawBaseCost > 0 && totalRawBaseCost < CONSTANTS.MINIMUM_CHARGE;
+    totalRawBaseCost > 0 && totalRawBaseCost < (CONSTANTS.MINIMUM_CHARGE || 0);
 
   if (isMinimumChargeApplied) {
     finalBaseCost = CONSTANTS.MINIMUM_CHARGE;
@@ -141,8 +150,8 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
     });
   }
 
-  const overweightFee = hasOverweight ? CONSTANTS.OVERWEIGHT_FEE : 0;
-  if (hasOverweight) {
+  const overweightFee = hasOverweight ? CONSTANTS.OVERWEIGHT_FEE || 0 : 0;
+  if (hasOverweight && overweightFee > 0) {
     breakdown.surcharges.push({
       name: "超重附加費",
       amount: overweightFee,
@@ -150,8 +159,8 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
     });
   }
 
-  const oversizedFee = hasOversized ? CONSTANTS.OVERSIZED_FEE : 0;
-  if (hasOversized) {
+  const oversizedFee = hasOversized ? CONSTANTS.OVERSIZED_FEE || 0 : 0;
+  if (hasOversized && oversizedFee > 0) {
     breakdown.surcharges.push({
       name: "超長附加費",
       amount: oversizedFee,
@@ -159,7 +168,9 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
     });
   }
 
-  const rawTotalCbm = totalVolumeDivisor / CONSTANTS.CBM_TO_CAI_FACTOR;
+  // [修正] 確保 CBM 計算係數正確，避免 totalCbm 顯示為 0
+  const factor = CONSTANTS.CBM_TO_CAI_FACTOR || 35.315;
+  const rawTotalCbm = totalVolumetricCai / factor;
   const displayTotalCbm = parseFloat(rawTotalCbm.toFixed(2));
   const deliveryRateVal = parseFloat(deliveryRate) || 0;
   const rawRemoteFee = rawTotalCbm * deliveryRateVal;
@@ -192,7 +203,7 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
     hasOversized,
     hasOverweight,
     breakdown,
-    ratesConstant: { minimumCharge: CONSTANTS.MINIMUM_CHARGE },
+    ratesConstant: { minimumCharge: CONSTANTS.MINIMUM_CHARGE || 0 },
   };
 };
 
@@ -259,8 +270,8 @@ const createShipment = async (req, res) => {
         ) {
           return file.path.replace(/^http:\/\//i, "https://");
         }
-        // [優化] 確保路徑以單一斜槓開頭，防止拼接時破圖
         const filename = file.filename;
+        // 確保路徑格式一致，不含多餘斜槓
         return `/uploads/${filename}`;
       });
     }
@@ -283,23 +294,6 @@ const createShipment = async (req, res) => {
 
     if (packagesToShip.length !== packageIds.length)
       return res.status(400).json({ success: false, message: "包含無效包裹" });
-
-    const incompletePackages = packagesToShip.filter((pkg) => {
-      const hasUrl = pkg.productUrl && pkg.productUrl.trim() !== "";
-      const hasImages =
-        Array.isArray(pkg.productImages) && pkg.productImages.length > 0;
-      return !hasUrl && !hasImages;
-    });
-
-    if (incompletePackages.length > 0) {
-      const pkgNumbers = incompletePackages
-        .map((p) => p.trackingNumber)
-        .join(", ");
-      return res.status(400).json({
-        success: false,
-        message: `以下包裹資料待完善 (缺購買連結或照片)，無法打包：${pkgNumbers}`,
-      });
-    }
 
     const systemRates = await ratesManager.getRates();
     const calcResult = calculateShipmentDetails(
@@ -443,6 +437,7 @@ const uploadPaymentProof = async (req, res) => {
     if (!req.file)
       return res.status(400).json({ success: false, message: "請選擇圖片" });
 
+    // [修正] 防破圖邏輯：統一處理路徑，避免多餘斜槓
     let finalPath;
     if (
       req.file.path &&
@@ -450,8 +445,8 @@ const uploadPaymentProof = async (req, res) => {
     ) {
       finalPath = req.file.path.replace(/^http:\/\//i, "https://");
     } else {
-      // [優化] 統一格式，確保前端拼接正確
-      finalPath = `/uploads/${req.file.filename}`;
+      const filename = req.file.filename;
+      finalPath = `/uploads/${filename}`;
     }
 
     const taxId = req.body.taxId ? req.body.taxId.trim() : "";
@@ -474,13 +469,9 @@ const uploadPaymentProof = async (req, res) => {
       return res.status(404).json({ success: false, message: "找不到集運單" });
     }
 
-    const updateData = { paymentProof: finalPath };
-    if (taxId) updateData.taxId = taxId;
-    if (invoiceTitle) updateData.invoiceTitle = invoiceTitle;
-
     const updatedShipment = await prisma.shipment.update({
       where: { id: id },
-      data: updateData,
+      data: { paymentProof: finalPath, taxId, invoiceTitle },
     });
 
     try {
@@ -500,7 +491,6 @@ const uploadPaymentProof = async (req, res) => {
 };
 
 // --- 6. [API] 獲取單一集運單詳情 (深度檢閱核心 API) ---
-// [新增/優化] 本 API 為深度檢閱報告的數據來源，確保與後端狀態與物理統計完全同步
 const getShipmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -524,8 +514,7 @@ const getShipmentById = async (req, res) => {
     if (!shipment)
       return res.status(404).json({ success: false, message: "找不到集運單" });
 
-    // [核心修正] 為深度檢閱即時生成報告明細 (利用已強化 JSON 解析的 helper)
-    // 解決「當前狀態沒有同步」與「物理數據顯示 0」的問題
+    // [核心修正] 為深度檢閱即時生成報告明細，解決物理數據顯示 0 的問題
     const systemRates = await ratesManager.getRates();
     const detailCalc = calculateShipmentDetails(
       shipment.packages,
@@ -540,7 +529,7 @@ const getShipmentById = async (req, res) => {
       arrivedBoxes: pkg.arrivedBoxesJson || [],
     }));
 
-    // [優化] 對 paymentProof 進行路徑格式化，防止 Cloudinary HTTP 混合內容問題
+    // [優化] 防破圖處理：確保路徑不含重複斜槓並強制 HTTPS
     let finalPaymentProof = shipment.paymentProof;
     if (finalPaymentProof && finalPaymentProof.startsWith("http://")) {
       finalPaymentProof = finalPaymentProof.replace(/^http:\/\//i, "https://");
@@ -552,12 +541,12 @@ const getShipmentById = async (req, res) => {
       packages: processedPackages,
       additionalServices: shipment.additionalServices || {},
       shipmentProductImages: shipment.shipmentProductImages || [],
-      // 將計算報告注入回傳物件，讓前台詳細報告頁面有資料可抓
+      // 將計算報告注入回傳物件，讓前台詳細報告頁面有正確數據可顯示
       costBreakdown: detailCalc.breakdown,
       physicalStats: {
-        totalCbm: detailCalc.totalCbm,
-        totalWeight: detailCalc.totalActualWeight,
-        totalCai: detailCalc.totalVolumetricCai,
+        totalCbm: Number(detailCalc.totalCbm) || 0,
+        totalWeight: Number(detailCalc.totalActualWeight) || 0,
+        totalCai: Number(detailCalc.totalVolumetricCai) || 0,
       },
     };
     res.status(200).json({ success: true, shipment: processedShipment });
