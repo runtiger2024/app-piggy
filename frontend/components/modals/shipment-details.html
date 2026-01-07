@@ -101,189 +101,179 @@
       </div>
     </div>
 
-    <div id="sd-proof-container" class="detail-section mb-0">
-      <div class="section-title">
-        <i class="fas fa-shield-alt"></i>
-        <span>支付安全與憑證</span>
+    <div
+      class="modal-footer"
+      style="
+        background: #f8fafc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      "
+    >
+      <div style="font-size: 12px; color: #999">
+        <i class="fas fa-info-circle"></i> 數據根據後台測量結果自動生成
       </div>
-      <div id="sd-proof-images" class="proof-upload-area">
-        <span class="text-muted">暫無憑證數據</span>
+      <div class="d-flex gap-10">
+        <button
+          class="btn btn-outline-primary"
+          onclick="window.print()"
+          style="border-radius: var(--radius-full)"
+        >
+          <i class="fas fa-print"></i> 列印報告
+        </button>
+        <button
+          class="btn btn-secondary px-5"
+          onclick="document.getElementById('shipment-details-modal').style.display='none'"
+          style="border-radius: var(--radius-full)"
+        >
+          關閉詳情
+        </button>
       </div>
     </div>
   </div>
 
-  <div
-    class="modal-footer"
-    style="
-      background: #f8fafc;
+  <style>
+    /* 旗艦版層次感專用 CSS */
+    .info-card-mini {
+      background: #fff;
+      border: 1px solid var(--border-light);
+      padding: 15px 20px;
+      border-radius: var(--radius-md);
+    }
+    .info-card-mini .label {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-bottom: 5px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .info-card-mini .value {
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
+    .detail-section {
+      margin-bottom: 25px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .section-title {
+      background: #f0f7ff;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #007bff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .info-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 20px;
+      background: #fff;
+    }
+    .info-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    "
-  >
-    <div style="font-size: 12px; color: #999">
-      <i class="fas fa-info-circle"></i> 數據根據後台測量結果自動生成
-    </div>
-    <div class="d-flex gap-10">
-      <button
-        class="btn btn-outline-primary"
-        onclick="window.print()"
-        style="border-radius: var(--radius-full)"
-      >
-        <i class="fas fa-print"></i> 列印報告
-      </button>
-      <button
-        class="btn btn-secondary px-5"
-        onclick="document.getElementById('shipment-details-modal').style.display='none'"
-        style="border-radius: var(--radius-full)"
-      >
-        關閉詳情
-      </button>
-    </div>
-  </div>
-</div>
-
-<style>
-  /* 旗艦版層次感專用 CSS */
-  .info-card-mini {
-    background: #fff;
-    border: 1px solid var(--border-light);
-    padding: 15px 20px;
-    border-radius: var(--radius-md);
-  }
-  .info-card-mini .label {
-    font-size: 11px;
-    color: var(--text-sub);
-    margin-bottom: 5px;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-  .info-card-mini .value {
-    font-size: 1.1rem;
-    font-weight: 800;
-  }
-
-  .detail-section {
-    margin-bottom: 25px;
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-  .section-title {
-    background: #f0f7ff;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 800;
-    color: #007bff;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid var(--border-light);
-  }
-
-  .info-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 20px;
-    background: #fff;
-  }
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-    border-bottom: 1px dashed #f0f0f0;
-    padding-bottom: 8px;
-  }
-  .info-row-highlight {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    background: #fffbe6;
-    border-radius: 8px;
-    margin-top: 5px;
-    border: 1px solid #ffe58f;
-  }
-  .info-label {
-    color: var(--text-sub);
-    font-weight: 600;
-  }
-  .info-value {
-    color: var(--text-main);
-    font-weight: 700;
-    text-align: right;
-  }
-
-  .receipt-style {
-    background: #fff;
-    padding: 0px;
-    overflow-x: auto;
-  }
-  .receipt-style table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .receipt-style th {
-    background: #fafafa;
-    padding: 10px;
-    color: #666;
-    border-bottom: 2px solid #eee;
-  }
-  .receipt-style td {
-    padding: 12px 10px;
-    border-bottom: 1px solid #f5f5f5;
-  }
-
-  /* 憑證顯示區域：解決破圖與排版穩定性 */
-  .proof-upload-area {
-    background: #fafafa;
-    min-height: 120px;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-  }
-  .proof-upload-area img {
-    max-width: 100%;
-    height: auto;
-    object-fit: contain;
-    border-radius: 8px;
-    border: 1px solid #eee;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  }
-
-  @media (max-width: 600px) {
-    .info-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 4px;
+      font-size: 14px;
+      border-bottom: 1px dashed #f0f0f0;
+      padding-bottom: 8px;
+    }
+    .info-row-highlight {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      background: #fffbe6;
+      border-radius: 8px;
+      margin-top: 5px;
+      border: 1px solid #ffe58f;
+    }
+    .info-label {
+      color: var(--text-sub);
+      font-weight: 600;
     }
     .info-value {
-      text-align: left;
+      color: var(--text-main);
+      font-weight: 700;
+      text-align: right;
     }
-    .modal-footer {
-      flex-direction: column;
-      gap: 15px;
-      text-align: center;
-    }
-  }
 
-  /* 列印優化 */
-  @media print {
-    .modal-close,
-    .modal-footer button {
-      display: none;
+    .receipt-style {
+      background: #fff;
+      padding: 0px;
+      overflow-x: auto;
     }
-    .modal-overlay {
-      position: static;
-      background: white;
+    .receipt-style table {
+      width: 100%;
+      border-collapse: collapse;
     }
-    .modal-content {
-      box-shadow: none;
-      border: none;
+    .receipt-style th {
+      background: #fafafa;
+      padding: 10px;
+      color: #666;
+      border-bottom: 2px solid #eee;
     }
-  }
-</style>
+    .receipt-style td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    /* 憑證顯示區域：解決破圖與排版穩定性 */
+    .proof-upload-area {
+      background: #fafafa;
+      min-height: 120px;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .proof-upload-area img {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid #eee;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (max-width: 600px) {
+      .info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+      .info-value {
+        text-align: left;
+      }
+      .modal-footer {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+    }
+
+    /* 列印優化 */
+    @media print {
+      .modal-close,
+      .modal-footer button {
+        display: none;
+      }
+      .modal-overlay {
+        position: static;
+        background: white;
+      }
+      .modal-content {
+        box-shadow: none;
+        border: none;
+      }
+    }
+  </style>
+</div>
