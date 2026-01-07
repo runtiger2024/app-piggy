@@ -1,5 +1,5 @@
 // frontend/js/dashboard-unclaimed.js
-// V26.0 - Latest: Unclaimed Package System with SWR & Image Preview
+// V26.2 - Latest: 隱私遮罩強化 & 嚴格認領校驗版
 // 負責無主包裹的顯示、搜尋、認領與圖片預覽邏輯
 
 // --- 函式定義 ---
@@ -88,7 +88,7 @@ function renderUnclaimed(list, isFiltering = false) {
                 <td>
                     <button class="btn btn-sm btn-primary" onclick="window.initiateClaim('${
                       pkg.id
-                    }', '${pkg.trackingNumber}')">
+                    }')">
                         <i class="fas fa-hand-paper"></i> 認領
                     </button>
                 </td>
@@ -98,7 +98,7 @@ function renderUnclaimed(list, isFiltering = false) {
       .join("");
   }
 
-  // [新功能] 渲染至卡片容器 (美化版，需在 HTML 加入此 ID)
+  // [新功能] 渲染至卡片容器 (美化版)
   if (container) {
     container.innerHTML = list
       .map(
@@ -130,7 +130,7 @@ function renderUnclaimed(list, isFiltering = false) {
                     </div>
                     <button class="btn-claim" onclick="window.initiateClaim('${
                       pkg.id
-                    }', '${pkg.trackingNumber}')">我要認領</button>
+                    }')">我要認領</button>
                 </div>
             </div>
         `
@@ -146,31 +146,44 @@ window.filterUnclaimed = function (keyword) {
   const filtered = window.unclaimedCache.filter(
     (p) =>
       (p.trackingNumber && p.trackingNumber.toLowerCase().includes(kw)) ||
-      (p.productName && p.productName.toLowerCase().includes(kw))
+      (p.productName && p.productName.toLowerCase().includes(kw)) ||
+      (p.maskedTrackingNumber &&
+        p.maskedTrackingNumber.toLowerCase().includes(kw))
   );
   renderUnclaimed(filtered, true);
 };
 
-// 4. 認領邏輯 (強化驗證與提示)
-window.initiateClaim = async function (id, trackingNum) {
+// 4. 認領邏輯 (嚴格驗證：強制使用者手動輸入完整單號)
+window.initiateClaim = async function (id) {
   const modal = document.getElementById("claim-package-modal");
   if (modal) {
-    // 自動帶入單號至認領彈窗
+    // 開啟彈窗時重置表單與預覽圖
+    const form = document.getElementById("claim-package-form");
+    if (form) form.reset();
+
+    const preview = document.getElementById("claim-proof-preview");
+    if (preview) {
+      preview.src = "";
+      preview.style.display = "none";
+    }
+
+    // [重點優化]：不自動帶入單號，要求客戶必須手動輸入完整單號才能認領
     const input = document.getElementById("claim-tracking");
     if (input) {
-      input.value = trackingNum;
-      input.readOnly = true; // 防止填錯
+      input.value = "";
+      input.readOnly = false; // 確保可以輸入
+      input.placeholder = "請輸入完整單號以進行認領校驗";
     }
     modal.style.display = "flex";
     return;
   }
 
   // 退回備用方案 (prompt)
-  const desc = prompt(
-    `認領包裹：${trackingNum}\n請輸入包裹內容物描述（如：衣服、桌子）：`
-  );
+  const fullTracking = prompt("認領包裹：請輸入您要認領的完整物流單號");
+  if (!fullTracking) return;
+  const desc = prompt("請輸入包裹內容物描述（如：衣服、桌子）：");
   if (!desc) return;
-  submitClaimAPI(trackingNum, desc);
+  submitClaimAPI(fullTracking, desc);
 };
 
 // 處理原有的認領表單提交
@@ -178,6 +191,11 @@ window.handleClaimSubmit = async function (e) {
   e.preventDefault();
   const btn = e.target.querySelector("button[type='submit']");
   const tracking = document.getElementById("claim-tracking").value.trim();
+
+  if (!tracking) {
+    alert("請輸入完整物流單號");
+    return;
+  }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
@@ -193,32 +211,36 @@ window.handleClaimSubmit = async function (e) {
       headers: { Authorization: `Bearer ${window.dashboardToken}` },
       body: fd,
     });
+    const data = await res.json();
+
     if (res.ok) {
-      window.showMessage("認領申請已提交，請等待審核", "success");
+      window.showMessage("認領成功！包裹已歸入您的帳戶。", "success");
       document.getElementById("claim-package-modal").style.display = "none";
-      // 樂觀更新：從快取中移除
-      window.unclaimedCache = window.unclaimedCache.filter(
-        (p) => p.trackingNumber !== tracking
-      );
-      renderUnclaimed(window.unclaimedCache);
+
+      // 成功後清除預覽圖
+      const preview = document.getElementById("claim-proof-preview");
+      if (preview) preview.style.display = "none";
+
+      // 樂觀更新：從快取中移除該筆（需根據輸入的完整單號匹配，或直接刷新清單）
+      window.loadUnclaimedList(true);
       window.loadMyPackages(); // 重新整理「我的包裹」清單
     } else {
-      const data = await res.json();
-      alert(data.message || "認領失敗，單號可能不存在或已被認領");
+      // 顯示後端回傳的錯誤（如：找不到此單號）
+      alert(data.message || "認領失敗，請檢查單號是否正確");
     }
   } catch (err) {
     alert("網路錯誤");
   } finally {
     btn.disabled = false;
-    btn.innerHTML = "確認認領";
+    btn.innerHTML = "提交認領";
   }
 };
 
-// 圖片預覽功能
+// 圖片預覽功能 (倉庫照片預覽)
 window.previewImage = function (url) {
   if (!url || url.includes("no-image")) return;
   const src = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
-  const modal = document.getElementById("view-images-modal"); // 使用現有的圖片彈窗
+  const modal = document.getElementById("view-images-modal");
   if (modal) {
     modal.innerHTML = `
             <div class="modal-content" style="max-width:800px; padding:0; background:transparent;">
@@ -241,5 +263,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const claimForm = document.getElementById("claim-package-form");
   if (claimForm) {
     claimForm.addEventListener("submit", window.handleClaimSubmit);
+  }
+
+  // [新增] 認領彈窗的上傳圖片即時預覽邏輯 (確保縮圖出現)
+  const claimProofInput = document.getElementById("claim-proof");
+  const claimProofPreview = document.getElementById("claim-proof-preview");
+  if (claimProofInput && claimProofPreview) {
+    claimProofInput.addEventListener("change", function () {
+      const file = this.files[0];
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          claimProofPreview.src = e.target.result;
+          claimProofPreview.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      } else {
+        claimProofPreview.src = "";
+        claimProofPreview.style.display = "none";
+      }
+    });
   }
 });

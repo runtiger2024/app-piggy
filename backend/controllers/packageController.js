@@ -1,5 +1,5 @@
 // backend/controllers/packageController.js
-// V2025.V16.1 - 旗艦極限穩定版：效能巔峰優化 & 雲端圖片全整合
+// V2025.V16.2 - 旗艦極限穩定版：效能巔峰優化 & 嚴格認領校驗整合
 
 const prisma = require("../config/db.js");
 const ratesManager = require("../utils/ratesManager.js");
@@ -11,7 +11,7 @@ const deleteFiles = (filePaths) => {
 };
 
 /**
- * @description 取得無主包裹列表 (單號遮罩)
+ * @description 取得無主包裹列表 (單號遮罩改為末 4 碼)
  * @route GET /api/packages/unclaimed
  */
 const getUnclaimedPackages = async (req, res) => {
@@ -34,11 +34,11 @@ const getUnclaimedPackages = async (req, res) => {
 
     const maskedPackages = packages.map((pkg) => {
       const full = pkg.trackingNumber || "";
+      // 優化：隱藏前面的單號，僅顯示末 4 碼
       const masked =
-        full.length > 5 ? "*".repeat(full.length - 5) + full.slice(-5) : full;
+        full.length > 4 ? "*".repeat(full.length - 4) + full.slice(-4) : full;
 
       let weightInfo = "待入庫測量";
-      // [大師級優化]：Prisma Json 欄位拿出來直接就是陣列，不用檢查字串
       const boxes = Array.isArray(pkg.arrivedBoxesJson)
         ? pkg.arrivedBoxesJson
         : [];
@@ -73,7 +73,7 @@ const createPackageForecast = async (req, res) => {
     const { trackingNumber, productName, quantity, note, productUrl } =
       req.body;
     const userId = req.user.id;
-    const userEmail = req.user.email; // 從 Token 取得 Email
+    const userEmail = req.user.email;
 
     if (!trackingNumber || !productName) {
       return res
@@ -85,12 +85,10 @@ const createPackageForecast = async (req, res) => {
     const hasImages = req.files && req.files.length > 0;
 
     if (!hasUrl && !hasImages) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "請提供「購買連結」或「上傳圖片」(二擇一)",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "請提供「購買連結」或「上傳圖片」(二擇一)",
+      });
     }
 
     const existingPackage = await prisma.package.findUnique({
@@ -118,7 +116,6 @@ const createPackageForecast = async (req, res) => {
       },
     });
 
-    // [大師級優化]：傳入 userEmail，讓日誌系統免去一次資料庫查詢
     await createLog(
       userId,
       "CREATE_PACKAGE",
@@ -186,7 +183,7 @@ const bulkForecast = async (req, res) => {
 };
 
 /**
- * @description 認領無主包裹
+ * @description 認領無主包裹 (嚴格校驗：若不存在則拒絕且不新增)
  */
 const claimPackage = async (req, res) => {
   try {
@@ -195,13 +192,19 @@ const claimPackage = async (req, res) => {
     const userEmail = req.user.email;
     const proofFile = req.file;
 
+    // 嚴格查詢：單號必須完全相符且存在於資料庫中
     const pkg = await prisma.package.findUnique({
       where: { trackingNumber: trackingNumber.trim() },
       include: { user: true },
     });
 
+    // 如果找不到包裹，直接拒絕，絕不自動新增
     if (!pkg)
-      return res.status(404).json({ success: false, message: "找不到此包裹" });
+      return res.status(404).json({
+        success: false,
+        message:
+          "認領失敗：找不到此物流單號。請確認單號輸入正確，且包裹已顯示在無主列表中。",
+      });
 
     // 檢查是否為無主包裹
     if (
@@ -211,10 +214,14 @@ const claimPackage = async (req, res) => {
       if (pkg.userId !== userId) {
         return res
           .status(400)
-          .json({ success: false, message: "此包裹已被其他會員預報。" });
+          .json({
+            success: false,
+            message: "認領失敗：此包裹已被其他會員預報。",
+          });
       }
     }
 
+    // 執行更新，將包裹歸屬權移交給當前會員
     await prisma.package.update({
       where: { id: pkg.id },
       data: {
@@ -286,7 +293,6 @@ const getMyPackages = async (req, res) => {
     const RATES = systemRates.categories || {};
 
     const packagesWithParsedJson = myPackages.map((pkg) => {
-      // [大師級重點]：Prisma 的 Json 類型欄位取出時已經是物件，完全不需要 JSON.parse()
       const arrivedBoxes = Array.isArray(pkg.arrivedBoxesJson)
         ? pkg.arrivedBoxesJson
         : [];
@@ -359,7 +365,6 @@ const updateMyPackage = async (req, res) => {
     if (!pkg || pkg.status !== "PENDING")
       return res.status(400).json({ message: "包裹目前狀態無法修改" });
 
-    // 檢查單號重複
     if (trackingNumber && trackingNumber.trim() !== pkg.trackingNumber) {
       const dup = await prisma.package.findUnique({
         where: { trackingNumber: trackingNumber.trim() },
@@ -369,7 +374,6 @@ const updateMyPackage = async (req, res) => {
 
     let keepImagesList = [];
     try {
-      // 這是從前端發來的 string，所以要 parse
       keepImagesList = existingImages ? JSON.parse(existingImages) : [];
     } catch (e) {
       keepImagesList = [];
