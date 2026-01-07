@@ -358,60 +358,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     const container = document.getElementById("services-container");
     if (!container) return;
 
+    const statusClass = item.isActive
+      ? "service-status-active"
+      : "service-status-inactive";
     const tempId = item.id === "new" ? `new-${Date.now()}` : item.id;
+
     const html = `
-            <div class="service-block card mb-3" data-id="${
-              item.id
-            }" style="border-left: 4px solid #1cc88a;">
-                <div class="card-body p-3">
-                    <div class="row align-items-end">
-                        <div class="col-md-3 mb-2">
-                            <label class="small text-muted">服務名稱</label>
-                            <input type="text" class="form-control svc-name" value="${
-                              item.name
-                            }" placeholder="如：釘木架" required>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="small text-muted">單價 ($)</label>
-                            <input type="number" class="form-control svc-price" value="${
-                              item.price
-                            }" required>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="small text-muted">計費單位</label>
-                            <select class="form-control svc-unit">
-                                <option value="PIECE" ${
-                                  item.unit === "PIECE" ? "selected" : ""
-                                }>每件</option>
-                                <option value="WEIGHT" ${
-                                  item.unit === "WEIGHT" ? "selected" : ""
-                                }>每公斤</option>
-                                <option value="SHIPMENT" ${
-                                  item.unit === "SHIPMENT" ? "selected" : ""
-                                }>每單</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input svc-active" id="active-${tempId}" ${
+    <div class="service-block card mb-4 ${statusClass}" data-id="${item.id}">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4 svc-input-group mb-3">
+            <label><i class="fas fa-tag"></i> 服務名稱</label>
+            <input type="text" class="form-control svc-name" value="${
+              item.name
+            }" placeholder="例如：釘木架" required>
+          </div>
+          <div class="col-md-3 svc-input-group mb-3">
+            <label><i class="fas fa-dollar-sign"></i> 單價 (TWD)</label>
+            <input type="number" class="form-control svc-price" value="${
+              item.price
+            }" required>
+          </div>
+          <div class="col-md-3 svc-input-group mb-3">
+            <label><i class="fas fa-balance-scale"></i> 計費單位</label>
+            <select class="form-control svc-unit">
+              <option value="PIECE" ${
+                item.unit === "PIECE" ? "selected" : ""
+              }>按件計費</option>
+              <option value="WEIGHT" ${
+                item.unit === "WEIGHT" ? "selected" : ""
+              }>按重量 (kg)</option>
+              <option value="SHIPMENT" ${
+                item.unit === "SHIPMENT" ? "selected" : ""
+              }>按單計費</option>
+            </select>
+          </div>
+          <div class="col-md-2 mb-3 d-flex align-items-end justify-content-center">
+            <div class="custom-control custom-switch">
+              <input type="checkbox" class="custom-control-input svc-active" id="active-${tempId}" ${
       item.isActive ? "checked" : ""
     }>
-                                <label class="custom-control-label small" for="active-${tempId}">啟用</label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-2 text-right">
-                            <button type="button" class="btn btn-sm btn-success btn-save-service">儲存</button>
-                            <button type="button" class="btn btn-sm btn-danger btn-delete-service">刪除</button>
-                        </div>
-                        <div class="col-12">
-                            <label class="small text-muted">服務描述 (選填)</label>
-                            <input type="text" class="form-control svc-desc" value="${
-                              item.description || ""
-                            }" placeholder="顯示於前台的描述內容">
-                        </div>
-                    </div>
-                </div>
-            </div>`;
+              <label class="custom-control-label font-weight-bold" for="active-${tempId}">${
+      item.isActive ? "啟用" : "停用"
+    }</label>
+            </div>
+          </div>
+          <div class="col-md-9 svc-input-group mb-3">
+            <label><i class="fas fa-info-circle"></i> 服務描述 (前台顯示)</label>
+            <input type="text" class="form-control svc-desc" value="${
+              item.description || ""
+            }" placeholder="說明此服務的具體內容...">
+          </div>
+          <div class="col-md-3 d-flex align-items-end mb-3">
+            <div class="btn-action-group w-100">
+              <button type="button" class="btn btn-success btn-icon-split btn-sm btn-save-service w-100">
+                <span class="icon text-white-50"><i class="fas fa-save"></i></span>
+                <span class="text">儲存</span>
+              </button>
+              <button type="button" class="btn btn-danger btn-sm btn-delete-service">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
 
     container.insertAdjacentHTML("beforeend", html);
 

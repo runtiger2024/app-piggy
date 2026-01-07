@@ -284,3 +284,74 @@
     padding-bottom: 30px;
   }
 }
+/* 客戶端附加服務優化 */
+#shipment-services-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.service-option-item {
+  border: 2px solid #eaecf4;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.service-option-item:hover {
+  border-color: #4e73df;
+  background: #f8f9fc;
+}
+
+.service-option-item.selected {
+  border-color: #4e73df;
+  background: #f0f4ff;
+  box-shadow: 0 4px 12px rgba(78, 115, 223, 0.1);
+}
+
+.svc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.svc-title {
+  font-weight: 700;
+  color: #3a3b45;
+}
+
+.svc-price-tag {
+  background: #4e73df;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.svc-checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #d1d3e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+}
+
+.selected .svc-checkbox-custom {
+  background: #4e73df;
+  border-color: #4e73df;
+  color: white;
+}
+
+.svc-description {
+  font-size: 0.8rem;
+  color: #858796;
+  margin-left: 30px;
+}
