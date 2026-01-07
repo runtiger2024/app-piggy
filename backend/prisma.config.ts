@@ -30,7 +30,7 @@ export default defineConfig({
 
   // 2. 強制引擎類型為 "library"
   // 這是解決 Prisma 7 在標準 Node.js 環境（如 Render）中報錯 P1012 的最核心設定
-  engine: "library",
+  engineType: "library",
 
   // 3. 資料庫連線配置
   datasource: {
