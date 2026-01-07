@@ -1,7 +1,5 @@
 {
   "dependencies": {
-    "@capacitor/cli": "^8.0.0",
-    "@capacitor/core": "^8.0.0",
     "cloudinary": "^1.41.3",
     "multer-storage-cloudinary": "^4.0.0"
   }

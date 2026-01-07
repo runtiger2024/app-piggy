@@ -1,17 +1,13 @@
 // backend/prisma/schema.prisma
-// V20.0 - 終極旗艦生產優化版：全面解決 Render 部署 P1012 錯誤，新增庫存異動、客服工單與版本管理
+// V16.0 - 旗艦整合版：支援 LINE 登入並行與訊息推播功能 (新增 lineUserId)
 
 generator client {
-  provider      = "prisma-client-js"
-  // 強制鎖定 library 引擎，確保在 Render 等 Linux 環境運行穩定
-  engineType    = "library"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  // [核心修正] 根據 Prisma 7.2.0 規範，當專案存在 prisma.config.ts 時，
-  // 此處不可放置 url 或 directUrl，否則會導致驗證失敗 (P1012)。
+  url      = env("DATABASE_URL")
 }
 
 // --- 1. 會員 (客戶) 資料模型 ---
@@ -19,55 +15,47 @@ model User {
   id                  String   @id @default(cuid())
   
   // 專屬會員標識碼：格式為 RP0000889
-  piggyId             String?  @unique
+  piggyId              String?  @unique
   
-  email               String   @unique
+  email                String   @unique
   
-  // 支援 LINE 快速註冊，密碼改為可選
-  passwordHash        String?
-  name                String? 
-  phone               String? 
-  defaultAddress      String? 
+  // [修改] passwordHash 改為可選，因為 LINE 快速註冊的使用者初期可能沒有密碼
+  passwordHash         String?
+  
+  name                 String?
+  phone                String?
+  defaultAddress       String?
 
-  // 國際化與個人化偏好
-  preferredLanguage   String   @default("zh-TW")
-  timezone             String   @default("Asia/Taipei")
-  userSettings        Json     @default("{}")
-
-  // LINE 整合相關欄位
-  lineUserId          String?  @unique
+  // [新增] LINE 相關欄位：用於辨識 LINE 客戶與執行後續訊息推播
+  lineUserId           String?  @unique
 
   // 發票預設資料
   defaultTaxId         String?
   defaultInvoiceTitle String?
 
-  // 權限控制與帳號狀態
+  // 權限控制
   permissions          Json     @default("[]")
+
+  // 帳號狀態
   isActive            Boolean  @default(true)
 
-  // 安全驗證欄位
+  // 忘記密碼欄位
   resetPasswordToken  String?
   resetPasswordExpire DateTime?
-
-  // 會員積分獎勵系統
-  rewardPoints        Int      @default(0)
 
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  // 關聯定義
+  // 關聯
   packages            Package[]
   shipments            Shipment[]
   activityLogs        ActivityLog[]
   recipients          Recipient[]
   wallet              Wallet?
   notifications        Notification[]
-  furnitureOrders      FurnitureOrder[]
-  coupons             UserCoupon[]
-  pointRecords        PointRecord[]
   
-  // [新增] 客服工單關聯
-  tickets             SupportTicket[]
+  // 家具代採購關聯
+  furnitureOrders      FurnitureOrder[]
 }
 
 // --- 2. 包裹 (預報) 資料模型 ---
@@ -76,47 +64,27 @@ model Package {
   trackingNumber      String   @unique
   productName          String
   quantity            Int      @default(1)
-  note                String? 
-  productUrl          String?  @db.Text
+  note                String?
+  
+  productUrl          String?   
 
-  // 物流規格數據：用於精準材積計算
-  weight              Float?   // 重量 (kg)
-  length              Float?   // 長 (cm)
-  width               Float?   // 寬 (cm)
-  height              Float?   // 高 (cm)
-  volumeWeight        Float?   // 材積重量 (kg)
-
-  // 圖片管理
   productImages        Json     @default("[]")
   warehouseImages      Json     @default("[]")
   warehouseThumbnails Json     @default("[]")
-  
-  // 狀態管理
-  status              String   @default("PENDING") // PENDING, ARRIVED, SHELVED, SHIPPED, EXCEPTION
+  status              String   @default("PENDING")
   arrivedBoxesJson     Json     @default("[]")
-  totalCalculatedFee  Float?  
+  totalCalculatedFee  Float?
   warehouseRemark      String?
-  claimProof          String? 
+  claimProof          String?
   exceptionStatus      String?
-  exceptionNote        String? 
-  
+  exceptionNote        String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  // 關聯定義
   userId              String
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shipmentId          String? 
+  user                User     @relation(fields: [userId], references: [id])
+  shipmentId          String?
   shipment            Shipment? @relation(fields: [shipmentId], references: [id])
-  
-  // 歸屬倉庫與儲位管理
-  warehouseId         String?
-  warehouse           Warehouse? @relation(fields: [warehouseId], references: [id])
-  storageBinId        String?
-  storageBin          StorageBin? @relation(fields: [storageBinId], references: [id])
-
-  // [新增] 庫存異動紀錄
-  inventoryLogs       InventoryLog[]
 
   @@index([userId])
   @@index([shipmentId])
@@ -130,164 +98,64 @@ model Shipment {
   phone                 String
   shippingAddress       String
   idNumber              String
-  taxId                 String?  
-  invoiceTitle          String?  
-  note                  String?  
-  adminNote             String?    @db.Text
+  taxId                 String?
+  invoiceTitle          String?
+  note                  String?
+  // 管理員審核備註：專用於記錄改價、審核意見，與客戶備註分開
+  adminNote             String?   @db.Text
   
-  // 附加服務與費率快照
+  // 儲存當時勾選的附加服務快照，例如：[{"name":"釘木架", "price":50}]
   additionalServices    Json?      @default("{}")
-  deliveryLocationRate  Float?   
+  deliveryLocationRate  Float?
   
-  // 運單狀態與財務數據
+  // 預設狀態調整為 AWAITING_REVIEW，強制執行後台審核流程
   status                String    @default("AWAITING_REVIEW")
-  totalCost             Float?   
-  actualWeight          Float?    // 實際總重量
-  chargeableWeight      Float?    // 計費總重量
   
-  // 物流追蹤
-  trackingNumberTW      String?  
-  paymentProof          String?  
-  carrierType           String?  
-  carrierId             String?  
-  loadingDate           DateTime?
-  returnReason          String?  
+  totalCost             Float?
+  trackingNumberTW      String?
+  paymentProof          String?
   
-  // 發票與電子檔案
-  invoiceNumber         String?  
+  carrierType           String?   
+  carrierId             String?   
+  loadingDate           DateTime? 
+  returnReason          String?   
+
+  // 發票相關
+  invoiceNumber         String?
   invoiceDate           DateTime?
-  invoiceRandomCode     String?  
-  invoiceStatus         String?  
-  productUrl            String?  
+  invoiceRandomCode     String?
+  invoiceStatus         String?
+  productUrl            String?
   shipmentProductImages Json      @default("[]")
 
-  // 財務與追蹤關聯
-  transactionId         String?    @unique
+  transactionId         String?   @unique
   transaction           Transaction? @relation(fields: [transactionId], references: [id])
-  trackingHistory       TrackingHistory[]
 
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User      @relation(fields: [userId], references: [id])
   packages              Package[]
-  
-  // 優惠券關聯
-  couponId              String?  
-  coupon                Coupon?   @relation(fields: [couponId], references: [id])
 
   @@index([userId])
   @@index([status])
 }
 
-// --- 4. 貨態追蹤歷程 ---
-model TrackingHistory {
-  id          String   @id @default(cuid())
-  shipmentId  String
-  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-  status      String   // 例如: 倉庫裝櫃、離開港口、清關中、派送中
-  description String?  @db.Text
-  location    String?
-  timestamp   DateTime @default(now())
-
-  @@index([shipmentId])
-}
-
-// --- 5. 倉庫管理模型 ---
-model Warehouse {
-  id          String   @id @default(cuid())
-  name        String   
-  address     String   @db.Text
-  contact     String? 
-  isActive    Boolean  @default(true)
-  packages    Package[]
-  bins        StorageBin[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// --- 6. 倉庫儲位模型 ---
-model StorageBin {
-  id          String   @id @default(cuid())
-  code        String   // 儲位編號，如 A-01-05
-  warehouseId String
-  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  packages    Package[]
-  createdAt   DateTime @default(now())
-
-  @@unique([warehouseId, code])
-}
-
-// --- 7. [新功能] 庫存異動日誌 ---
-model InventoryLog {
-  id              String   @id @default(cuid())
-  packageId       String
-  package         Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  action          String   // SHELVED, MOVED, REMOVED
-  fromBin         String?
-  toBin           String?
-  operatorEmail   String
-  createdAt       DateTime @default(now())
-
-  @@index([packageId])
-}
-
-// --- 8. 優惠券與行銷系統 ---
-model Coupon {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  discountType  String   // PERCENTAGE, FIXED
-  value         Float    
-  minSpend      Float    @default(0)
-  startDate     DateTime
-  endDate       DateTime
-  isActive      Boolean  @default(true)
-  shipments     Shipment[]
-  users         UserCoupon[]
-  createdAt     DateTime @default(now())
-}
-
-model UserCoupon {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  couponId  String  
-  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  isUsed    Boolean  @default(false)
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-
-  @@unique([userId, couponId])
-}
-
-// --- 9. 積分紀錄模型 ---
-model PointRecord {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount    Int      
-  type      String   // EARNED, USED, EXPIRED, REFUNDED
-  reason    String?
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
-// --- 10. 估價單 ---
+// --- 4. 估價單 ---
 model CalculationQuote {
   id                String   @id @default(cuid())
   createdAt          DateTime @default(now())
   calculationResult Json
 }
 
-// --- 11. 操作日誌 ---
+// --- 5. 操作日誌 ---
 model ActivityLog {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   action    String
-  targetId  String? 
-  details   String?  @db.Text
+  targetId  String?
+  details   String?
   userId    String
   userEmail String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -296,36 +164,20 @@ model ActivityLog {
   @@index([action])
 }
 
-// --- 12. 系統公告系統 ---
-model Announcement {
-  id          String   @id @default(cuid())
-  title       String
-  content     String   @db.Text
-  priority    Int      @default(0)
-  isActive    Boolean  @default(true)
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// --- 13. [新功能] 客服工單系統 ---
-model SupportTicket {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject     String
-  content     String   @db.Text
-  status      String   @default("OPEN") // OPEN, IN_PROGRESS, CLOSED
-  priority    String   @default("NORMAL")
-  attachments Json     @default("[]")
-  createdAt   DateTime @default(now())
+// --- 6. 系統設定 ---
+model SystemSetting {
+  key         String   @id
+  value       Json
+  category    String?  // 費率、公告、系統等大類
+  group       String?  
+  type        String?  
+  description String?
   updatedAt   DateTime @updatedAt
 
-  @@index([userId])
+  @@index([category])
 }
 
-// --- 14. 常用收件人 ---
+// --- 7. 常用收件人 ---
 model Recipient {
   id          String   @id @default(cuid())
   userId      String
@@ -333,7 +185,7 @@ model Recipient {
   name        String
   phone       String
   address     String
-  idNumber    String? 
+  idNumber    String?
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -341,23 +193,23 @@ model Recipient {
   @@index([userId])
 }
 
-// --- 15. 通知中心 ---
+// --- 8. 通知中心 ---
 model Notification {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
-  message     String   @db.Text
-  type        String  
+  message     String
+  type        String
   isRead      Boolean  @default(false)
-  link        String? 
+  link        String?
   createdAt   DateTime @default(now())
 
   @@index([userId])
   @@index([isRead])
 }
 
-// --- 16. 電子錢包與交易紀錄 ---
+// --- 9. 電子錢包 ---
 model Wallet {
   id          String   @id @default(cuid())
   userId      String   @unique
@@ -368,6 +220,7 @@ model Wallet {
   transactions Transaction[]
 }
 
+// --- 10. 交易紀錄 ---
 model Transaction {
   id                String    @id @default(cuid())
   walletId          String
@@ -375,14 +228,16 @@ model Transaction {
   amount            Float
   type              String    // DEPOSIT, PAYMENT, REFUND, ADJUST
   status            String    // PENDING, COMPLETED, FAILED, REJECTED
-  description       String?   @db.Text
-  proofImage        String?  
+  description       String?
+  proofImage        String?
+
   taxId             String?  
-  invoiceTitle      String?
-  invoiceNumber     String?  
+  invoiceTitle      String?  
+  invoiceNumber     String?
   invoiceDate       DateTime?
   invoiceRandomCode String?
   invoiceStatus     String?  
+
   shipment          Shipment?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -391,25 +246,38 @@ model Transaction {
   @@index([status])
 }
 
-// --- 17. 家具代採購訂單模型 ---
+// --- 11. 家具代採購訂單模型 ---
 model FurnitureOrder {
   id              String   @id @default(cuid())
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 代採購資訊
   factoryName     String
-  productName     String  
+  productName     String
+  
+  // 商品參考網址：用於存放商品在淘寶、天貓或工廠官網的連結
   productUrl      String?  @db.Text
+
   quantity        Int
   priceRMB        Float
+  
+  // 計算結果與當時費率
   serviceFeeRMB   Float    
   exchangeRate    Float    
-  serviceFeeRate  Float    
-  totalAmountTWD  Int      
+  serviceFeeRate Float    
+  totalAmountTWD Int      
+  
+  // 狀態與備註
   status          String   @default("PENDING") 
   note            String?  @db.Text
   adminRemark     String?  @db.Text
+
+  // 參考截圖欄位：用於存放客戶上傳的商品或報價單縮圖路徑
   refImageUrl     String?  @db.Text
-  invoiceUrl      String?  @db.Text
+
+  invoiceUrl      String?  @db.Text // 管理員提供的正式發票網址
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -417,36 +285,15 @@ model FurnitureOrder {
   @@index([status])
 }
 
-// --- 18. 系統底層模型 ---
-model SystemSetting {
-  key         String   @id
-  value       Json
-  category    String?  
-  group       String?  
-  type        String? 
-  description String?  @db.Text
-  updatedAt   DateTime @updatedAt
-
-  @@index([category])
-}
-
+// --- 12. 附加服務定義模型 ---
+// 用於管理後台 CRUD 附加服務項目（如：釘木架、加強包裝等）
 model ShipmentServiceItem {
   id          String   @id @default(cuid())
-  name        String   
-  description String?  @db.Text
-  price       Float    @default(0)
-  unit        String   @default("PIECE") 
-  isActive    Boolean  @default(true) 
+  name        String   // 服務名稱
+  description String?  // 服務描述內容
+  price       Float    @default(0) // 預設單價
+  unit        String   @default("PIECE") // 計費單位：PIECE (件), WEIGHT (重量), SHIPMENT (每單)
+  isActive    Boolean  @default(true) // 是否在前端顯示供客戶勾選
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-}
-
-// [新增] 系統版本管理
-model AppVersion {
-  id          String   @id @default(cuid())
-  version     String   @unique
-  platform    String   // WEB, IOS, ANDROID
-  isMandatory Boolean  @default(false)
-  releaseNote String?  @db.Text
-  createdAt   DateTime @default(now())
 }
