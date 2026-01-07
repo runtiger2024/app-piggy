@@ -6,6 +6,32 @@
 // [Added] 新增憑證上傳時的發票資訊聯動與強制驗證邏輯
 // [Added] 深度檢閱報告數據同步：狀態同步、物理統計值、透明化報表渲染、防破圖憑證顯示
 
+/** * [修正] 全局狀態映射表 - 確保客戶端與後端狀態完全對齊
+ */
+window.SHIPMENT_STATUS_MAP = {
+  AWAITING_REVIEW: "待管理員審核",
+  PENDING_PAYMENT: "待付款",
+  PROCESSING: "處理中/已收款",
+  SHIPPED: "已裝櫃出貨",
+  CUSTOMS_CHECK: "海關查驗中",
+  UNSTUFFING: "拆櫃派送中",
+  COMPLETED: "已送達完成",
+  CANCELLED: "已取消",
+  RETURNED: "訂單退回",
+};
+
+window.STATUS_CLASSES = {
+  AWAITING_REVIEW: "status-PENDING",
+  PENDING_PAYMENT: "status-PENDING",
+  PROCESSING: "status-PROCESSING",
+  SHIPPED: "status-SHIPPED",
+  CUSTOMS_CHECK: "status-SHIPPED",
+  UNSTUFFING: "status-SHIPPED",
+  COMPLETED: "status-COMPLETED",
+  CANCELLED: "status-CANCELLED",
+  RETURNED: "status-CANCELLED",
+};
+
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
   const bar = document.getElementById("checkout-bar");
@@ -552,7 +578,7 @@ window.loadMyShipments = async function () {
         `;
       });
     } else {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">尚與集運單</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">尚未有集運單</td></tr>`;
     }
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入失敗</td></tr>`;
@@ -576,7 +602,7 @@ window.openShipmentDetails = async function (id) {
     const dateEl = document.getElementById("sd-date");
     if (dateEl) dateEl.textContent = new Date(s.createdAt).toLocaleString();
 
-    // 2. 狀態同步顯示 (修復問題 1)
+    // 2. 狀態同步顯示 (修復問題 1：同步後台最新狀態)
     const statusBox = document.getElementById("sd-status");
     if (statusBox) {
       if (s.status === "RETURNED") {
@@ -603,7 +629,7 @@ window.openShipmentDetails = async function (id) {
       if (caiEl) caiEl.textContent = s.physicalStats.totalCai || 0;
     }
 
-    // 4. 配送資訊
+    // 4. 配送資訊 (修復：優先顯示台灣單號)
     const nameEl = document.getElementById("sd-name");
     if (nameEl) nameEl.textContent = s.recipientName || "--";
     const phoneEl = document.getElementById("sd-phone");
@@ -611,7 +637,8 @@ window.openShipmentDetails = async function (id) {
     const addrEl = document.getElementById("sd-address");
     if (addrEl) addrEl.textContent = s.shippingAddress || "--";
     const trackingEl = document.getElementById("sd-trackingTW");
-    if (trackingEl) trackingEl.textContent = s.carrierId || "尚未產生";
+    if (trackingEl)
+      trackingEl.textContent = s.trackingNumberTW || s.carrierId || "尚未產生";
 
     // 5. 費用透明化報告渲染
     const breakdownDiv = document.getElementById("sd-fee-breakdown");
@@ -623,18 +650,25 @@ window.openShipmentDetails = async function (id) {
       );
     }
 
-    // 6. 支付憑證渲染 (修復問題 3：防破圖處理)
+    // 6. 支付憑證渲染 (修復問題 3：防破圖處理與統一路徑拼湊)
     const proofImagesContainer = document.getElementById("sd-proof-images");
     if (proofImagesContainer) {
       if (s.paymentProof && s.paymentProof !== "WALLET_PAY") {
-        // 判定路徑並補全 URL
-        const fullUrl = s.paymentProof.startsWith("http")
-          ? s.paymentProof
-          : `${API_BASE_URL}${s.paymentProof}`;
+        let path = s.paymentProof;
+        // [修正] 如果路徑開頭已有斜槓，先移除，統由模板拼接
+        if (!path.startsWith("http") && path.startsWith("/")) {
+          path = path.substring(1);
+        }
+
+        const fullUrl = path.startsWith("http")
+          ? path
+          : `${API_BASE_URL}/${path}`;
+
         proofImagesContainer.innerHTML = `
           <div style="text-align:center; width: 100%;">
             <a href="${fullUrl}" target="_blank">
-              <img src="${fullUrl}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee;">
+              <img src="${fullUrl}" onerror="this.src='https://placehold.co/300x200?text=圖片路徑異常';this.style.width='200px';" 
+                   style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee;">
             </a>
             <p style="font-size: 11px; color: #999; margin-top: 10px;"><i class="fas fa-search-plus"></i> 點擊圖片可放大查看原圖</p>
           </div>
@@ -652,7 +686,7 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
-    // 7. 進度條同步
+    // 7. 進度條同步 (修復：包含待審核階段)
     const timelineContainer = document.getElementById("sd-timeline");
     if (timelineContainer) renderTimeline(timelineContainer, s.status);
 
@@ -684,8 +718,12 @@ window.cancelShipment = async function (id) {
   }
 };
 
+/**
+ * [修復] 進度條渲染邏輯 - 加入 AWAITING_REVIEW 待審核節點
+ */
 function renderTimeline(container, currentStatus) {
   const steps = [
+    { code: "AWAITING_REVIEW", label: "待審核" },
     { code: "PENDING_PAYMENT", label: "待付款" },
     { code: "PROCESSING", label: "處理中" },
     { code: "SHIPPED", label: "已裝櫃" },

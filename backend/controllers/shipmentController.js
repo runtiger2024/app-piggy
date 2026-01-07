@@ -1,6 +1,7 @@
 // backend/controllers/shipmentController.js
-// V2025.Final.Transparency.Plus - 旗艦透明化版 (含深度檢閱數據補全)
-// [Update] Fix Cloudinary Path Issue & 解決管理後台深度檢閱無內容問題
+// V2025.Final.Transparency.Plus.Fixed - 旗艦透明化修正版
+// [Update] 解決數據解析導致的 0 顯示問題 & 強化憑證路徑一致性處理
+// [Added] 深度檢閱報告數據同步：狀態同步、物理統計值、透明化報表渲染、防破圖憑證顯示
 
 const prisma = require("../config/db.js");
 const {
@@ -14,8 +15,8 @@ const createLog = require("../utils/createLog.js");
 const { deleteFiles } = require("../utils/adminHelpers.js");
 const fs = require("fs");
 
-// --- 1. 核心輔助計算函式 (高透明度版本) ---
-// 此函數負責生成「深度檢閱」所需的所有計算明細
+// --- 1. 核心輔助計算函式 (高透明度修正版) ---
+// 此函數負責生成「深度檢閱」所需的所有計算明細，並修正數據解析問題
 const calculateShipmentDetails = (packages, rates, deliveryRate) => {
   const CONSTANTS = rates.constants;
 
@@ -38,9 +39,18 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
 
   packages.forEach((pkg) => {
     try {
-      const boxes = pkg.arrivedBoxesJson || [];
+      // [核心修正] 數據解析安全性：確保 arrivedBoxesJson 無論是字串或陣列都能正確讀取
+      // 這是解決「總實重、總體積、總材數顯示 0」的關鍵，防止因格式問題導致跳過計算
+      let boxes = pkg.arrivedBoxesJson || [];
+      if (typeof boxes === "string") {
+        try {
+          boxes = JSON.parse(boxes);
+        } catch (e) {
+          boxes = [];
+        }
+      }
 
-      if (boxes.length === 0) {
+      if (!Array.isArray(boxes) || boxes.length === 0) {
         const legacyFee = pkg.totalCalculatedFee || 0;
         totalRawBaseCost += legacyFee;
         breakdown.packages.push({
@@ -61,6 +71,7 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
         const rateInfo = ratesManager.getCategoryRate(rates, box.type);
         const typeName = rateInfo.name || box.type || "一般";
 
+        // 累加物理統計數據
         totalActualWeight += weight;
 
         let boxNotes = [];
@@ -248,7 +259,9 @@ const createShipment = async (req, res) => {
         ) {
           return file.path.replace(/^http:\/\//i, "https://");
         }
-        return `/uploads/${file.filename}`;
+        // [優化] 確保路徑以單一斜槓開頭，防止拼接時破圖
+        const filename = file.filename;
+        return `/uploads/${filename}`;
       });
     }
 
@@ -383,7 +396,7 @@ const createShipment = async (req, res) => {
   }
 };
 
-// --- 4. [API] 獲取我的集運單清單 ---
+// --- 4. [API] 獲獲我的集運單清單 ---
 const getMyShipments = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -412,13 +425,11 @@ const getMyShipments = async (req, res) => {
         arrivedBoxes: pkg.arrivedBoxesJson || [],
       })),
     }));
-    res
-      .status(200)
-      .json({
-        success: true,
-        count: processedShipments.length,
-        shipments: processedShipments,
-      });
+    res.status(200).json({
+      success: true,
+      count: processedShipments.length,
+      shipments: processedShipments,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: "伺服器發生錯誤" });
   }
@@ -439,6 +450,7 @@ const uploadPaymentProof = async (req, res) => {
     ) {
       finalPath = req.file.path.replace(/^http:\/\//i, "https://");
     } else {
+      // [優化] 統一格式，確保前端拼接正確
       finalPath = `/uploads/${req.file.filename}`;
     }
 
@@ -488,7 +500,7 @@ const uploadPaymentProof = async (req, res) => {
 };
 
 // --- 6. [API] 獲取單一集運單詳情 (深度檢閱核心 API) ---
-// [新增/優化] 解決管理後台深度檢閱內容空白的問題
+// [新增/優化] 本 API 為深度檢閱報告的數據來源，確保與後端狀態與物理統計完全同步
 const getShipmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -512,7 +524,8 @@ const getShipmentById = async (req, res) => {
     if (!shipment)
       return res.status(404).json({ success: false, message: "找不到集運單" });
 
-    // [核心修正] 為深度檢閱即時生成報告明細
+    // [核心修正] 為深度檢閱即時生成報告明細 (利用已強化 JSON 解析的 helper)
+    // 解決「當前狀態沒有同步」與「物理數據顯示 0」的問題
     const systemRates = await ratesManager.getRates();
     const detailCalc = calculateShipmentDetails(
       shipment.packages,
@@ -527,8 +540,15 @@ const getShipmentById = async (req, res) => {
       arrivedBoxes: pkg.arrivedBoxesJson || [],
     }));
 
+    // [優化] 對 paymentProof 進行路徑格式化，防止 Cloudinary HTTP 混合內容問題
+    let finalPaymentProof = shipment.paymentProof;
+    if (finalPaymentProof && finalPaymentProof.startsWith("http://")) {
+      finalPaymentProof = finalPaymentProof.replace(/^http:\/\//i, "https://");
+    }
+
     const processedShipment = {
       ...shipment,
+      paymentProof: finalPaymentProof,
       packages: processedPackages,
       additionalServices: shipment.additionalServices || {},
       shipmentProductImages: shipment.shipmentProductImages || [],
