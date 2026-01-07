@@ -1,6 +1,6 @@
 // backend/controllers/shipmentController.js
-// V2026.01.Final.CloudinaryFixed - 憑證顯示與雲端路徑保險版
-// [Update] 解決 Cloudinary 網址被 replace 損毀變成 https:/ 的問題
+// V2026.01.Final.CloudinaryFixed.Plus - 憑證顯示與雲端路徑全自動修復版
+// [Update] 導入自我修復正則表達式，解決 Cloudinary 網址協議損毀 (https:/) 與混合內容問題
 // [Update] 解決數據解析導致的 0 顯示問題 (重量與體積累加邏輯優化)
 // [Added] 深度檢閱報告數據同步：透明化報表渲染、防破圖憑證顯示
 
@@ -321,11 +321,15 @@ const uploadPaymentProof = async (req, res) => {
 
     let finalPath = req.file.path;
 
-    // [關鍵修正]：如果是 Cloudinary 網址，跳過斜槓 replace，防止協議損毀 (https:// -> https:/)
+    // [關鍵修正]：導入自我修復邏輯
+    // 1. 強制 HTTPS 防止 Mixed Content
+    // 2. 修復協議後的斜槓數量 (正則表達式確保協議後方必定有兩個斜線，修復 https:/)
     if (finalPath.startsWith("http")) {
-      finalPath = finalPath.replace(/^http:\/\//i, "https://");
+      finalPath = finalPath
+        .replace(/^http:\/\//i, "https://")
+        .replace(/^https?:\/+(?!\/)/, "https://");
     } else {
-      // 只有本地開發文件才執行路徑清理
+      // 本地開發文件路徑清理
       finalPath = finalPath.replace(/\\/g, "/");
       if (finalPath.startsWith("public/")) {
         finalPath = "/" + finalPath.replace("public/", "");
@@ -381,10 +385,12 @@ const getShipmentById = async (req, res) => {
       shipment.deliveryLocationRate || 0
     );
 
-    // 強制轉換為 HTTPS
+    // [關鍵修正]：渲染前修復 Cloudinary 網址 (HTTPS 與單斜線修復)
     let finalPaymentProof = shipment.paymentProof;
-    if (finalPaymentProof && finalPaymentProof.startsWith("http://")) {
-      finalPaymentProof = finalPaymentProof.replace(/^http:\/\//i, "https://");
+    if (finalPaymentProof && finalPaymentProof.startsWith("http")) {
+      finalPaymentProof = finalPaymentProof
+        .replace(/^http:\/\//i, "https://")
+        .replace(/^https?:\/+(?!\/)/, "https://");
     }
 
     const processedShipment = {

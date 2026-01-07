@@ -1,6 +1,7 @@
 // frontend/js/dashboard-shipments.js
-// V2026.01.Stable.Full - 精簡穩定版 (移除狀態與統計，修復 Cloudinary 破圖)
-// [Fixed] 解決本地開發與 Cloudinary 混合路徑導致的破圖問題
+// V2026.01.Stable.Full.Plus - 旗艦穩定修復版 (修復 Cloudinary 協議損毀與路徑破圖)
+// [Fixed] 導入自我修復正則表達式，解決 Cloudinary 網址協議損毀 (https:/) 造成的破圖問題
+// [Fixed] 解決本地開發與 Cloudinary 混合路徑導致的渲染問題
 // [Optimization] 移除當前狀態、重量、體積、材積賦值邏輯，確保渲染流程不中斷
 // [Added] 附加服務明細渲染、進度條防崩潰保護、API 數據調試日誌
 
@@ -539,7 +540,7 @@ window.loadMyShipments = async function () {
   }
 };
 
-// --- 7. 查看訂單詳情 (深度檢閱精簡修復版) ---
+// --- 7. 查看訂單詳情 (深度檢閱修復版) ---
 window.openShipmentDetails = async function (id) {
   try {
     // 1. 初始化 UI：清空舊數據
@@ -641,18 +642,18 @@ window.openShipmentDetails = async function (id) {
       );
     }
 
-    // 6. 支付憑證渲染 (修復 Cloudinary 破圖核心)
+    // 6. 支付憑證渲染 (修復 Cloudinary 破圖核心 - 自我修復版)
     const proofImagesContainer = document.getElementById("sd-proof-images");
     if (proofImagesContainer) {
       if (s.paymentProof && s.paymentProof !== "WALLET_PAY") {
         let path = s.paymentProof;
         let fullUrl = "";
 
-        // [關鍵修正]：判斷是否為 Cloudinary 網址 (以 http 開頭)
+        // [關鍵修正]：判斷網址格式並導入正則修復 (解決 https:/ 單斜線問題)
         if (path.startsWith("http")) {
-          fullUrl = path; // 直接使用原始雲端網址
+          fullUrl = path.replace(/^https?:\/+(?!\/)/, "https://");
         } else {
-          // 本地開發環境：清理 API_BASE_URL 結尾斜槓與路徑開頭斜槓，防止產生 //
+          // 本地開發環境路徑清理
           const cleanBase = API_BASE_URL.replace(/\/+$/, "");
           const cleanPath = path.startsWith("/") ? path : "/" + path;
           fullUrl = cleanBase + cleanPath;
