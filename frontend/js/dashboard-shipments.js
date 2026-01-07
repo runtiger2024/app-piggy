@@ -1,9 +1,10 @@
 // frontend/js/dashboard-shipments.js
-// V2026.01.Stable - 旗艦版整合邏輯 (含收件人選擇器聯動、費用透明化、銀行轉帳憑證修復)
+// V2026.01.Stable.Full - 旗艦版整合邏輯 (修復深度檢閱數據同步、統計顯示與憑證顯示)
 // [New] 修復「常用地址」按鈕聯動邏輯，確保正確開啟收件人選擇器
 // [Optimization] 整合費用明細、傢俱類型顯示、超重警告與一鍵複製
 // [Fixed] 解決銀行轉帳憑證上傳 404 錯誤 (修正 API 路徑與 PUT 方法)
 // [Added] 新增憑證上傳時的發票資訊聯動與強制驗證邏輯
+// [Added] 深度檢閱報告數據同步：狀態同步、物理統計值、透明化報表渲染、防破圖憑證顯示
 
 // --- 1. 更新底部結帳條 ---
 window.updateCheckoutBar = function () {
@@ -204,7 +205,7 @@ window.recalculateShipmentTotal = async function () {
   }
 };
 
-// 渲染詳細透明化報表
+// 渲染詳細透明化報表 (保留原始名稱與邏輯)
 function renderBreakdownTable(breakdown, container, rate) {
   let html = `
     <div style="font-size: 13px; border: 1px solid #eee; border-radius: 4px; overflow: hidden; background: #fff;">
@@ -551,14 +552,14 @@ window.loadMyShipments = async function () {
         `;
       });
     } else {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">尚無集運單</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">尚與集運單</td></tr>`;
     }
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入失敗</td></tr>`;
   }
 };
 
-// --- 7. 查看訂單詳情 ---
+// --- 7. 查看訂單詳情 (深度檢閱關鍵修復版) ---
 window.openShipmentDetails = async function (id) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/shipments/${id}`, {
@@ -568,12 +569,14 @@ window.openShipmentDetails = async function (id) {
     if (!data.success) throw new Error(data.message);
 
     const s = data.shipment;
+
+    // 1. 基礎標頭資訊
     const idEl = document.getElementById("sd-id");
     if (idEl) idEl.textContent = s.id.slice(-8).toUpperCase();
+    const dateEl = document.getElementById("sd-date");
+    if (dateEl) dateEl.textContent = new Date(s.createdAt).toLocaleString();
 
-    const timelineContainer = document.getElementById("sd-timeline");
-    if (timelineContainer) renderTimeline(timelineContainer, s.status);
-
+    // 2. 狀態同步顯示
     const statusBox = document.getElementById("sd-status");
     if (statusBox) {
       if (s.status === "RETURNED") {
@@ -587,18 +590,74 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
+    // 3. 物理統計數據同步 (修復數據為 0 的問題)
+    if (s.physicalStats) {
+      const weightEl = document.getElementById("sd-total-weight");
+      if (weightEl) weightEl.textContent = s.physicalStats.totalWeight || 0;
+      const cbmEl = document.getElementById("sd-total-cbm");
+      if (cbmEl) cbmEl.textContent = s.physicalStats.totalCbm || 0;
+      const caiEl = document.getElementById("sd-total-cai");
+      if (caiEl) caiEl.textContent = s.physicalStats.totalCai || 0;
+    }
+
+    // 4. 配送資訊
     const nameEl = document.getElementById("sd-name");
     if (nameEl) nameEl.textContent = s.recipientName || "--";
     const phoneEl = document.getElementById("sd-phone");
     if (phoneEl) phoneEl.textContent = s.phone || "--";
     const addrEl = document.getElementById("sd-address");
     if (addrEl) addrEl.textContent = s.shippingAddress || "--";
+    const trackingEl = document.getElementById("sd-trackingTW");
+    if (trackingEl) trackingEl.textContent = s.carrierId || "尚未產生";
+
+    // 5. 費用透明化報告渲染
+    const breakdownDiv = document.getElementById("sd-fee-breakdown");
+    if (breakdownDiv && s.costBreakdown) {
+      renderBreakdownTable(
+        s.costBreakdown,
+        breakdownDiv,
+        s.deliveryLocationRate || 0
+      );
+    }
+
+    // 6. 支付憑證渲染 (防破圖處理)
+    const proofImagesContainer = document.getElementById("sd-proof-images");
+    if (proofImagesContainer) {
+      if (s.paymentProof && s.paymentProof !== "WALLET_PAY") {
+        // 判斷是否為絕對路徑，若否則補上 API 基底
+        const fullUrl = s.paymentProof.startsWith("http")
+          ? s.paymentProof
+          : `${API_BASE_URL}${s.paymentProof}`;
+        proofImagesContainer.innerHTML = `
+          <div style="text-align:center; width: 100%;">
+            <a href="${fullUrl}" target="_blank">
+              <img src="${fullUrl}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee;">
+            </a>
+            <p style="font-size: 11px; color: #999; margin-top: 10px;"><i class="fas fa-search-plus"></i> 點擊圖片可放大查看原圖</p>
+          </div>
+        `;
+      } else if (s.paymentProof === "WALLET_PAY") {
+        proofImagesContainer.innerHTML = `
+          <div style="background: #e6f7ff; color: #1890ff; padding: 15px; border-radius: 8px; border: 1px solid #91d5ff;">
+            <i class="fas fa-wallet"></i> <strong>餘額支付訂單</strong><br>
+            <span style="font-size: 12px;">此訂單已通過錢包餘額結清，無需上傳線下轉帳憑證。</span>
+          </div>
+        `;
+      } else {
+        proofImagesContainer.innerHTML =
+          '<span class="text-muted">暫無憑證數據</span>';
+      }
+    }
+
+    // 7. 進度條同步
+    const timelineContainer = document.getElementById("sd-timeline");
+    if (timelineContainer) renderTimeline(timelineContainer, s.status);
 
     const detailModal = document.getElementById("shipment-details-modal");
     if (detailModal) detailModal.style.display = "flex";
   } catch (e) {
     console.error("載入集運詳情發生異常:", e);
-    alert("無法載入詳情。");
+    alert("無法載入詳情報告，請稍後再試。");
   }
 };
 
