@@ -1,11 +1,12 @@
 /**
  * dashboard-packages.js
- * V2026.01.15.Enhanced_FullVersion
- * [功能]：包裹管理核心邏輯 (整合無主包裹優化版)
+ * V2026.01.15.DetailedCalculation_FullVersion
+ * [功能]：包裹管理核心邏輯 (整合無主包裹優化版 + 智慧計費詳情可視化)
  * [修復]：
  * 1. 整合 Cache-First (SWR) 策略至無主包裹載入，消除切換頓挫感。
  * 2. 新增無主包裹即時過濾搜尋與圖片預覽功能。
- * 3. 保留 V2026.01.14 所有修復：事件委派、大數據渲染優化、費率逆推、批量預報。
+ * 3. [詳情優化]：強化計費比對視覺，清楚標示「重量」或「材積」勝出基準，提升客戶透明度。
+ * 4. 保留 V2026.01.14 所有修復：事件委派、大數據渲染優化、費率逆推、批量預報。
  */
 
 let currentEditPackageImages = [];
@@ -390,41 +391,72 @@ window.openPackageDetails = function (pkgDataStr) {
       const finalFee = Math.max(wtFee, volFee);
       calculatedTotalBaseFee += finalFee;
 
+      // [優化]：判定哪一個是計費基準 (Winner)
+      const isWeightWinner = wtFee >= volFee;
+      const isVolumeWinner = volFee > wtFee;
+
       boxesHtml += `
-        <div class="detail-box-card">
-          <div class="box-header">
-            <span class="box-title">📦 第 ${idx + 1} 箱</span>
-            <span class="box-fee">$${finalFee.toLocaleString()}</span>
+        <div class="detail-box-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div class="box-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;">
+            <span class="box-title" style="font-weight: 800; color: #475569;">📦 第 ${
+              idx + 1
+            } 箱</span>
+            <span class="box-fee" style="color: #1e293b; font-weight: 800;">小計: $${finalFee.toLocaleString()}</span>
           </div>
-          <div class="box-specs">
-            <div class="spec-item"><span class="label">尺寸:</span> <span class="value">${l}x${w}x${h} cm</span></div>
-            <div class="spec-item"><span class="label">重量:</span> <span class="value">${weight} kg</span></div>
-            <div class="spec-item"><span class="label">材積:</span> <span class="value">${cai} 材</span></div>
+          <div class="box-specs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 12px;">
+            <div class="spec-item"><span class="label" style="color:#64748b;">尺寸:</span> <span class="value" style="color:#334155; font-weight:600;">${l}x${w}x${h} cm</span></div>
+            <div class="spec-item"><span class="label" style="color:#64748b;">重量:</span> <span class="value" style="color:#334155; font-weight:600;">${weight} kg</span></div>
+            <div class="spec-item"><span class="label" style="color:#64748b;">材積:</span> <span class="value" style="color:#334155; font-weight:600;">${cai} 材</span></div>
+            <div class="spec-item"><span class="label" style="color:#64748b;">分類:</span> <span class="value" style="color:#1a73e8; font-weight:600;">${
+              pkgRateConfig.name || "一般家具"
+            }</span></div>
           </div>
-          <div class="detail-calc-box">
+          
+          <div class="detail-calc-box" style="background: #f8fafc; padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">費用試算比對 (取大者計費)：</div>
             <div class="calc-comparison-row ${
-              wtFee >= volFee ? "is-winner" : ""
-            }">
-              <span>重量計費 (${weight}kg × ${
-        pkgRateConfig.weightRate
-      })</span><span>$${wtFee}</span>
+              isWeightWinner ? "is-winner" : ""
+            }" 
+                 style="display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 4px; border: 1px solid ${
+                   isWeightWinner ? "#22c55e" : "transparent"
+                 }; background: ${
+        isWeightWinner ? "#f0fdf4" : "transparent"
+      }; color: ${isWeightWinner ? "#15803d" : "#64748b"}; font-weight: ${
+        isWeightWinner ? "700" : "normal"
+      };">
+              <span>重量計費 (${weight}kg × ${pkgRateConfig.weightRate})</span>
+              <span>$${wtFee} ${
+        isWeightWinner
+          ? '<span style="font-size:10px; background:#22c55e; color:white; padding:1px 5px; border-radius:10px; margin-left:5px;">最終採用</span>'
+          : ""
+      }</span>
             </div>
             <div class="calc-comparison-row ${
-              volFee > wtFee ? "is-winner" : ""
-            }">
-              <span>材積計費 (${cai}材 × ${
-        pkgRateConfig.volumeRate
-      })</span><span>$${volFee}</span>
+              isVolumeWinner ? "is-winner" : ""
+            }" 
+                 style="display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 6px; font-size: 13px; border: 1px solid ${
+                   isVolumeWinner ? "#22c55e" : "transparent"
+                 }; background: ${
+        isVolumeWinner ? "#f0fdf4" : "transparent"
+      }; color: ${isVolumeWinner ? "#15803d" : "#64748b"}; font-weight: ${
+        isVolumeWinner ? "700" : "normal"
+      };">
+              <span>材積計費 (${cai}材 × ${pkgRateConfig.volumeRate})</span>
+              <span>$${volFee} ${
+        isVolumeWinner
+          ? '<span style="font-size:10px; background:#22c55e; color:white; padding:1px 5px; border-radius:10px; margin-left:5px;">最終採用</span>'
+          : ""
+      }</span>
             </div>
           </div>
           ${
             Math.max(l, w, h) >= CONSTANTS.OVERSIZED_LIMIT
-              ? `<div class="alert-highlight">⚠️ 尺寸超長 (+$${CONSTANTS.OVERSIZED_FEE})</div>`
+              ? `<div class="alert-highlight" style="margin-top: 8px; font-size: 11px; color: #ef4444; font-weight: 600;">⚠️ 尺寸超長 (+$${CONSTANTS.OVERSIZED_FEE})</div>`
               : ""
           }
           ${
             weight >= CONSTANTS.OVERWEIGHT_LIMIT
-              ? `<div class="alert-highlight">⚠️ 單件超重 (+$${CONSTANTS.OVERWEIGHT_FEE})</div>`
+              ? `<div class="alert-highlight" style="margin-top: 4px; font-size: 11px; color: #ef4444; font-weight: 600;">⚠️ 單件超重 (+$${CONSTANTS.OVERWEIGHT_FEE})</div>`
               : ""
           }
         </div>`;
