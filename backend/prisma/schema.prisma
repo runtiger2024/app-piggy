@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // 這裡不可以有 url，否則 Prisma 7 會報錯 P1012
 }
 
 // --- 1. 會員 (客戶) 資料模型 ---
