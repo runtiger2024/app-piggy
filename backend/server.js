@@ -1,5 +1,5 @@
 // backend/server.js
-// V15.1 - 旗艦穩定修復版：強化 CORS 安全性、App 環境支援與前端靜態連結
+// V16.0 - 旗艦整合版：強化 CORS 安全性、新增 ngrok 測試支援與跳過警告中介軟體
 
 const express = require("express");
 const dotenv = require("dotenv");
@@ -19,20 +19,21 @@ const recipientRoutes = require("./routes/recipientRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
-// [新增] 傢俱代採購功能路由
+// [保留功能] 傢俱代採購功能路由
 const furnitureRoutes = require("./routes/furnitureRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- [大師優化：強化 CORS 安全設定] ---
-// 為了讓你的後端能同時支援「網頁版」與「手機 APP (Android/iOS)」，我們必須指定白名單
+// --- [大師優化：強化 CORS 安全設定與支援 ngrok 隧道] ---
+// 為了讓後端能同時支援「網頁版」、「手機 APP」以及「ngrok 測試環境」
 const allowedOrigins = [
   "http://localhost:3000", // 本地開發後端
   "http://localhost:5500", // 常見的 Live Server 前端
   "http://127.0.0.1:5500",
-  "https://runpiggy-api.onrender.com", // 你的正式環境後端網址
-  "https://www.your-frontend-url.com", // [請替換] 你的正式環境前端網址
+  "https://runpiggy-api.onrender.com", // 您的正式環境後端網址
+  "https://www.your-frontend-url.com", // [待替換] 您的正式環境前端網址
+  "https://encephalographically-pseudophilanthropic-norberto.ngrok-free.dev", // [新增] 您目前的 ngrok 測試網址
   "capacitor://localhost", // iOS App 專用 (Capacitor/Cordova 框架)
   "http://localhost", // Android App 專用
 ];
@@ -40,7 +41,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // 允許沒有 origin 的請求 (例如：手機 App 的本機請求、Postman 調試)
+      // 允許沒有 origin 的請求 (例如：手機 App 的本機請求、Postman 調試、LINE Webhook)
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
@@ -52,6 +53,14 @@ app.use(
   })
 );
 
+// --- [新增優化：跳過 ngrok 瀏覽器警告頁面] ---
+// 當您使用免費版 ngrok 時，系統會先跳出一個警告網頁。
+// 此中介軟體能讓程式自動跳過該頁面，確保 LINE 登入與推播功能能正確抓取資料。
+app.use((req, res, next) => {
+  res.setHeader("ngrok-skip-browser-warning", "true");
+  next();
+});
+
 app.use(express.json());
 
 // --- 靜態檔案設定 ---
@@ -59,8 +68,7 @@ app.use(express.json());
 // 1. 圖片上傳路徑 (保留原功能)
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
-// 2. [優化新增] 前端網頁路徑：解決 quote.html 等前端頁面無法讀取的問題
-// 這會讓 Express 嘗試從與 backend 併列的 frontend 資料夾中尋找檔案
+// 2. [保留優化] 前端網頁路徑：支援 quote.html 等前端頁面讀取
 app.use(express.static(path.join(__dirname, "../frontend")));
 
 // --- 註冊 API 路由 (保留原功能) ---
@@ -74,16 +82,16 @@ app.use("/api/recipients", recipientRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-// [新增] 註冊傢俱代採購功能路由
+// [保留功能] 註冊傢俱代採購功能路由
 app.use("/api/furniture", furnitureRoutes);
 
 app.get("/", (req, res) => {
   res.json({
-    message: "小跑豬後端伺服器 (System V15.1 - Production Ready)!",
+    message: "小跑豬後端伺服器 (System V16.0 - LINE Integration Ready)!",
   });
 });
 
-// 全域錯誤處理邏輯 (可選，但建議加入，避免後端當機導致 App 無響應)
+// 全域錯誤處理邏輯 (保留原功能)
 app.use((err, req, res, next) => {
   console.error("[系統錯誤]", err.stack);
   res.status(500).json({ success: false, message: "後端伺服器發生異常" });
@@ -91,7 +99,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`[啟動成功] 伺服器正在 http://localhost:${PORT} 上運行...`);
-  console.log(`[CORS 狀態] 已啟用動態白名單保護`);
+  console.log(`[CORS 狀態] 已啟用動態白名單保護，支援 ngrok 隧道測試`);
   console.log(
     `[靜態路由] 已連結至前端目錄: ${path.join(__dirname, "../frontend")}`
   );
