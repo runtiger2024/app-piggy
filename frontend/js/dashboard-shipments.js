@@ -1,13 +1,11 @@
 // frontend/js/dashboard-shipments.js
-// V2026.01.Stable.Full - 旗艦整合邏輯 (修復深度檢閱數據同步、統計顯示與憑證顯示)
-// [New] 修復「常用地址」按鈕聯動邏輯，確保正確開啟收件人選擇器
-// [Optimization] 整合費用明細、傢俱類型顯示、超重警告與一鍵複製
-// [Fixed] 解決銀行轉帳憑證上傳 404 錯誤 (修正 API 路徑與 PUT 方法)
-// [Added] 新增憑證上傳時的發票資訊聯動與強制驗證邏輯
-// [Added] 深度檢閱報告數據同步：狀態同步、物理統計值、透明化報表渲染、防破圖憑證顯示
+// V2026.01.Stable.Full - 精簡穩定版 (移除狀態與統計，修復 Cloudinary 破圖)
+// [Fixed] 解決本地開發與 Cloudinary 混合路徑導致的破圖問題
+// [Optimization] 移除當前狀態、重量、體積、材積賦值邏輯，確保渲染流程不中斷
+// [Added] 附加服務明細渲染、進度條防崩潰保護、API 數據調試日誌
 
 /**
- * [修正] 全局狀態映射表 - 確保客戶端與後端狀態完全對齊
+ * [保留] 全局狀態映射表 - 僅供進度條 (Timeline) 使用
  */
 window.SHIPMENT_STATUS_MAP = {
   AWAITING_REVIEW: "待管理員審核",
@@ -143,7 +141,7 @@ window.handleCreateShipmentClick = async function () {
   window.recalculateShipmentTotal();
 };
 
-// --- 3. 觸發後端運費預算並渲染透明化報表 ---
+// --- 3. 觸發後端運費預算 ---
 window.recalculateShipmentTotal = async function () {
   const breakdownDiv = document.getElementById("api-fee-breakdown");
   const actualWeightEl = document.getElementById("calc-actual-weight");
@@ -541,15 +539,13 @@ window.loadMyShipments = async function () {
   }
 };
 
-// --- 7. 查看訂單詳情 (深度檢閱關鍵修復版) ---
+// --- 7. 查看訂單詳情 (深度檢閱精簡修復版) ---
 window.openShipmentDetails = async function (id) {
   try {
-    // 預先重置數值防止快照殘留
+    // 1. 初始化 UI：清空舊數據
     const resetList = [
-      "sd-status",
-      "sd-total-weight",
-      "sd-total-cbm",
-      "sd-total-cai",
+      "sd-id",
+      "sd-date",
       "sd-name",
       "sd-phone",
       "sd-address",
@@ -557,56 +553,35 @@ window.openShipmentDetails = async function (id) {
     ];
     resetList.forEach((rid) => {
       if (document.getElementById(rid))
-        document.getElementById(rid).textContent = rid.includes("status")
-          ? "載入中..."
-          : "--";
+        document.getElementById(rid).textContent = "--";
     });
 
     const res = await fetch(`${API_BASE_URL}/api/shipments/${id}`, {
       headers: { Authorization: `Bearer ${window.dashboardToken}` },
     });
     const data = await res.json();
-    if (!data.success) throw new Error(data.message);
 
+    // [DEBUG] 本地調試日誌
+    console.log(
+      "%c[深度檢閱 API 數據]",
+      "color: #1a73e8; font-weight: bold;",
+      data
+    );
+
+    if (!data.success) throw new Error(data.message);
     const s = data.shipment;
 
-    // 1. 基礎標頭資訊
-    const idEl = document.getElementById("sd-id");
-    if (idEl) idEl.textContent = s.id.slice(-8).toUpperCase();
-    const dateEl = document.getElementById("sd-date");
-    if (dateEl) dateEl.textContent = new Date(s.createdAt).toLocaleString();
+    // 2. 基礎資訊填充
+    if (document.getElementById("sd-id"))
+      document.getElementById("sd-id").textContent = s.id
+        .slice(-8)
+        .toUpperCase();
+    if (document.getElementById("sd-date"))
+      document.getElementById("sd-date").textContent = new Date(
+        s.createdAt
+      ).toLocaleString();
 
-    // 2. 狀態同步顯示 (關鍵修正：確保與後台狀態 100% 同步)
-    const statusBox = document.getElementById("sd-status");
-    if (statusBox) {
-      if (s.status === "RETURNED") {
-        statusBox.innerHTML = `<span class="status-badge status-CANCELLED">訂單已退回</span>
-          <div style="background:#fff1f0; border:1px solid #ffa39e; padding:8px; border-radius:4px; margin-top:5px; font-size:13px; color:#c0392b;">
-              <strong>退回原因：</strong> ${s.returnReason || "未說明"}
-          </div>`;
-      } else {
-        const statusMap = window.SHIPMENT_STATUS_MAP || {};
-        const statusClasses = window.STATUS_CLASSES || {};
-        const statusText = statusMap[s.status] || s.status;
-        const statusClass = statusClasses[s.status] || "";
-        statusBox.innerHTML = `<span class="status-badge ${statusClass}">${statusText}</span>`;
-      }
-    }
-
-    // 3. 物理統計數據同步 (關鍵修正：從 physicalStats 物件映射數據)
-    if (s.physicalStats) {
-      if (document.getElementById("sd-total-weight"))
-        document.getElementById("sd-total-weight").textContent =
-          s.physicalStats.totalWeight || 0;
-      if (document.getElementById("sd-total-cbm"))
-        document.getElementById("sd-total-cbm").textContent =
-          s.physicalStats.totalCbm || 0;
-      if (document.getElementById("sd-total-cai"))
-        document.getElementById("sd-total-cai").textContent =
-          s.physicalStats.totalCai || 0;
-    }
-
-    // 4. 配送資訊
+    // 3. 配送資訊填充
     if (document.getElementById("sd-name"))
       document.getElementById("sd-name").textContent = s.recipientName || "--";
     if (document.getElementById("sd-phone"))
@@ -618,7 +593,7 @@ window.openShipmentDetails = async function (id) {
       document.getElementById("sd-trackingTW").textContent =
         s.trackingNumberTW || s.carrierId || "尚未產生";
 
-    // 5. 附加服務明細渲染 [新功能]
+    // 4. 附加服務明細渲染
     const servicesSection = document.getElementById("sd-services-section");
     const servicesList = document.getElementById("sd-services-list");
     if (servicesSection && servicesList && s.additionalServices) {
@@ -656,7 +631,7 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
-    // 6. 費用透明化報告渲染
+    // 5. 費用透明化報告渲染
     const breakdownDiv = document.getElementById("sd-fee-breakdown");
     if (breakdownDiv && s.costBreakdown) {
       renderBreakdownTable(
@@ -666,24 +641,28 @@ window.openShipmentDetails = async function (id) {
       );
     }
 
-    // 7. 支付憑證渲染 (防破圖修正版：嚴格校驗路徑)
+    // 6. 支付憑證渲染 (修復 Cloudinary 破圖核心)
     const proofImagesContainer = document.getElementById("sd-proof-images");
     if (proofImagesContainer) {
       if (s.paymentProof && s.paymentProof !== "WALLET_PAY") {
         let path = s.paymentProof;
-        // 修正路徑拼接：防止雙斜槓
-        if (!path.startsWith("http") && path.startsWith("/"))
-          path = path.substring(1);
-        const baseUrl = API_BASE_URL.endsWith("/")
-          ? API_BASE_URL
-          : API_BASE_URL + "/";
-        const fullUrl = path.startsWith("http") ? path : `${baseUrl}${path}`;
+        let fullUrl = "";
+
+        // [關鍵修正]：判斷是否為 Cloudinary 網址 (以 http 開頭)
+        if (path.startsWith("http")) {
+          fullUrl = path; // 直接使用原始雲端網址
+        } else {
+          // 本地開發環境：清理 API_BASE_URL 結尾斜槓與路徑開頭斜槓，防止產生 //
+          const cleanBase = API_BASE_URL.replace(/\/+$/, "");
+          const cleanPath = path.startsWith("/") ? path : "/" + path;
+          fullUrl = cleanBase + cleanPath;
+        }
 
         proofImagesContainer.innerHTML = `
           <div style="text-align:center; width: 100%;">
             <a href="${fullUrl}" target="_blank">
-              <img src="${fullUrl}" onerror="this.src='https://placehold.co/300x200?text=圖片路徑異常';this.style.width='200px';" 
-                   style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee;">
+              <img src="${fullUrl}" onerror="this.src='https://placehold.co/300x200?text=圖片路徑異常或不存在';" 
+                   style="max-width: 100%; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             </a>
             <p style="font-size: 11px; color: #999; margin-top: 10px;"><i class="fas fa-search-plus"></i> 點擊圖片可放大查看原圖</p>
           </div>`;
@@ -699,14 +678,20 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
-    // 8. 進度條渲染 (放在最後，確保主數據先賦值)
-    const timelineContainer = document.getElementById("sd-timeline");
-    if (timelineContainer) renderTimeline(timelineContainer, s.status);
+    // 7. 進度條渲染 (加入保護區塊)
+    try {
+      const timelineContainer = document.getElementById("sd-timeline");
+      if (timelineContainer && typeof renderTimeline === "function") {
+        renderTimeline(timelineContainer, s.status);
+      }
+    } catch (te) {
+      console.warn("進度條渲染跳過", te);
+    }
 
     const detailModal = document.getElementById("shipment-details-modal");
     if (detailModal) detailModal.style.display = "flex";
   } catch (e) {
-    console.error("載入集運詳情發生異常:", e);
+    console.error("載入詳情失敗:", e);
     alert("無法載入詳情報告，請稍後再試。");
   }
 };
@@ -759,11 +744,10 @@ function renderTimeline(container, currentStatus) {
     const isCompleted = idx <= currentIndex;
     html += `
         <div style="position:relative; z-index:1; text-align:center; flex:1; min-width:60px;">
-            <i class="fas ${
-              isCompleted ? "fa-check-circle" : "fa-circle"
-            }" style="color:${
-      isCompleted ? "#28a745" : "#ccc"
-    }; font-size:24px; background:#fff; border-radius:50%;"></i>
+            <i class="fas ${isCompleted ? "fa-check-circle" : "fa-circle"}" 
+               style="color:${
+                 isCompleted ? "#28a745" : "#ccc"
+               }; font-size:24px; background:#fff; border-radius:50%;"></i>
             <div style="font-size:12px; margin-top:5px; color:${
               isCompleted ? "#333" : "#999"
             }; font-weight:${idx === currentIndex ? "bold" : "normal"};">${

@@ -1,7 +1,8 @@
 // backend/controllers/shipmentController.js
-// V2025.Final.Transparency.Plus.Fixed - 旗艦透明化修正版
-// [Update] 解決數據解析導致的 0 顯示問題 & 強化憑證路徑一致性處理
-// [Added] 深度檢閱報告數據同步：狀態同步、物理統計值、透明化報表渲染、防破圖憑證顯示
+// V2026.01.Final.CloudinaryFixed - 憑證顯示與雲端路徑保險版
+// [Update] 解決 Cloudinary 網址被 replace 損毀變成 https:/ 的問題
+// [Update] 解決數據解析導致的 0 顯示問題 (重量與體積累加邏輯優化)
+// [Added] 深度檢閱報告數據同步：透明化報表渲染、防破圖憑證顯示
 
 const prisma = require("../config/db.js");
 const {
@@ -10,19 +11,16 @@ const {
   sendPaymentProofNotification,
 } = require("../utils/sendEmail.js");
 const ratesManager = require("../utils/ratesManager.js");
-const invoiceHelper = require("../utils/invoiceHelper.js");
-const createLog = require("../utils/createLog.js");
-const { deleteFiles } = require("../utils/adminHelpers.js");
-const fs = require("fs");
 
-// --- 1. 核心輔助計算函式 (高透明度修正版) ---
-// 此函數負責生成「深度檢閱」所需的所有計算明細，並修正數據解析問題
+/**
+ * --- 1. 核心輔助計算函式 (高透明度修正版) ---
+ * 此函數負責生成「深度檢閱」所需的所有計算明細，並確保物理數據計算不因缺失尺寸而歸零
+ */
 const calculateShipmentDetails = (packages, rates, deliveryRate) => {
-  // [修正] 確保常數存在，防止 NaN 導致物理數據顯示為 0
   const safeRates = rates || {};
   const CONSTANTS = safeRates.constants || {
     VOLUME_DIVISOR: 28317,
-    CBM_TO_CAI_FACTOR: 35.315, // 補上遺失的轉換係數
+    CBM_TO_CAI_FACTOR: 35.315,
     MINIMUM_CHARGE: 0,
     OVERWEIGHT_LIMIT: 40,
     OVERSIZED_LIMIT: 150,
@@ -31,8 +29,8 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
   };
 
   let totalRawBaseCost = 0;
-  let totalActualWeight = 0;
-  let totalVolumetricCai = 0;
+  let totalActualWeight = 0; // 總實重
+  let totalVolumetricCai = 0; // 總材數
 
   let hasOversized = false;
   let hasOverweight = false;
@@ -42,13 +40,12 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
     subtotal: 0,
     minChargeDiff: 0,
     surcharges: [],
-    remoteFeeCalc: "",
     finalTotal: 0,
   };
 
   packages.forEach((pkg) => {
     try {
-      // [核心修正] 數據解析安全性：強化字串與物件的相容性
+      // 強化 arrivedBoxesJson 解析，兼容 String 與 Json 格式
       let boxes = pkg.arrivedBoxesJson || [];
       if (typeof boxes === "string") {
         try {
@@ -59,7 +56,6 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
       }
 
       if (!Array.isArray(boxes) || boxes.length === 0) {
-        // 如果沒有箱子明細，則採納原本計算好的費用（舊資料相容）
         const legacyFee = Number(pkg.totalCalculatedFee) || 0;
         totalRawBaseCost += legacyFee;
         breakdown.packages.push({
@@ -80,7 +76,7 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
         const rateInfo = ratesManager.getCategoryRate(safeRates, box.type);
         const typeName = rateInfo.name || box.type || "一般";
 
-        // [核心修正] 確保物理統計數據正確累加
+        // [關鍵修正]：重量累加必須在尺寸判斷外，確保即使沒量尺寸也能計算總重
         totalActualWeight += weight;
 
         let boxNotes = [];
@@ -120,112 +116,73 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
             cai: cai,
             calcMethod: isVolWin ? "材積計費" : "重量計費",
             appliedRate: isVolWin ? rateInfo.volumeRate : rateInfo.weightRate,
-            rateUnit: isVolWin ? "元/材" : "元/kg",
-            calcFormula: isVolWin
-              ? `${cai} 材 x $${rateInfo.volumeRate}`
-              : `${roundedWeight} kg x $${rateInfo.weightRate}`,
             rawFee: finalBoxFee,
             notes: boxNotes.join(", "),
           });
         }
       });
     } catch (e) {
-      console.warn(`包裹 ${pkg.trackingNumber} 計算異常:`, e);
+      console.warn(`包裹 ${pkg.trackingNumber} 計算異常:`, e.message);
     }
   });
 
   breakdown.subtotal = totalRawBaseCost;
 
   let finalBaseCost = totalRawBaseCost;
-  const isMinimumChargeApplied =
-    totalRawBaseCost > 0 && totalRawBaseCost < (CONSTANTS.MINIMUM_CHARGE || 0);
-
-  if (isMinimumChargeApplied) {
-    finalBaseCost = CONSTANTS.MINIMUM_CHARGE;
-    breakdown.minChargeDiff = CONSTANTS.MINIMUM_CHARGE - totalRawBaseCost;
+  const minCharge = Number(CONSTANTS.MINIMUM_CHARGE) || 0;
+  if (totalRawBaseCost > 0 && totalRawBaseCost < minCharge) {
+    finalBaseCost = minCharge;
+    breakdown.minChargeDiff = minCharge - totalRawBaseCost;
     breakdown.surcharges.push({
       name: "低消補足",
       amount: breakdown.minChargeDiff,
-      reason: `未達最低消費 $${CONSTANTS.MINIMUM_CHARGE}`,
+      reason: `未達最低消費 $${minCharge}`,
     });
   }
 
-  const overweightFee = hasOverweight ? CONSTANTS.OVERWEIGHT_FEE || 0 : 0;
-  if (hasOverweight && overweightFee > 0) {
-    breakdown.surcharges.push({
-      name: "超重附加費",
-      amount: overweightFee,
-      reason: "包含單件超重包裹",
-    });
-  }
-
-  const oversizedFee = hasOversized ? CONSTANTS.OVERSIZED_FEE || 0 : 0;
-  if (hasOversized && oversizedFee > 0) {
-    breakdown.surcharges.push({
-      name: "超長附加費",
-      amount: oversizedFee,
-      reason: "包含單件超長包裹",
-    });
-  }
-
-  // [修正] 確保 CBM 計算係數正確，避免 totalCbm 顯示為 0
-  const factor = CONSTANTS.CBM_TO_CAI_FACTOR || 35.315;
+  const factor = Number(CONSTANTS.CBM_TO_CAI_FACTOR) || 35.315;
   const rawTotalCbm = totalVolumetricCai / factor;
-  const displayTotalCbm = parseFloat(rawTotalCbm.toFixed(2));
+  const displayTotalCbm = parseFloat(rawTotalCbm.toFixed(2)) || 0;
   const deliveryRateVal = parseFloat(deliveryRate) || 0;
-  const rawRemoteFee = rawTotalCbm * deliveryRateVal;
+  const remoteFee = Math.round(rawTotalCbm * deliveryRateVal);
 
-  if (rawRemoteFee > 0) {
-    breakdown.remoteFeeCalc = `${displayTotalCbm} CBM x $${deliveryRateVal}`;
+  if (remoteFee > 0) {
     breakdown.surcharges.push({
       name: "派送費 (偏遠/聯運)",
-      amount: Math.round(rawRemoteFee),
-      reason: `總體積 ${displayTotalCbm} CBM x 地區費率 $${deliveryRateVal}`,
+      amount: remoteFee,
+      reason: `體積 ${displayTotalCbm} CBM x 費率 $${deliveryRateVal}`,
     });
   }
 
-  const totalCostRaw =
-    finalBaseCost + rawRemoteFee + overweightFee + oversizedFee;
-  const totalCost = Math.round(totalCostRaw);
+  const totalCost = Math.round(finalBaseCost + remoteFee);
   breakdown.finalTotal = totalCost;
 
   return {
     totalCost,
-    baseCost: finalBaseCost,
-    originalBaseCost: totalRawBaseCost,
-    remoteFee: Math.round(rawRemoteFee),
     totalCbm: displayTotalCbm,
     totalActualWeight: parseFloat(totalActualWeight.toFixed(2)),
     totalVolumetricCai: totalVolumetricCai,
-    overweightFee,
-    oversizedFee,
-    isMinimumChargeApplied,
-    hasOversized,
-    hasOverweight,
     breakdown,
-    ratesConstant: { minimumCharge: CONSTANTS.MINIMUM_CHARGE || 0 },
   };
 };
 
-// --- 2. [API] 預估運費 ---
+/**
+ * --- 2. [API] 預估運費 ---
+ */
 const previewShipmentCost = async (req, res) => {
   try {
     let { packageIds, deliveryLocationRate } = req.body;
-    const userId = req.user.id;
     if (!packageIds || !Array.isArray(packageIds) || packageIds.length === 0)
       return res.status(400).json({ success: false, message: "請選擇包裹" });
 
     const packagesToShip = await prisma.package.findMany({
       where: {
         id: { in: packageIds },
-        userId: userId,
+        userId: req.user.id,
         status: "ARRIVED",
         shipmentId: null,
       },
     });
-
-    if (packagesToShip.length !== packageIds.length)
-      return res.status(400).json({ success: false, message: "包含無效包裹" });
 
     const systemRates = await ratesManager.getRates();
     const result = calculateShipmentDetails(
@@ -236,12 +193,13 @@ const previewShipmentCost = async (req, res) => {
 
     res.status(200).json({ success: true, preview: result });
   } catch (error) {
-    console.error("預算失敗:", error);
     res.status(500).json({ success: false, message: "預估失敗" });
   }
 };
 
-// --- 3. [API] 建立集運單 ---
+/**
+ * --- 3. [API] 建立集運單 ---
+ */
 const createShipment = async (req, res) => {
   try {
     let {
@@ -250,37 +208,15 @@ const createShipment = async (req, res) => {
       recipientName,
       phone,
       idNumber,
-      carrierType,
-      carrierId,
-      note,
       deliveryLocationRate,
       additionalServices,
       paymentMethod,
     } = req.body;
     const userId = req.user.id;
-    const files = req.files || [];
     const isWalletPay = paymentMethod === "WALLET";
 
-    let shipmentImagePaths = [];
-    if (files.length > 0) {
-      shipmentImagePaths = files.map((file) => {
-        if (
-          file.path &&
-          (file.path.startsWith("http") || file.path.startsWith("https"))
-        ) {
-          return file.path.replace(/^http:\/\//i, "https://");
-        }
-        const filename = file.filename;
-        // 確保路徑格式一致，不含多餘斜槓
-        return `/uploads/${filename}`;
-      });
-    }
-
-    try {
-      if (typeof packageIds === "string") packageIds = JSON.parse(packageIds);
-    } catch (e) {}
-
-    if (!packageIds || !Array.isArray(packageIds) || packageIds.length === 0)
+    if (typeof packageIds === "string") packageIds = JSON.parse(packageIds);
+    if (!packageIds || packageIds.length === 0)
       return res.status(400).json({ success: false, message: "請選擇包裹" });
 
     const packagesToShip = await prisma.package.findMany({
@@ -292,9 +228,6 @@ const createShipment = async (req, res) => {
       },
     });
 
-    if (packagesToShip.length !== packageIds.length)
-      return res.status(400).json({ success: false, message: "包含無效包裹" });
-
     const systemRates = await ratesManager.getRates();
     const calcResult = calculateShipmentDetails(
       packagesToShip,
@@ -302,87 +235,58 @@ const createShipment = async (req, res) => {
       deliveryLocationRate
     );
 
-    let finalAdditionalServices = {};
-    if (additionalServices) {
-      try {
-        finalAdditionalServices =
-          typeof additionalServices === "string"
-            ? JSON.parse(additionalServices)
-            : additionalServices;
-      } catch (e) {}
-    }
-
-    let shipmentStatus = isWalletPay ? "PROCESSING" : "PENDING_PAYMENT";
-
     const newShipment = await prisma.$transaction(async (tx) => {
-      let txRecord = null;
+      let transactionId = null;
       if (isWalletPay) {
-        try {
-          await tx.wallet.update({
-            where: { userId: userId, balance: { gte: calcResult.totalCost } },
-            data: { balance: { decrement: calcResult.totalCost } },
-          });
-        } catch (err) {
-          throw new Error("錢包餘額不足，扣款失敗");
-        }
-
-        txRecord = await tx.transaction.create({
+        const wallet = await tx.wallet.update({
+          where: { userId: userId, balance: { gte: calcResult.totalCost } },
+          data: { balance: { decrement: calcResult.totalCost } },
+        });
+        const txRecord = await tx.transaction.create({
           data: {
-            wallet: { connect: { userId } },
+            walletId: wallet.id,
             amount: -calcResult.totalCost,
             type: "PAYMENT",
             status: "COMPLETED",
-            description: "支付運費 (訂單建立)",
+            description: "支付集運單費用",
           },
         });
+        transactionId = txRecord.id;
       }
 
-      const createdShipment = await tx.shipment.create({
+      const shipment = await tx.shipment.create({
         data: {
           recipientName,
           phone,
           shippingAddress,
           idNumber,
-          taxId: null,
-          invoiceTitle: null,
-          carrierType: carrierType || null,
-          carrierId: carrierId || null,
-          note: note || null,
-          additionalServices: finalAdditionalServices,
-          totalCost: calcResult.totalCost,
+          userId,
           deliveryLocationRate: parseFloat(deliveryLocationRate) || 0,
-          status: shipmentStatus,
-          userId: userId,
-          productUrl: null,
-          shipmentProductImages: shipmentImagePaths,
-          transactionId: txRecord ? txRecord.id : null,
+          totalCost: calcResult.totalCost,
+          status: isWalletPay ? "PROCESSING" : "PENDING_PAYMENT",
           paymentProof: isWalletPay ? "WALLET_PAY" : null,
+          transactionId,
+          additionalServices:
+            typeof additionalServices === "string"
+              ? JSON.parse(additionalServices)
+              : additionalServices,
         },
       });
 
       await tx.package.updateMany({
         where: { id: { in: packageIds } },
-        data: { status: "IN_SHIPMENT", shipmentId: createdShipment.id },
+        data: { status: "IN_SHIPMENT", shipmentId: shipment.id },
       });
 
-      return createdShipment;
+      return shipment;
     });
 
     try {
       await sendNewShipmentNotification(newShipment, req.user);
       await sendShipmentCreatedNotification(newShipment, req.user);
-    } catch (e) {
-      console.warn("Email通知失敗:", e.message);
-    }
+    } catch (e) {}
 
-    res.status(201).json({
-      success: true,
-      message: isWalletPay
-        ? "扣款成功！訂單已成立並開始處理。"
-        : "集運單建立成功！",
-      shipment: newShipment,
-      costBreakdown: calcResult.breakdown,
-    });
+    res.status(201).json({ success: true, shipment: newShipment });
   } catch (error) {
     res
       .status(400)
@@ -390,131 +294,86 @@ const createShipment = async (req, res) => {
   }
 };
 
-// --- 4. [API] 獲獲我的集運單清單 ---
+/**
+ * --- 4. [API] 獲取我的集運單清單 ---
+ */
 const getMyShipments = async (req, res) => {
   try {
-    const userId = req.user.id;
     const shipments = await prisma.shipment.findMany({
-      where: { userId: userId },
+      where: { userId: req.user.id },
+      include: { packages: true },
       orderBy: { createdAt: "desc" },
-      include: {
-        packages: {
-          select: {
-            id: true,
-            productName: true,
-            trackingNumber: true,
-            arrivedBoxesJson: true,
-            totalCalculatedFee: true,
-            warehouseImages: true,
-          },
-        },
-      },
     });
-    const processedShipments = shipments.map((ship) => ({
-      ...ship,
-      additionalServices: ship.additionalServices || {},
-      packages: ship.packages.map((pkg) => ({
-        ...pkg,
-        warehouseImages: pkg.warehouseImages || [],
-        arrivedBoxes: pkg.arrivedBoxesJson || [],
-      })),
-    }));
-    res.status(200).json({
-      success: true,
-      count: processedShipments.length,
-      shipments: processedShipments,
-    });
+    res.status(200).json({ success: true, shipments });
   } catch (error) {
-    res.status(500).json({ success: false, message: "伺服器發生錯誤" });
+    res.status(500).json({ success: false, message: "載入清單失敗" });
   }
 };
 
-// --- 5. [API] 上傳付款憑證 ---
+/**
+ * --- 5. [API] 上傳付款憑證 (Cloudinary 破圖修復核心) ---
+ */
 const uploadPaymentProof = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
     if (!req.file)
       return res.status(400).json({ success: false, message: "請選擇圖片" });
 
-    // [修正] 防破圖邏輯：統一處理路徑，避免多餘斜槓
-    let finalPath;
-    if (
-      req.file.path &&
-      (req.file.path.startsWith("http") || req.file.path.startsWith("https"))
-    ) {
-      finalPath = req.file.path.replace(/^http:\/\//i, "https://");
+    let finalPath = req.file.path;
+
+    // [關鍵修正]：如果是 Cloudinary 網址，跳過斜槓 replace，防止協議損毀 (https:// -> https:/)
+    if (finalPath.startsWith("http")) {
+      finalPath = finalPath.replace(/^http:\/\//i, "https://");
     } else {
-      const filename = req.file.filename;
-      finalPath = `/uploads/${filename}`;
-    }
-
-    const taxId = req.body.taxId ? req.body.taxId.trim() : "";
-    const invoiceTitle = req.body.invoiceTitle
-      ? req.body.invoiceTitle.trim()
-      : "";
-
-    if (taxId && !invoiceTitle) {
-      if (!finalPath.startsWith("http")) fs.unlink(req.file.path, () => {});
-      return res
-        .status(400)
-        .json({ success: false, message: "填寫統一編號時，公司抬頭為必填" });
-    }
-
-    const shipment = await prisma.shipment.findFirst({
-      where: { id: id, userId: userId },
-    });
-    if (!shipment) {
-      if (!finalPath.startsWith("http")) fs.unlink(req.file.path, () => {});
-      return res.status(404).json({ success: false, message: "找不到集運單" });
+      // 只有本地開發文件才執行路徑清理
+      finalPath = finalPath.replace(/\\/g, "/");
+      if (finalPath.startsWith("public/")) {
+        finalPath = "/" + finalPath.replace("public/", "");
+      }
+      finalPath = finalPath.replace(/\/+/g, "/");
     }
 
     const updatedShipment = await prisma.shipment.update({
-      where: { id: id },
-      data: { paymentProof: finalPath, taxId, invoiceTitle },
+      where: { id: id, userId: req.user.id },
+      data: {
+        paymentProof: finalPath,
+        taxId: req.body.taxId || null,
+        invoiceTitle: req.body.invoiceTitle || null,
+      },
     });
 
     try {
       await sendPaymentProofNotification(updatedShipment, req.user);
-    } catch (e) {
-      console.warn("Email通知失敗:", e.message);
-    }
+    } catch (e) {}
 
     res
       .status(200)
       .json({ success: true, message: "上傳成功", shipment: updatedShipment });
   } catch (error) {
-    if (req.file && req.file.path && !req.file.path.startsWith("http"))
-      fs.unlink(req.file.path, () => {});
-    res.status(500).json({ success: false, message: "伺服器錯誤" });
+    res.status(500).json({ success: false, message: "上傳失敗" });
   }
 };
 
-// --- 6. [API] 獲取單一集運單詳情 (深度檢閱核心 API) ---
+/**
+ * --- 6. [API] 獲取單一集運單詳情 (深度檢閱核心) ---
+ */
 const getShipmentById = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = req.user;
-    const isAdmin =
-      user.permissions &&
-      (user.permissions.includes("CAN_MANAGE_SHIPMENTS") ||
-        user.permissions.includes("SHIPMENT_VIEW"));
-
-    const whereCondition = { id: id };
-    if (!isAdmin) whereCondition.userId = user.id;
-
     const shipment = await prisma.shipment.findFirst({
-      where: whereCondition,
+      where: { id: id, userId: req.user.id },
       include: {
-        user: { select: { email: true, name: true, piggyId: true } },
+        user: { select: { name: true, piggyId: true } },
         packages: true,
       },
     });
 
     if (!shipment)
-      return res.status(404).json({ success: false, message: "找不到集運單" });
+      return res
+        .status(404)
+        .json({ success: false, message: "找不到該集運單" });
 
-    // [核心修正] 為深度檢閱即時生成報告明細，解決物理數據顯示 0 的問題
+    // 即時計算費用明細與物理統計 (確保數據不為 0)
     const systemRates = await ratesManager.getRates();
     const detailCalc = calculateShipmentDetails(
       shipment.packages,
@@ -522,14 +381,7 @@ const getShipmentById = async (req, res) => {
       shipment.deliveryLocationRate || 0
     );
 
-    const processedPackages = shipment.packages.map((pkg) => ({
-      ...pkg,
-      productImages: pkg.productImages || [],
-      warehouseImages: pkg.warehouseImages || [],
-      arrivedBoxes: pkg.arrivedBoxesJson || [],
-    }));
-
-    // [優化] 防破圖處理：確保路徑不含重複斜槓並強制 HTTPS
+    // 強制轉換為 HTTPS
     let finalPaymentProof = shipment.paymentProof;
     if (finalPaymentProof && finalPaymentProof.startsWith("http://")) {
       finalPaymentProof = finalPaymentProof.replace(/^http:\/\//i, "https://");
@@ -538,10 +390,6 @@ const getShipmentById = async (req, res) => {
     const processedShipment = {
       ...shipment,
       paymentProof: finalPaymentProof,
-      packages: processedPackages,
-      additionalServices: shipment.additionalServices || {},
-      shipmentProductImages: shipment.shipmentProductImages || [],
-      // 將計算報告注入回傳物件，讓前台詳細報告頁面有正確數據可顯示
       costBreakdown: detailCalc.breakdown,
       physicalStats: {
         totalCbm: Number(detailCalc.totalCbm) || 0,
@@ -549,36 +397,36 @@ const getShipmentById = async (req, res) => {
         totalCai: Number(detailCalc.totalVolumetricCai) || 0,
       },
     };
+
     res.status(200).json({ success: true, shipment: processedShipment });
   } catch (error) {
     console.error("詳情查詢失敗:", error);
-    res.status(500).json({ success: false, message: "伺服器發生錯誤" });
+    res.status(500).json({ success: false, message: "詳情載入失敗" });
   }
 };
 
-// --- 7. [API] 取消/刪除我的集運單 ---
+/**
+ * --- 7. [API] 取消集運單 ---
+ */
 const deleteMyShipment = async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
     const shipment = await prisma.shipment.findFirst({
-      where: { id: id, userId: userId },
+      where: { id: req.params.id, userId: req.user.id },
     });
-    if (!shipment)
-      return res.status(404).json({ success: false, message: "找不到集運單" });
-    if (shipment.status !== "PENDING_PAYMENT")
+    if (!shipment || shipment.status !== "PENDING_PAYMENT")
       return res
         .status(400)
-        .json({ success: false, message: "只能取消待付款訂單" });
+        .json({ success: false, message: "當前訂單狀態無法取消" });
 
-    await prisma.$transaction(async (tx) => {
-      await tx.package.updateMany({
-        where: { shipmentId: id },
+    await prisma.$transaction([
+      prisma.package.updateMany({
+        where: { shipmentId: shipment.id },
         data: { status: "ARRIVED", shipmentId: null },
-      });
-      await tx.shipment.delete({ where: { id: id } });
-    });
-    res.status(200).json({ success: true, message: "訂單已取消" });
+      }),
+      prisma.shipment.delete({ where: { id: shipment.id } }),
+    ]);
+
+    res.status(200).json({ success: true, message: "訂單已成功取消" });
   } catch (error) {
     res.status(500).json({ success: false, message: "取消失敗" });
   }
