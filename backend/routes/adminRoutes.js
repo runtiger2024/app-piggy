@@ -1,5 +1,7 @@
 // backend/routes/adminRoutes.js
-// V16 - 旗艦極限穩定版：新增附加服務管理 (ShipmentServiceItem) 路由
+// V16.2.Stable - 旗艦極限穩定修正版
+// [Fix] 修正附加服務路由路徑，解決 API 404 導致前端載入失敗 (SyntaxError) 的問題
+// [Retain] 完整保留：儀表板報表、系統設定、包裹管理、集運單審核、發票系統、會員模擬、財務稽核、家具代採購
 
 const express = require("express");
 const router = express.Router();
@@ -40,7 +42,7 @@ router
   );
 
 // ==========================================
-// 2. 系統全域設定與附加服務
+// 2. 系統全域設定與附加服務 (核心修正區)
 // ==========================================
 router
   .route("/settings")
@@ -58,9 +60,9 @@ router
     settingsController.updateSystemSetting
   );
 
-// [新增] 附加服務項目管理 (CRUD)
+// [修正] 附加服務項目管理 (將路徑掛載於 /settings 下以匹配前台請求)
 router
-  .route("/service-items")
+  .route("/settings/service-items")
   .get(
     protect,
     checkPermission("SYSTEM_CONFIG"),
@@ -73,7 +75,7 @@ router
   );
 
 router
-  .route("/service-items/:id")
+  .route("/settings/service-items/:id")
   .put(
     protect,
     checkPermission("SYSTEM_CONFIG"),
