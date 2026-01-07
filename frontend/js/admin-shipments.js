@@ -1,6 +1,7 @@
 // frontend/js/admin-shipments.js
 // V2026.Final.Premium.Fixed - 旗艦深度檢閱與管理維修版
 // [Fix] 徹底解決管理 Modal 包裹詳情顯示空白問題，優化多箱規格與照片渲染邏輯
+// [Update] 新增「包裹分類」顯示功能，完整保留所有原始管理維護功能
 
 document.addEventListener("DOMContentLoaded", () => {
   const adminToken = localStorage.getItem("admin_token");
@@ -297,7 +298,15 @@ document.addEventListener("DOMContentLoaded", () => {
       safeSetText("m-user", s.user?.name || s.user?.email);
       safeSetText("m-piggy-id", s.user?.piggyId ? `(${s.user.piggyId})` : "");
 
-      // 2. [重點修復] 渲染「包裹詳細清單」表格內容 (修正照片、單號、規格、費用不顯示的問題)
+      // [新增] 包裹類型名稱映射表
+      const typeMap = {
+        general: "一般家具",
+        special_a: "特殊家具A",
+        special_b: "特殊家具B",
+        special_c: "特殊家具C",
+      };
+
+      // 2. [重點修復] 渲染「包裹詳細清單」表格內容 (修正照片、單號、分類、規格、費用顯示)
       const listBody = document.getElementById("m-packages-list-body");
       if (listBody) {
         listBody.innerHTML = (s.packages || [])
@@ -311,8 +320,17 @@ document.addEventListener("DOMContentLoaded", () => {
               imgHtml = `<img src="${url}" class="pkg-thumb" onclick="window.open('${url}', '_blank')">`;
             }
 
-            // B. 規格渲染：遍歷 arrivedBoxesJson 單箱數據
+            // B. 規格與分類渲染：遍歷 arrivedBoxesJson 數據
             const boxes = p.arrivedBoxesJson || [];
+
+            // [新增] 提取包裹分類名稱 (根據第一箱數據)
+            const rawType =
+              boxes.length > 0 ? boxes[0].type || "general" : "general";
+            const typeLabel = typeMap[rawType.trim().toLowerCase()] || rawType;
+            const typeBadgeHtml = `<span class="badge ${
+              rawType === "general" ? "badge-light" : "badge-warning"
+            }" style="font-size:11px; border:1px solid #ddd;">${typeLabel}</span>`;
+
             const specHtml =
               boxes.length > 0
                 ? boxes
@@ -342,6 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   }</div>
                   <small class="text-muted">${p.trackingNumber}</small>
                 </td>
+                <td class="text-center">${typeBadgeHtml}</td>
                 <td class="text-center">${linkHtml}</td>
                 <td style="font-size:12px;">${specHtml}</td>
                 <td class="text-danger font-weight-bold">NT$ ${Math.round(
@@ -432,7 +451,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/shipments/${id}/approve`,
         {
-          method: "PUT", // 根據後端路由定義使用 PUT
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${adminToken}`,
             "Content-Type": "application/json",
@@ -787,7 +806,6 @@ window.handleReturnShipment = async function (id) {
     if (res.ok) {
       alert("訂單已成功退回，包裹已釋放回入庫狀態。");
       document.getElementById("shipment-modal").style.display = "none";
-      // 因為函式在 DOMContentLoaded 外，需手動調用 location.reload 或確保 loadShipments 全域可用
       location.reload();
     } else {
       alert("退回失敗：" + (data.message || "未知錯誤"));
