@@ -1,5 +1,5 @@
 // backend/routes/adminRoutes.js
-// V15.3 - 強化集運單與財務管理全功能版 (含批量審核、財務統計與資信詳情)
+// V16 - 旗艦極限穩定版：新增附加服務管理 (ShipmentServiceItem) 路由
 
 const express = require("express");
 const router = express.Router();
@@ -12,7 +12,7 @@ const shipmentController = require("../controllers/admin/shipmentController");
 const userController = require("../controllers/admin/userController");
 const reportController = require("../controllers/admin/reportController");
 const walletController = require("../controllers/admin/walletController");
-const furnitureAdminController = require("../controllers/admin/furnitureAdminController"); // [新增] 傢俱管理控制器
+const furnitureAdminController = require("../controllers/admin/furnitureAdminController");
 
 const { protect, checkPermission } = require("../middleware/authMiddleware.js");
 
@@ -40,7 +40,7 @@ router
   );
 
 // ==========================================
-// 2. 系統全域設定
+// 2. 系統全域設定與附加服務
 // ==========================================
 router
   .route("/settings")
@@ -56,6 +56,33 @@ router
     protect,
     checkPermission("SYSTEM_CONFIG"),
     settingsController.updateSystemSetting
+  );
+
+// [新增] 附加服務項目管理 (CRUD)
+router
+  .route("/service-items")
+  .get(
+    protect,
+    checkPermission("SYSTEM_CONFIG"),
+    settingsController.getServiceItems
+  )
+  .post(
+    protect,
+    checkPermission("SYSTEM_CONFIG"),
+    settingsController.createServiceItem
+  );
+
+router
+  .route("/service-items/:id")
+  .put(
+    protect,
+    checkPermission("SYSTEM_CONFIG"),
+    settingsController.updateServiceItem
+  )
+  .delete(
+    protect,
+    checkPermission("SYSTEM_CONFIG"),
+    settingsController.deleteServiceItem
   );
 
 // 測試 Email
@@ -171,7 +198,7 @@ router
     shipmentController.getAllShipments
   );
 
-// [新增] 集運單詳細資訊 API (含包裹物流單、照片、連結、計費參數)
+// 集運單詳細資訊 API (含包裹物流單、照片、連結、計費參數、及已勾選附加服務)
 router
   .route("/shipments/:id/detail")
   .get(
@@ -180,7 +207,7 @@ router
     shipmentController.getShipmentDetail
   );
 
-// [新增] 集運單審核通過 API (支持手動調整最終金額)
+// 集運單審核通過 API (支持手動調整最終金額)
 router
   .route("/shipments/:id/approve")
   .put(
@@ -205,7 +232,7 @@ router
     shipmentController.manualVoidInvoice
   );
 
-// 人工改價 API (保持原功能)
+// 人工改價 API
 router
   .route("/shipments/:id/price")
   .put(
@@ -299,9 +326,8 @@ router
   );
 
 // ==========================================
-// 6. 財務管理 (優化擴充)
+// 6. 財務管理
 // ==========================================
-// [新增] 財務儀表板統計數據
 router
   .route("/finance/stats")
   .get(
@@ -310,7 +336,6 @@ router
     walletController.getFinanceStats
   );
 
-// [優化] 取得全體會員錢包概覽
 router
   .route("/finance/wallets")
   .get(
@@ -319,7 +344,6 @@ router
     walletController.getWalletsOverview
   );
 
-// [新增] 取得特定會員錢包詳情與完整交易歷史
 router
   .route("/finance/wallets/:userId")
   .get(
@@ -336,7 +360,6 @@ router
     walletController.getTransactions
   );
 
-// [新增] 批量審核交易紀錄
 router
   .route("/finance/transactions/bulk-review")
   .post(
@@ -361,7 +384,6 @@ router
     walletController.manualIssueDepositInvoice
   );
 
-// [優化] 支援單筆交易的修改與刪除 (CRUD)
 router
   .route("/finance/transactions/:id")
   .put(

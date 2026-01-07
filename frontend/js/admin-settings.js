@@ -1,6 +1,5 @@
 // frontend/js/admin-settings.js
-// V2025.RemoteAreas.Default - Added Default Remote Areas from shippingData.js
-// V2025.Furniture.Procurement - Fixed ID mismatch (fur-) and added Min Fee Support
+// V16.1 - 旗艦極限穩定版：整合附加服務管理 (ShipmentServiceItem) CRUD 功能
 
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("admin_token");
@@ -21,8 +20,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // 2. 初始載入
+  // 2. 初始載入：系統設定與附加服務項目
   await loadSettings();
+  await loadServiceItems();
 
   // 3. 綁定表單提交
   document.getElementById("form-rates").addEventListener("submit", saveRates);
@@ -39,21 +39,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   document
     .getElementById("form-email")
     .addEventListener("submit", saveEmailConfig);
-  // [New] 綁定傢俱代採購表單
   document
     .getElementById("form-furniture")
     .addEventListener("submit", saveFurnitureConfig);
 
-  // 4. 綁定按鈕
+  // 4. 綁定按鈕事件
   document.getElementById("btn-add-category").addEventListener("click", () => {
     addCategoryBlock("", {}, true);
   });
-  // [New] 新增偏遠區塊按鈕
   document.getElementById("btn-add-remote").addEventListener("click", () => {
     addRemoteBlock("", []);
   });
+  // [New] 新增附加服務按鈕
+  document.getElementById("btn-add-service").addEventListener("click", () => {
+    renderServiceItem({
+      id: "new",
+      name: "",
+      description: "",
+      price: 0,
+      unit: "PIECE",
+      isActive: true,
+    });
+  });
 
-  // [New] 綁定 Email 測試按鈕
   const btnTestEmail = document.getElementById("btn-test-email");
   if (btnTestEmail) {
     btnTestEmail.addEventListener("click", sendTestEmail);
@@ -96,7 +104,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         keys.forEach((key) => addCategoryBlock(key, cats[key], false));
       }
 
-      // [完整保留] B. 偏遠地區設定 (含預設值)
+      // B. 偏遠地區設定
       const DEFAULT_REMOTE_AREAS = {
         1800: [
           "東勢區",
@@ -243,8 +251,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
 
       let remoteAreas = s.remote_areas;
-
-      // 如果後端完全沒資料 (或空物件)，就使用預設值
       if (!remoteAreas || Object.keys(remoteAreas).length === 0) {
         remoteAreas = DEFAULT_REMOTE_AREAS;
       }
@@ -252,7 +258,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (remoteAreas) {
         const remoteContainer = document.getElementById("remote-container");
         remoteContainer.innerHTML = "";
-        // 依金額排序 (從小到大)
         const sortedRates = Object.keys(remoteAreas).sort(
           (a, b) => parseInt(a) - parseInt(b)
         );
@@ -295,7 +300,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         setValue("email-recipients", recipients);
       }
 
-      // [修正] G. 傢俱代採購設定 - ID 從原本錯誤的 furn- 統一改為 fur-
+      // G. 傢俱代採購設定
       if (s.furniture_config) {
         setValue("fur-exchange-rate", s.furniture_config.exchangeRate);
         setValue("fur-service-fee-rate", s.furniture_config.serviceFeeRate);
@@ -306,6 +311,162 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("載入設定失敗，請檢查 API 連線");
     }
   }
+
+  // --- 附加服務項目 (ShipmentServiceItem) 邏輯 ---
+
+  async function loadServiceItems() {
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/admin/settings/service-items`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await res.json();
+      const container = document.getElementById("services-container");
+      container.innerHTML = "";
+      if (data.success && data.items) {
+        data.items.forEach((item) => renderServiceItem(item));
+      }
+    } catch (e) {
+      console.error("載入附加服務失敗", e);
+    }
+  }
+
+  function renderServiceItem(item) {
+    const container = document.getElementById("services-container");
+    const isNew = item.id === "new";
+    const html = `
+      <div class="service-block card mb-3" data-id="${
+        item.id
+      }" style="border-left: 4px solid #1cc88a;">
+        <div class="card-body p-3">
+          <div class="row align-items-end">
+            <div class="col-md-3 mb-2">
+              <label class="small text-muted">服務名稱</label>
+              <input type="text" class="form-control svc-name" value="${
+                item.name
+              }" placeholder="如：釘木架" required>
+            </div>
+            <div class="col-md-2 mb-2">
+              <label class="small text-muted">單價 ($)</label>
+              <input type="number" class="form-control svc-price" value="${
+                item.price
+              }" required>
+            </div>
+            <div class="col-md-2 mb-2">
+              <label class="small text-muted">計費單位</label>
+              <select class="form-control svc-unit">
+                <option value="PIECE" ${
+                  item.unit === "PIECE" ? "selected" : ""
+                }>每件 (PIECE)</option>
+                <option value="WEIGHT" ${
+                  item.unit === "WEIGHT" ? "selected" : ""
+                }>每公斤 (WEIGHT)</option>
+                <option value="SHIPMENT" ${
+                  item.unit === "SHIPMENT" ? "selected" : ""
+                }>每單 (SHIPMENT)</option>
+              </select>
+            </div>
+            <div class="col-md-2 mb-2">
+              <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input svc-active" id="active-${
+                  item.id
+                }" ${item.isActive ? "checked" : ""}>
+                <label class="custom-control-label small" for="active-${
+                  item.id
+                }">啟用</label>
+              </div>
+            </div>
+            <div class="col-md-3 mb-2 text-right">
+              <button class="btn btn-sm btn-success btn-save-service">儲存</button>
+              <button class="btn btn-sm btn-danger btn-delete-service">刪除</button>
+            </div>
+            <div class="col-12">
+              <label class="small text-muted">服務描述 (選填)</label>
+              <input type="text" class="form-control svc-desc" value="${
+                item.description || ""
+              }" placeholder="顯示於前台的描述內容">
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    container.insertAdjacentHTML("beforeend", html);
+
+    // 綁定單個項目的儲存與刪除
+    const block = container.querySelector(`[data-id="${item.id}"]`);
+    block
+      .querySelector(".btn-save-service")
+      .addEventListener("click", () => saveServiceItem(item.id, block));
+    block
+      .querySelector(".btn-delete-service")
+      .addEventListener("click", () => deleteServiceItem(item.id, block));
+  }
+
+  async function saveServiceItem(id, block) {
+    const data = {
+      name: block.querySelector(".svc-name").value,
+      description: block.querySelector(".svc-desc").value,
+      price: parseFloat(block.querySelector(".svc-price").value),
+      unit: block.querySelector(".svc-unit").value,
+      isActive: block.querySelector(".svc-active").checked,
+    };
+
+    const isNew = id === "new";
+    const url = isNew
+      ? `${API_BASE_URL}/api/admin/settings/service-items`
+      : `${API_BASE_URL}/api/admin/settings/service-items/${id}`;
+    const method = isNew ? "POST" : "PUT";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        alert("附加服務儲存成功");
+        loadServiceItems(); // 重新載入以獲取正確的 ID 或更新狀態
+      } else {
+        alert("儲存失敗: " + result.message);
+      }
+    } catch (e) {
+      alert("網路錯誤");
+    }
+  }
+
+  async function deleteServiceItem(id, block) {
+    if (id === "new") {
+      block.remove();
+      return;
+    }
+    if (!confirm("確定要刪除此附加服務嗎？")) return;
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/admin/settings/service-items/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (res.ok) {
+        block.remove();
+      } else {
+        const d = await res.json();
+        alert("刪除失敗: " + d.message);
+      }
+    } catch (e) {
+      alert("網路錯誤");
+    }
+  }
+
+  // --- UI 元件輔助函式 ---
 
   function addCategoryBlock(key, data, isNew) {
     const container = document.getElementById("categories-container");
@@ -359,7 +520,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     container.insertAdjacentHTML("beforeend", html);
   }
 
-  // [New] 渲染偏遠地區區塊
   function addRemoteBlock(rate, areas) {
     const container = document.getElementById("remote-container");
     const areasStr = Array.isArray(areas) ? areas.join(", ") : "";
@@ -369,8 +529,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="remote-header">
           <div class="d-flex align-items-center">
              <span class="font-weight-bold mr-2">費率單價: $</span>
-             <input type="number" class="form-control form-control-sm remote-rate" 
-                    value="${rate}" placeholder="2000" style="width: 100px;">
+             <input type="number" class="form-control form-control-sm remote-rate" value="${rate}" placeholder="2000" style="width: 100px;">
              <span class="ml-2">/ CBM</span>
           </div>
           <i class="fas fa-trash-alt btn-remove-cat" title="刪除此區間" onclick="this.closest('.remote-block').remove()"></i>
@@ -383,6 +542,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
     container.insertAdjacentHTML("beforeend", html);
   }
+
+  // --- 儲存動作 ---
 
   async function saveRates(e) {
     e.preventDefault();
@@ -428,7 +589,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       if (isNaN(wRate) || isNaN(vRate) || wRate < 0 || vRate < 0) {
-        alert(`錯誤：類別 ${key} 的費率必須為正數`);
+        alert(`錯誤：費率必須為正數`);
         hasError = true;
         return;
       }
@@ -442,44 +603,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     if (hasError) return;
-    if (
-      Object.keys(categories).length === 0 &&
-      !confirm("警告：無類別，確定嗎？")
-    )
-      return;
-
     await sendUpdate("rates_config", { constants, categories }, "費率設定");
   }
 
-  // [New] 儲存偏遠地區
   async function saveRemoteAreas(e) {
     e.preventDefault();
     const remoteData = {};
     let hasError = false;
 
     document.querySelectorAll(".remote-block").forEach((block) => {
-      const rateInput = block.querySelector(".remote-rate");
-      const areasInput = block.querySelector(".remote-areas");
+      const rate = block.querySelector(".remote-rate").value.trim();
+      const areasStr = block.querySelector(".remote-areas").value.trim();
 
-      const rate = rateInput.value.trim();
-      const areasStr = areasInput.value.trim();
-
-      if (!rate) {
-        alert("請填寫費率金額");
-        hasError = true;
-        return;
-      }
-      if (isNaN(rate)) {
+      if (!rate || isNaN(rate)) {
         alert("費率必須為數字");
         hasError = true;
         return;
       }
-
       const areasList = areasStr
         .split(/[,\n]/)
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
-
       if (areasList.length === 0) return;
 
       if (remoteData[rate]) {
@@ -531,9 +675,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function saveEmailConfig(e) {
     e.preventDefault();
-    const rawRecipients = document.getElementById("email-recipients").value;
-    const recipients = rawRecipients
-      .split(",")
+    const recipients = document
+      .getElementById("email-recipients")
+      .value.split(",")
       .map((s) => s.trim())
       .filter((s) => s);
     const data = {
@@ -544,7 +688,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     await sendUpdate("email_config", data, "郵件設定");
   }
 
-  // [修正] 儲存傢俱代採購設定 - 確保 ID 統一為 fur-
   async function saveFurnitureConfig(e) {
     e.preventDefault();
     const data = {
@@ -557,12 +700,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       minServiceFee:
         parseFloat(document.getElementById("fur-min-service-fee").value) || 0,
     };
-
     if (isNaN(data.exchangeRate) || isNaN(data.serviceFeeRate)) {
       alert("匯率與服務費率必須為有效數字");
       return;
     }
-
     await sendUpdate("furniture_config", data, "傢俱代採購設定");
   }
 
@@ -578,11 +719,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (res.ok) {
-        alert(data.message);
-      } else {
-        alert("發送失敗: " + data.message);
-      }
+      alert(res.ok ? data.message : "發送失敗: " + data.message);
     } catch (e) {
       alert("網路錯誤");
     } finally {

@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// V15.3 - 旗艦完整版：新增家具代採購商品網址欄位 (productUrl) 以優化採購精準度
+// V15.4 - 旗艦完整版：新增附加服務管理模型 (ShipmentServiceItem) 以支援後台 CRUD
 
 generator client {
   provider = "prisma-client-js"
@@ -98,6 +98,7 @@ model Shipment {
   // 管理員審核備註：專用於記錄改價、審核意見，與客戶備註分開
   adminNote             String?   @db.Text
   
+  // 儲存當時勾選的附加服務快照，例如：[{"name":"釘木架", "price":50}]
   additionalServices    Json?      @default("{}")
   deliveryLocationRate  Float?
   
@@ -249,7 +250,7 @@ model FurnitureOrder {
   factoryName     String
   productName     String
   
-  // [新增] 商品參考網址：用於存放商品在淘寶、天貓或工廠官網的連結
+  // 商品參考網址：用於存放商品在淘寶、天貓或工廠官網的連結
   productUrl      String?  @db.Text
 
   quantity        Int
@@ -276,4 +277,17 @@ model FurnitureOrder {
 
   @@index([userId])
   @@index([status])
+}
+
+// --- 12. 附加服務定義模型 ---
+// 用於管理後台 CRUD 附加服務項目（如：釘木架、加強包裝等）
+model ShipmentServiceItem {
+  id          String   @id @default(cuid())
+  name        String   // 服務名稱
+  description String?  // 服務描述內容
+  price       Float    @default(0) // 預設單價
+  unit        String   @default("PIECE") // 計費單位：PIECE (件), WEIGHT (重量), SHIPMENT (每單)
+  isActive    Boolean  @default(true) // 是否在前端顯示供客戶勾選
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

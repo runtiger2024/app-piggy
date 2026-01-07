@@ -236,121 +236,10 @@
             "
           >
             <h4 style="margin-bottom: 10px; color: #2c3e50">🛠️ 附加服務</h4>
-            <div class="service-item" style="margin-bottom: 10px">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <input
-                  type="checkbox"
-                  id="srv-floor"
-                  style="width: 18px; height: 18px"
-                />
-                <label for="srv-floor" style="font-weight: bold; margin: 0"
-                  >需要上樓搬運</label
-                >
-              </div>
-              <div
-                id="srv-floor-options"
-                style="
-                  display: none;
-                  margin-left: 28px;
-                  margin-top: 8px;
-                  padding: 10px;
-                  background: #f8f9fa;
-                  border-radius: 5px;
-                "
-              >
-                <div style="margin-bottom: 8px">
-                  <label
-                    style="font-size: 13px; display: block; margin-bottom: 3px"
-                    >電梯設施：</label
-                  >
-                  <div style="display: flex; gap: 15px">
-                    <label style="font-weight: normal; font-size: 14px"
-                      ><input type="radio" name="srv-elevator" value="yes" />
-                      有電梯</label
-                    >
-                    <label style="font-weight: normal; font-size: 14px"
-                      ><input type="radio" name="srv-elevator" value="no" />
-                      無電梯 (需爬梯)</label
-                    >
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  id="srv-floor-note"
-                  class="form-control"
-                  placeholder="備註 (例: 5樓, 樓梯較窄)..."
-                  style="font-size: 13px"
-                />
-              </div>
-            </div>
 
-            <div class="service-item" style="margin-bottom: 10px">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <input
-                  type="checkbox"
-                  id="srv-wood"
-                  style="width: 18px; height: 18px"
-                /><label for="srv-wood" style="font-weight: bold; margin: 0"
-                  >回收木架</label
-                >
-              </div>
-              <div
-                id="srv-wood-input"
-                style="display: none; margin-left: 28px; margin-top: 5px"
-              >
-                <input
-                  type="text"
-                  id="srv-wood-note"
-                  class="form-control"
-                  placeholder="數量/備註..."
-                  style="font-size: 13px"
-                />
-              </div>
-            </div>
-            <div class="service-item" style="margin-bottom: 10px">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <input
-                  type="checkbox"
-                  id="srv-assembly"
-                  style="width: 18px; height: 18px"
-                /><label for="srv-assembly" style="font-weight: bold; margin: 0"
-                  >傢俱組裝</label
-                >
-              </div>
-              <div
-                id="srv-assembly-input"
-                style="display: none; margin-left: 28px; margin-top: 5px"
-              >
-                <input
-                  type="text"
-                  id="srv-assembly-note"
-                  class="form-control"
-                  placeholder="備註..."
-                  style="font-size: 13px"
-                />
-              </div>
-            </div>
-            <div class="service-item" style="margin-bottom: 10px">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <input
-                  type="checkbox"
-                  id="srv-old"
-                  style="width: 18px; height: 18px"
-                /><label for="srv-old" style="font-weight: bold; margin: 0"
-                  >回收舊傢俱</label
-                >
-              </div>
-              <div
-                id="srv-old-input"
-                style="display: none; margin-left: 28px; margin-top: 5px"
-              >
-                <input
-                  type="text"
-                  id="srv-old-note"
-                  class="form-control"
-                  placeholder="品項/數量 (例: 5樓, 樓梯較窄)..."
-                  style="font-size: 13px"
-                />
+            <div id="shipment-services-container">
+              <div style="color: #999; font-size: 13px; padding: 5px 0">
+                <i class="fas fa-sync fa-spin"></i> 正在載入可用服務...
               </div>
             </div>
 
@@ -364,7 +253,7 @@
               "
             >
               <i class="fas fa-exclamation-circle"></i>
-              附加服務費由司機現場報價並收取。
+              部分特殊服務（如搬運、組裝）費用可能由司機現場核實後收取。
             </div>
           </div>
 
@@ -372,7 +261,7 @@
             class="form-section"
             style="
               margin-top: 15px;
-              border-top: 1px dashed #ccc;
+              border-top: 1px solid #eee;
               padding-top: 10px;
             "
           >

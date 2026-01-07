@@ -64,6 +64,20 @@
         align-items: center;
         border-bottom: 1px solid #e3e6f0;
       }
+      /* 附加服務表格樣式 */
+      .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+      }
+      .status-active {
+        background: #e1f5fe;
+        color: #0288d1;
+      }
+      .status-inactive {
+        background: #f5f5f5;
+        color: #757575;
+      }
     </style>
   </head>
   <body>
@@ -74,6 +88,9 @@
         <div class="settings-tab-nav">
           <div class="tab-btn active" data-tab="tab-rates">
             <i class="fas fa-calculator"></i> 運費費率
+          </div>
+          <div class="tab-btn" data-tab="tab-services">
+            <i class="fas fa-concierge-bell"></i> 附加服務 (CRUD)
           </div>
           <div class="tab-btn" data-tab="tab-remote">
             <i class="fas fa-map-marked-alt"></i> 偏遠地區
@@ -210,6 +227,47 @@
               </button>
             </div>
           </form>
+        </div>
+
+        <div id="tab-services" class="tab-content">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 20px;
+            "
+          >
+            <h5 class="text-primary font-weight-bold mb-0">附加服務管理</h5>
+            <button
+              type="button"
+              id="btn-add-service"
+              class="btn btn-primary btn-sm"
+            >
+              <i class="fas fa-plus"></i> 新增服務項目
+            </button>
+          </div>
+
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            在此管理的項目會出現在客戶申請集運時的選單中。設定「計費單位」可協助您更精準地核對費用。
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+              <thead class="thead-light">
+                <tr>
+                  <th>服務名稱</th>
+                  <th>描述</th>
+                  <th>單價 (TWD)</th>
+                  <th>單位</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="services-list"></tbody>
+            </table>
+          </div>
         </div>
 
         <div id="tab-remote" class="tab-content">
@@ -425,6 +483,64 @@
                 <i class="fas fa-vial"></i> 發送測試信
               </button>
             </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-service" class="modal-overlay">
+      <div class="modal-container" style="max-width: 500px">
+        <div class="modal-header">
+          <h3 id="service-modal-title">新增附加服務</h3>
+          <span class="modal-close" id="btn-close-service-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="form-service-item">
+            <input type="hidden" id="service-id" />
+            <div class="form-group mb-3">
+              <label>服務名稱 *</label>
+              <input
+                type="text"
+                id="service-name"
+                class="form-control"
+                placeholder="如：釘木架"
+                required
+              />
+            </div>
+            <div class="form-group mb-3">
+              <label>描述</label>
+              <textarea
+                id="service-desc"
+                class="form-control"
+                rows="2"
+                placeholder="說明服務內容"
+              ></textarea>
+            </div>
+            <div class="form-group mb-3">
+              <label>單價 (TWD) *</label>
+              <input
+                type="number"
+                id="service-price"
+                class="form-control"
+                value="0"
+                required
+              />
+            </div>
+            <div class="form-group mb-3">
+              <label>計費單位</label>
+              <select id="service-unit" class="form-control">
+                <option value="PIECE">按件計費 (PIECE)</option>
+                <option value="WEIGHT">按重量計費 (WEIGHT)</option>
+                <option value="SHIPMENT">按單計費 (SHIPMENT)</option>
+              </select>
+            </div>
+            <div class="form-check mb-4">
+              <input type="checkbox" id="service-active" checked />
+              <label for="service-active">啟用 (供客戶勾選)</label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+              儲存服務項目
+            </button>
           </form>
         </div>
       </div>
