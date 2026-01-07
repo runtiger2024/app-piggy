@@ -1,5 +1,5 @@
 // backend/controllers/authController.js
-// V16.1 - 旗艦極限穩定版：修正登入狀態檢查、整合免查 DB 日誌系統與 Apple 規範
+// V16.2 - 旗艦整合版：保留 V16.1 所有穩定特性，新增 LINE 登入與並行綁定機制
 
 const prisma = require("../config/db.js");
 const bcrypt = require("bcryptjs");
@@ -94,7 +94,7 @@ const registerUser = async (req, res) => {
         .json({ success: false, message: "系統繁忙，請稍後再試" });
     }
 
-    // [大師優化] 記錄註冊成功日誌，並傳入 email 節省查詢開銷
+    // [大師優化] 記錄註冊成功日誌
     await createLog(
       newUser.id,
       "USER_REGISTER",
@@ -169,6 +169,169 @@ const loginUser = async (req, res) => {
 };
 
 /**
+ * LINE 登入：支援新用戶註冊與舊用戶自動綁定
+ * [新增功能]：確保與一般登入並行，並生成推播所需的 lineUserId
+ */
+const lineLogin = async (req, res) => {
+  try {
+    const { lineUserId, email, name } = req.body;
+
+    if (!lineUserId) {
+      return res.status(400).json({ success: false, message: "LINE ID 無效" });
+    }
+
+    // 1. 優先透過 lineUserId 尋找使用者
+    let user = await prisma.user.findUnique({
+      where: { lineUserId },
+    });
+
+    // 2. 若找不到，嘗試透過 Email 尋找並自動綁定（實現模式並行）
+    if (!user && email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (existingUser) {
+        // 自動綁定 LINE ID
+        user = await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { lineUserId },
+        });
+        await createLog(
+          user.id,
+          "USER_LINE_BIND",
+          user.id,
+          "登入時自動綁定 LINE",
+          user.email
+        );
+      }
+    }
+
+    // 3. 若仍找不到，則為全新的 LINE 用戶進行註冊
+    if (!user) {
+      let newUser;
+      let retryCount = 0;
+      const maxRetries = 5;
+      const lowerEmail = email
+        ? email.toLowerCase()
+        : `${lineUserId}@line.temp`;
+
+      while (!newUser && retryCount < maxRetries) {
+        try {
+          newUser = await prisma.$transaction(async (tx) => {
+            const lastUser = await tx.user.findFirst({
+              where: { piggyId: { startsWith: "RP" } },
+              orderBy: { piggyId: "desc" },
+            });
+
+            let nextPiggyId = "RP0000889";
+            if (lastUser && lastUser.piggyId) {
+              const currentNum = parseInt(
+                lastUser.piggyId.replace("RP", ""),
+                10
+              );
+              nextPiggyId = "RP" + String(currentNum + 1).padStart(7, "0");
+            }
+
+            const createdUser = await tx.user.create({
+              data: {
+                email: lowerEmail,
+                name: name || "LINE用戶",
+                lineUserId: lineUserId,
+                piggyId: nextPiggyId,
+                isActive: true,
+                permissions: [],
+              },
+            });
+
+            await tx.wallet.create({
+              data: { userId: createdUser.id, balance: 0 },
+            });
+
+            return createdUser;
+          });
+        } catch (dbError) {
+          if (dbError.code === "P2002") {
+            retryCount++;
+          } else {
+            throw dbError;
+          }
+        }
+      }
+      user = newUser;
+      await createLog(
+        user.id,
+        "USER_REGISTER_LINE",
+        user.id,
+        `LINE快速註冊: ${user.piggyId}`,
+        user.email
+      );
+    }
+
+    // [安全性檢查] 防止註銷帳號透過 LINE 登入
+    if (user.isActive === false) {
+      return res.status(401).json({ success: false, message: "此帳號已註銷" });
+    }
+
+    const permissions = user.permissions || [];
+    res.status(200).json({
+      success: true,
+      message: "LINE 登入成功",
+      user: {
+        id: user.id,
+        piggyId: user.piggyId,
+        email: user.email,
+        name: user.name,
+        permissions: permissions,
+      },
+      token: generateToken(user.id, { permissions }),
+    });
+  } catch (error) {
+    console.error("LINE 登入錯誤:", error);
+    res.status(500).json({ success: false, message: "LINE 登入失敗" });
+  }
+};
+
+/**
+ * 綁定 LINE 帳號 (已登入狀態下)
+ */
+const bindLine = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { lineUserId } = req.body;
+
+    if (!lineUserId) {
+      return res.status(400).json({ success: false, message: "缺失 LINE ID" });
+    }
+
+    // 檢查該 LINE ID 是否已被其他人綁定
+    const conflict = await prisma.user.findUnique({ where: { lineUserId } });
+    if (conflict && conflict.id !== userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "此 LINE 帳號已被其他會員綁定" });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lineUserId },
+    });
+
+    await createLog(
+      userId,
+      "USER_LINE_BIND",
+      userId,
+      "會員手動綁定 LINE",
+      req.user.email
+    );
+
+    res.json({ success: true, message: "LINE 綁定成功" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "綁定失敗" });
+  }
+};
+
+/**
  * 取得個人資料
  */
 const getMe = async (req, res) => {
@@ -182,6 +345,7 @@ const getMe = async (req, res) => {
         name: true,
         permissions: true,
         phone: true,
+        lineUserId: true, // 新增返回欄位
         defaultAddress: true,
         createdAt: true,
         defaultTaxId: true,
@@ -196,7 +360,6 @@ const getMe = async (req, res) => {
 
 /**
  * 帳號註銷 (Apple Store 強制要求)
- * [大師優化]：清除敏感聯繫資訊，確保隱私安全並記錄日誌
  */
 const deleteMe = async (req, res) => {
   try {
@@ -209,13 +372,13 @@ const deleteMe = async (req, res) => {
         isActive: false,
         name: "已註銷會員",
         phone: null,
+        lineUserId: null, // 同步清除 LINE 綁定
         defaultAddress: null,
         defaultTaxId: null,
         defaultInvoiceTitle: null,
       },
     });
 
-    // [大師優化] 記錄註銷動作
     await createLog(
       userId,
       "USER_DELETE",
@@ -260,7 +423,6 @@ const updateMe = async (req, res) => {
       },
     });
 
-    // [大師優化] 記錄更新日誌
     await createLog(
       userId,
       "USER_UPDATE",
@@ -379,6 +541,13 @@ const changePassword = async (req, res) => {
 
     if (!user)
       return res.status(404).json({ success: false, message: "找不到使用者" });
+    if (!user.passwordHash)
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "此帳號尚未設定密碼，請使用 LINE 登入",
+        });
 
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isMatch)
@@ -402,6 +571,8 @@ const changePassword = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  lineLogin, // [新增]
+  bindLine, // [新增]
   getMe,
   deleteMe,
   updateMe,

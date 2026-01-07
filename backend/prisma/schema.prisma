@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// V15.4 - 旗艦完整版：新增附加服務管理模型 (ShipmentServiceItem) 以支援後台 CRUD
+// V16.0 - 旗艦整合版：支援 LINE 登入並行與訊息推播功能 (新增 lineUserId)
 
 generator client {
   provider = "prisma-client-js"
@@ -18,10 +18,16 @@ model User {
   piggyId              String?  @unique
   
   email                String   @unique
-  passwordHash         String
+  
+  // [修改] passwordHash 改為可選，因為 LINE 快速註冊的使用者初期可能沒有密碼
+  passwordHash         String?
+  
   name                 String?
   phone                String?
   defaultAddress       String?
+
+  // [新增] LINE 相關欄位：用於辨識 LINE 客戶與執行後續訊息推播
+  lineUserId           String?  @unique
 
   // 發票預設資料
   defaultTaxId         String?
