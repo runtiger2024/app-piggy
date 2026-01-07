@@ -333,9 +333,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadServiceItems() {
     try {
       // [修正路徑] 移除多餘的 /settings/ 以符合後端路由 /api/admin/service-items
-      const res = await fetch(`${API_BASE_URL}/api/admin/service-items`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/api/admin/settings/service-items`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
 
       const data = await res.json();
