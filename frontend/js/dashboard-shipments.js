@@ -144,6 +144,7 @@ window.handleCreateShipmentClick = async function () {
   const modal = document.getElementById("create-shipment-modal");
   if (modal) modal.style.display = "flex";
 
+  window.loadAvailableServices();
   window.recalculateShipmentTotal();
 };
 
@@ -372,28 +373,20 @@ window.handleCreateShipmentSubmit = async function (e) {
   fd.append("note", document.getElementById("ship-note").value);
   fd.append("paymentMethod", paymentMethod);
 
-  // 附加服務邏輯提取
-  const services = {
-    floor: {
-      selected: document.getElementById("srv-floor").checked,
-      hasElevator:
-        document.querySelector('input[name="srv-elevator"]:checked')?.value ===
-        "yes",
-      note: document.getElementById("srv-floor-note").value,
-    },
-    wood: {
-      selected: document.getElementById("srv-wood").checked,
-      note: document.getElementById("srv-wood-note").value,
-    },
-    assembly: {
-      selected: document.getElementById("srv-assembly").checked,
-      note: document.getElementById("srv-assembly-note").value,
-    },
-    old: {
-      selected: document.getElementById("srv-old").checked,
-      note: document.getElementById("srv-old-note").value,
-    },
-  };
+  // 修正後的動態附加服務提取
+  const services = {};
+  document.querySelectorAll(".service-option-item").forEach((item) => {
+    const cb = item.querySelector(".svc-checkbox");
+    if (cb && cb.checked) {
+      const id = cb.dataset.id;
+      services[id] = {
+        selected: true,
+        name: cb.dataset.name,
+        price: parseFloat(cb.dataset.price),
+        note: item.querySelector(".svc-note")?.value || "",
+      };
+    }
+  });
   fd.append("additionalServices", JSON.stringify(services));
 
   try {
@@ -917,3 +910,71 @@ document.addEventListener("DOMContentLoaded", () => {
       window.recalculateShipmentTotal()
     );
 });
+window.loadAvailableServices = async function () {
+  const container = document.getElementById("shipment-services-container");
+  if (!container) return;
+
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/shipments/service-items/available`,
+      {
+        headers: { Authorization: `Bearer ${window.dashboardToken}` },
+      }
+    );
+    const data = await res.json();
+
+    if (data.success && data.items.length > 0) {
+      let html = "";
+      data.items.forEach((item) => {
+        // 根據不同單位顯示標籤
+        const unitMap = { PIECE: "件", WEIGHT: "kg", SHIPMENT: "單" };
+        const unitText = unitMap[item.unit] || "件";
+
+        html += `
+          <div class="service-option-item" style="margin-bottom: 10px; padding: 8px; border: 1px solid #eee; border-radius: 6px;">
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin-bottom: 0;">
+              <input type="checkbox" class="svc-checkbox" data-id="${
+                item.id
+              }" data-name="${item.name}" data-price="${
+          item.price
+        }" style="margin-top: 4px;">
+              <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 14px;">
+                  ${
+                    item.name
+                  } <span style="color: #d32f2f; margin-left: 5px;">$${
+          item.price
+        } / ${unitText}</span>
+                </div>
+                ${
+                  item.description
+                    ? `<div style="font-size: 12px; color: #888;">${item.description}</div>`
+                    : ""
+                }
+                <div class="svc-note-input" style="display: none; margin-top: 5px;">
+                  <input type="text" class="form-control form-control-sm svc-note" placeholder="備註 (如：哪件要釘木架)">
+                </div>
+              </div>
+            </label>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+
+      // 綁定連動顯示備註框
+      container.querySelectorAll(".svc-checkbox").forEach((cb) => {
+        cb.onchange = (e) => {
+          const noteInput = e.target
+            .closest(".service-option-item")
+            .querySelector(".svc-note-input");
+          if (noteInput)
+            noteInput.style.display = e.target.checked ? "block" : "none";
+        };
+      });
+    } else {
+      container.innerHTML = `<div style="color: #999; font-size: 13px;">暫無可用附加服務</div>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<div style="color: red; font-size: 13px;">服務載入失敗</div>`;
+  }
+};

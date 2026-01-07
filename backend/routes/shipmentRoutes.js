@@ -44,4 +44,17 @@ router
   .get(protect, getShipmentById)
   .delete(protect, deleteMyShipment);
 
+router.route("/service-items/available").get(protect, async (req, res) => {
+  const prisma = require("../config/db.js");
+  try {
+    const items = await prisma.shipmentServiceItem.findMany({
+      where: { isActive: true }, // 只抓取啟用的
+      orderBy: { createdAt: "asc" },
+    });
+    res.json({ success: true, items });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "無法載入服務項目" });
+  }
+});
+
 module.exports = router;
