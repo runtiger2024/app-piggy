@@ -198,7 +198,7 @@
         transform: scale(0.97);
       }
 
-      /* 圖片上傳區樣式 */
+      /* 圖片上傳區樣式：新增相對定位以利縮圖覆蓋 */
       .upload-zone {
         display: flex;
         flex-direction: column;
@@ -212,6 +212,8 @@
         cursor: pointer;
         transition: all 0.3s ease;
         color: #64748b;
+        position: relative;
+        overflow: hidden;
       }
       .upload-zone:hover {
         background-color: #f1f5f9;
@@ -726,7 +728,7 @@
         }
       }
 
-      // 載入所有 HTML 組件與彈窗 (Promise.all 確保組件到位)
+      // 載入所有 HTML 組件與彈窗
       Promise.all([
         loadHtml(
           "section-container-packages",
@@ -762,7 +764,6 @@
           "modal-container-claim-package",
           "components/modals/claim-package.html"
         ),
-        // [關鍵新增] 載入常用收件人選擇器 HTML
         loadHtml(
           "modal-container-recipient-selector",
           "components/modals/recipient-selector.html"
@@ -788,7 +789,7 @@
           else originalAddEventListener.call(document, type, listener, options);
         };
 
-        // 按序加載 JS 邏輯腳本
+        // 按序加載 JS 邏輯腳本 (確保功能正確鏈結)
         const scripts = [
           "js/apiConfig.js",
           "js/shippingData.js",
@@ -798,6 +799,7 @@
           "js/dashboard-shipments.js",
           "js/dashboard-recipient.js",
           "js/dashboard-wallet.js",
+          "js/dashboard-unclaimed.js", // [修正] 補上缺少的無主件認領邏輯，否則圖片預覽不會觸發
           "js/dashboard-notifications.js",
           "js/dashboard-main.js",
         ];
@@ -817,8 +819,7 @@
             await loadScript(src);
           }
 
-          // [核心修正] 強制重新綁定「常用地址」按鈕事件
-          // 因為 shipment-create.html 是動態載入的，腳本載入完畢後需確保按鈕與功能連結
+          // 核心按鈕事件綁定
           const btnSelect = document.getElementById("btn-select-recipient");
           if (btnSelect && typeof window.openRecipientSelector === "function") {
             const newBtn = btnSelect.cloneNode(true);
@@ -827,10 +828,9 @@
               e.preventDefault();
               window.openRecipientSelector();
             });
-            console.log("常用地址按鈕已成功重新綁定");
           }
 
-          // 初始化快速導向與交互
+          // 初始化快速導向
           const btnQuickForecast =
             document.getElementById("btn-quick-forecast");
           if (btnQuickForecast) {
@@ -840,6 +840,7 @@
                 .scrollIntoView({ behavior: "smooth", block: "center" });
           }
 
+          // 標籤切換滾動優化
           document.querySelectorAll(".tab-btn").forEach((btn) => {
             btn.addEventListener("click", () => {
               const wrapper = document.querySelector(".dashboard-tabs-wrapper");
