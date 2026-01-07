@@ -35,11 +35,11 @@ export default defineConfig({
   // 3. 資料庫連線配置
   datasource: {
     // 主要連線網址：供後端伺服器 (server.js) 日常運作使用，完全支援 Connection Pooling
-    url: DATABASE_URL,
+    url: process.env.DATABASE_URL,
 
     // [新增與保留功能] 直接連線網址 (Direct URL)
     // 專為 npx prisma db push 與 npx prisma migrate 指令優化，跳過連線池直接操作資料庫結構
-    directUrl: DIRECT_URL,
+    directUrl: process.env.DIRECT_URL || process.env.DATABASE_URL,
   },
 
   // 4. [新增與保留功能] 遷移路徑配置
