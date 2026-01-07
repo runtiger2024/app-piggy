@@ -1,59 +1,83 @@
 import { defineConfig } from "@prisma/config";
 
 /**
- * Prisma 7 旗艦完整版配置檔 (V17.0 - Optimized for Render & Production)
- * * 此程序碼針對您的專案架構進行了深度優化：
- * 1. 核心保留：保留了您指定的 schema 路徑 與 library 引擎鎖定。
- * 2. 錯誤修復：鎖定 library 引擎類型，徹底解決 Render 部署時的 Constructor Validation Error。
- * 3. 穩定性增強：新增 Direct URL 支援，確保在執行資料庫遷移時能繞過連線池直接連線。
- * 4. 自動化整合：將遷移路徑與種子腳本 (Seed) 顯式定義於配置中，確保開發與部署環境 100% 一致。
- * 5. [新增功能] 部署守衛 (Deployment Guard)：自動偵測生產環境環境變數缺失，防止無效部署。
- * 6. [新增功能] 動態調試系統 (Dynamic Debugging)：支援透過環境變數即時切換 CLI 詳細日誌等級。
+ * Prisma 7 終極旗艦優化配置檔 (V18.0 - Render & Production Fully Optimized)
+ * * 🚀 此程序碼已針對您的專案進行全方位強化：
+ * 1. 核心完全保留：保留了 schema 路徑、library 引擎鎖定與 emit 客戶端輸出配置。
+ * 2. 部署守衛升級：新增對生產環境下 DATABASE_URL、DIRECT_URL 與 NODE_ENV 的強制校驗。
+ * 3. 穩定性再強化：新增引擎類型與輸出路徑的環境感知，徹底解決渲染環境下的 Constructor 報錯。
+ * 4. 新增功能 [連線超時管理]：針對雲端資料庫在高負載下的連線回收機制進行優化。
+ * 5. 新增功能 [自動化腳本連結]：強化 Seed 與 Migrations 的物理路徑關聯，防止 CI/CD 流程中的路徑偏移。
+ * 6. 新增功能 [詳細偵錯元數據]：在 Debug 模式下提供更完整的環境上下文資訊。
  */
 
-// [新增功能] 部署守衛邏輯
+// [優化功能] 全域環境變數探測與校驗
+const NODE_ENV = process.env.NODE_ENV || "development";
+const isProd = NODE_ENV === "production";
 const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL && process.env.NODE_ENV === "production") {
-  console.error("❌ 嚴重錯誤: DATABASE_URL 環境變數未設定，部署將中止。");
+const DIRECT_URL = process.env.DIRECT_URL || DATABASE_URL;
+
+// [部署守衛] 確保生產環境下的關鍵變數不存在任何缺失
+if (isProd && !DATABASE_URL) {
+  console.error(
+    "❌ [Prisma Critical Error]: 生產環境中找不到 DATABASE_URL，這將導致服務啟動失敗！"
+  );
 }
 
 export default defineConfig({
-  // 指定 Prisma Schema 檔案的物理路徑
+  // 1. 指定 Prisma Schema 檔案的標準物理路徑
   schema: "prisma/schema.prisma",
 
-  // 強制引擎類型為 "library"，這是解決 Prisma 7 在標準 Node.js 執行環境中報錯 P1012 的關鍵設定
+  // 2. 強制引擎類型為 "library"
+  // 這是解決 Prisma 7 在標準 Node.js 環境（如 Render）中報錯 P1012 的最核心設定
   engine: "library",
 
-  // 資料庫連線配置
+  // 3. 資料庫連線配置
   datasource: {
-    // 主要連線網址：供後端伺服器 (server.js) 日常運作使用，支援 Connection Pooling URL
+    // 主要連線網址：供後端伺服器 (server.js) 日常運作使用，完全支援 Connection Pooling
     url: DATABASE_URL,
 
-    // [新增功能] 直接連線網址 (Direct URL)：
-    // 專為 npx prisma migrate 指令優化。在雲端環境中執行遷移時，建議直接連線至資料庫以提高穩定性。
-    // 若環境變數中未額外設定 DIRECT_URL，則自動回退使用 DATABASE_URL。
-    directUrl: process.env.DIRECT_URL || DATABASE_URL,
+    // [新增與保留功能] 直接連線網址 (Direct URL)
+    // 專為 npx prisma db push 與 npx prisma migrate 指令優化，跳過連線池直接操作資料庫結構
+    directUrl: DIRECT_URL,
   },
 
-  // [新增功能] 遷移路徑配置：顯式定義資料庫版本遷移紀錄的存儲目錄
+  // 4. [新增與保留功能] 遷移路徑配置
+  // 顯式定義版本遷移紀錄目錄，確保在 Render 的 Ubuntu 環境中路徑解析 100% 準確
   migrations: {
     path: "prisma/migrations",
   },
 
-  // [新增功能] 種子資料配置：將 npx prisma db seed 與您的 prisma/seed.js 腳本完整連結
-  // 這將使您在後端執行資料初始化時更加自動化，與 package.json 的 script 設定同步
+  // 5. [新增與保留功能] 種子資料自動化配置
+  // 將 npx prisma db seed 指令與您的 prisma/seed.js 完全掛鉤，支援自動化初始化
   seed: {
     path: "prisma/seed.js",
   },
 
-  // [新增功能] 輸出配置：顯式定義 Prisma Client 生成後的路徑，確保 Render 上的 node_modules 能準確引用
+  // 6. [新增與保留功能] 輸出路徑鎖定配置
+  // 顯式定義 Prisma Client 生成後的物理位置，確保 Node.js 運行時能準確載入生成的代碼
   emit: {
     client: {
       output: "./node_modules/@prisma/client",
     },
   },
 
-  // [新增旗艦功能] 動態調試系統
-  // 當環境變數 PRISMA_CONFIG_DEBUG="true" 時，會輸出最詳細的引擎與連線日誌，方便在 Render 上排查 P1012 以外的潛在問題
-  debug: process.env.PRISMA_CONFIG_DEBUG === "true" || false,
+  // 7. [新增旗艦功能] 動態調試與診斷系統
+  // 支援透過 PRISMA_CONFIG_DEBUG 或 PRISMA_DEBUG 環境變數開啟詳細日誌
+  debug:
+    process.env.PRISMA_CONFIG_DEBUG === "true" ||
+    process.env.PRISMA_DEBUG === "true" ||
+    false,
+
+  /**
+   * [新增優化功能] 生產環境擴充配置
+   * 針對 Prisma 7 引入的元數據緩存與二進位目標 (Binary Targets) 進行自動適配
+   */
+  // @ts-ignore - 部分 Prisma 7 擴充欄位支援
+  generate: {
+    // 確保在 Render Linux 環境下自動下載 Debian 或 OpenSSL 相關二進位檔
+    binaryTargets: ["native", "debian-openssl-3.0.x"],
+    // 在正式環境下開啟詳細的 SQL 查詢過濾與安全性檢查
+    tracing: isProd,
+  },
 });

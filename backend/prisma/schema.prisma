@@ -5,6 +5,7 @@ generator client {
   provider   = "prisma-client-js"
   // 強制鎖定 library 引擎，確保與 Prisma 7 配置相容並解決 Render 部署報錯
   engineType = "library"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
