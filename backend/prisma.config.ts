@@ -1,16 +1,16 @@
 import { defineConfig } from "@prisma/config";
 
-// V19.0 - Prisma 7 配置強化版：確保環境變數精準注入
+// V20.0 - 旗艦配置：環境變數精準映射
 
 export default defineConfig({
-  // 指定 Schema 路徑
+  // Schema 物理路徑
   schema: "prisma/schema.prisma",
 
-  // 強制鎖定原生引擎，防止被誤判為 client/wasm 引擎
+  // 核心引擎鎖定
   engineType: "library",
 
   datasource: {
-    // 明確從 process.env 讀取，確保 Render 注入的變數生效
+    // 透過 process.env 直接映射，確保 npx 指令執行時路徑正確
     url: process.env.DATABASE_URL,
     directUrl: process.env.DIRECT_URL || process.env.DATABASE_URL,
   },
@@ -23,6 +23,6 @@ export default defineConfig({
     path: "prisma/seed.js",
   },
 
-  // 移除了手動指定 emit 路徑，讓 Prisma 7 使用預設的 node_modules/.prisma
-  // 這通常是解決路徑解析報錯的最穩定的作法
+  // 注意：已移除 emit 區塊。
+  // 在 Prisma 7 中，讓 Client 生成在預設位置 (node_modules/.prisma) 最能保證載入成功。
 });
