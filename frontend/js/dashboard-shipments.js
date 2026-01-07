@@ -576,7 +576,7 @@ window.openShipmentDetails = async function (id) {
     const dateEl = document.getElementById("sd-date");
     if (dateEl) dateEl.textContent = new Date(s.createdAt).toLocaleString();
 
-    // 2. 狀態同步顯示
+    // 2. 狀態同步顯示 (修復問題 1)
     const statusBox = document.getElementById("sd-status");
     if (statusBox) {
       if (s.status === "RETURNED") {
@@ -586,11 +586,14 @@ window.openShipmentDetails = async function (id) {
           </div>`;
       } else {
         const statusMap = window.SHIPMENT_STATUS_MAP || {};
-        statusBox.textContent = statusMap[s.status] || s.status;
+        const statusClasses = window.STATUS_CLASSES || {};
+        const statusText = statusMap[s.status] || s.status;
+        const statusClass = statusClasses[s.status] || "";
+        statusBox.innerHTML = `<span class="status-badge ${statusClass}">${statusText}</span>`;
       }
     }
 
-    // 3. 物理統計數據同步 (修復數據為 0 的問題)
+    // 3. 物理統計數據同步 (修復問題 2：數據為 0 的問題)
     if (s.physicalStats) {
       const weightEl = document.getElementById("sd-total-weight");
       if (weightEl) weightEl.textContent = s.physicalStats.totalWeight || 0;
@@ -620,11 +623,11 @@ window.openShipmentDetails = async function (id) {
       );
     }
 
-    // 6. 支付憑證渲染 (防破圖處理)
+    // 6. 支付憑證渲染 (修復問題 3：防破圖處理)
     const proofImagesContainer = document.getElementById("sd-proof-images");
     if (proofImagesContainer) {
       if (s.paymentProof && s.paymentProof !== "WALLET_PAY") {
-        // 判斷是否為絕對路徑，若否則補上 API 基底
+        // 判定路徑並補全 URL
         const fullUrl = s.paymentProof.startsWith("http")
           ? s.paymentProof
           : `${API_BASE_URL}${s.paymentProof}`;
