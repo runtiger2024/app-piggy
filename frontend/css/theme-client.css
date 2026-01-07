@@ -3095,3 +3095,66 @@ textarea {
   border-color: #1a73e8;
   transform: scale(1.05);
 }
+/* LINE 懸浮球基礎樣式 */
+.line-float-wrapper {
+  position: fixed;
+  bottom: 100px; /* 初始位置：避開底部導覽列 */
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  z-index: 9999;
+  cursor: grab;
+  user-select: none;
+  touch-action: none; /* 防止行動端拖曳時觸發頁面滾動 */
+}
+
+.line-float-btn {
+  width: 100%;
+  height: 100%;
+  background-color: #06c755; /* LINE 官方綠色 */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+}
+
+.line-float-btn:active {
+  cursor: grabbing;
+  transform: scale(0.9);
+}
+
+.line-float-btn i {
+  color: white;
+  font-size: 32px;
+}
+
+/* 呼吸燈動畫，增加點擊率 */
+@keyframes line-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(6, 199, 85, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(6, 199, 85, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(6, 199, 85, 0);
+  }
+}
+
+.line-float-btn.pulse {
+  animation: line-pulse 2s infinite;
+}
+
+/* 行動端調整大小 */
+@media (max-width: 768px) {
+  .line-float-wrapper {
+    width: 50px;
+    height: 50px;
+  }
+  .line-float-btn i {
+    font-size: 26px;
+  }
+}
