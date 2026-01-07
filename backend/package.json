@@ -10,7 +10,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "build": "prisma generate"
+    "build": "npx prisma generate"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -20,6 +20,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/client": "^6.19.1",
     "@sendgrid/mail": "^8.1.6",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
@@ -30,13 +31,12 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "prisma": "^6.19.1",
     "qs": "^6.14.0",
     "sharp": "^0.33.2"
   },
   "devDependencies": {
-    "@prisma/client": "^6.19.1",
     "dotenv-cli": "^11.0.0",
-    "nodemon": "^3.1.10",
-    "prisma": "^6.19.1"
+    "nodemon": "^3.1.10"
   }
 }
