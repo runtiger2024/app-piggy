@@ -61,7 +61,7 @@
       </button>
       <button
         class="btn btn-primary-light"
-        onclick="document.getElementById('recipient-selector-modal').style.display='none'; document.getElementById('tab-recipients').click();"
+        onclick="document.getElementById('recipient-selector-modal').style.display='none'; if(document.getElementById('create-shipment-modal')) document.getElementById('create-shipment-modal').style.display='none'; document.getElementById('tab-recipients').click();"
         style="background: #eff6ff; color: #1a73e8; border: none"
       >
         <i class="fas fa-plus"></i> 管理收件人
