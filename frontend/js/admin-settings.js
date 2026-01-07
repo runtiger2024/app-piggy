@@ -439,8 +439,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const isNew = id === "new";
     const url = isNew
-      ? `${API_BASE_URL}/api/admin/service-items`
-      : `${API_BASE_URL}/api/admin/service-items/${id}`;
+      ? `${API_BASE_URL}/api/admin/settings/service-items`
+      : `${API_BASE_URL}/api/admin/settings/service-items/${id}`;
 
     try {
       const res = await fetch(url, {
@@ -467,10 +467,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (id === "new") return block.remove();
     if (!confirm("確定要刪除嗎？此動作無法復原。")) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/service-items/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/api/admin/settings/service-items/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (res.ok) {
         block.remove();
         alert("已刪除附加服務");
