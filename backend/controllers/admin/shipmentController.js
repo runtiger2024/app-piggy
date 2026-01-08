@@ -155,7 +155,7 @@ const approveShipment = async (req, res) => {
       "訂單審核完成",
       `您的訂單 ${id.slice(-8)} 已審核通過，請確認最終金額並完成支付。`,
       "SHIPMENT",
-      id
+      "/dashboard.html?tab=shipments"
     );
 
     await createLog(

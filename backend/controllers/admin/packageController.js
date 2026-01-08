@@ -484,7 +484,7 @@ const updatePackageDetails = async (req, res) => {
         "包裹已入庫",
         `您的包裹 ${pkg.trackingNumber} 已測量數據完畢並正式入庫。`,
         "PACKAGE",
-        "/dashboard?tab=packages"
+        "/dashboard.html?tab=packages"
       );
       // Email 通知
       await sendPackageArrivedNotification(updated, pkg.user);

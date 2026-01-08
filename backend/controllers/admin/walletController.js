@@ -219,7 +219,7 @@ const reviewTransaction = async (req, res) => {
         "儲值成功",
         `您申請的 $${tx.amount.toLocaleString()} 儲值已核准並入帳。`,
         "WALLET",
-        "tab-wallet"
+        "/dashboard.html?tab=wallet"
       );
       await createLog(
         req.user.id,

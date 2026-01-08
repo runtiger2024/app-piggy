@@ -220,7 +220,7 @@ const updateFurnitureOrder = async (req, res) => {
         status
       )}`,
       "FURNITURE",
-      `/dashboard/furniture`
+      "/dashboard.html?tab=furniture"
     );
 
     res.status(200).json({ success: true, order: updatedOrder });
@@ -287,12 +287,10 @@ const bulkDeleteFurniture = async (req, res) => {
       null,
       `批量刪除 ${deleteCount.count} 筆傢俱訂單`
     );
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: `已成功刪除 ${deleteCount.count} 筆訂單`,
-      });
+    res.status(200).json({
+      success: true,
+      message: `已成功刪除 ${deleteCount.count} 筆訂單`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: "批量刪除失敗" });
   }
