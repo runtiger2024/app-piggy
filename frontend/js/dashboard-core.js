@@ -198,6 +198,26 @@ function syncProfileToUI(user) {
       emailDisplay.title = "請務必更新真實電子信箱";
     }
   }
+  // 在 syncProfileToUI(user) 函式末尾加入
+  const isTemp = user.email && user.email.includes("@line.temp");
+  const emailInput = document.getElementById("edit-email");
+  const emailLabel = document.getElementById("label-edit-email");
+  const emailHint = document.getElementById("email-hint");
+
+  if (emailInput) {
+    if (isTemp) {
+      emailInput.disabled = false; // 開放修改
+      emailInput.style.border = "2px solid #1a73e8"; // 醒目提醒
+      if (emailHint) emailHint.style.display = "block";
+      if (emailLabel)
+        emailLabel.innerHTML =
+          '電子信箱 <span style="color:#d32f2f;">(待補填)</span>';
+    } else {
+      emailInput.disabled = true; // 已是正式信箱，鎖定防止誤改
+      emailInput.style.background = "#f1f5f9";
+      if (emailHint) emailHint.style.display = "none";
+    }
+  }
 }
 
 // --- [4. 系統配置與銀行資訊] ---

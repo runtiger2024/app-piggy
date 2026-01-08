@@ -249,6 +249,7 @@ function bindForms() {
       const data = {
         name: document.getElementById("edit-name")?.value || "",
         phone: document.getElementById("edit-phone")?.value || "",
+        email: document.getElementById("edit-email")?.value || "",
         defaultAddress: document.getElementById("edit-address")?.value || "",
         defaultTaxId: document.getElementById("edit-taxId")?.value || "",
         defaultInvoiceTitle:

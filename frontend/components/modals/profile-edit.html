@@ -49,14 +49,16 @@
             </div>
           </div>
           <div class="form-group" style="margin-top: 15px">
-            <label>電子信箱 (不可更改)</label>
+            <label id="label-edit-email">電子信箱</label>
             <input
               type="email"
               id="edit-email"
               class="form-control"
-              disabled
-              style="background: #f1f5f9 !important"
+              placeholder="請輸入真實信箱以利開立發票"
             />
+            <small id="email-hint" style="color: #d32f2f; display: none">
+              * 您目前使用系統暫時信箱，請務必更新。
+            </small>
           </div>
         </div>
 
