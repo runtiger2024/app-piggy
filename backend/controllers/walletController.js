@@ -1,6 +1,6 @@
 // backend/controllers/walletController.js
-// V2.2 - 最終整合版 (用戶端 V1.8 + 管理端 V2.1)
-// 特色：修正 Cloudinary HTTPS 破圖、強化統編驗證、新增管理員批量審核與財務儀表板統計
+// V2.3 - 強化 Email 檢核與發票安全攔截版
+// 特色：修正 Cloudinary HTTPS 破圖、強化統編驗證、新增發票 Email 安全攔截、管理員批量審核與財務儀表板統計
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
@@ -288,6 +288,7 @@ const getTransactions = async (req, res) => {
 
 /**
  * 審核單筆交易 (同意/駁回)
+ * [優化] 新增 Email 安全檢核攔截邏輯
  */
 const reviewTransaction = async (req, res) => {
   try {
@@ -303,6 +304,18 @@ const reviewTransaction = async (req, res) => {
       return res.status(400).json({ message: "交易不存在或已處理" });
 
     if (action === "APPROVE") {
+      // [安全檢核] 攔截 LINE 佔位符號 Email，防止在無法正確通知發票的情況下入帳
+      if (
+        tx.type === "DEPOSIT" &&
+        tx.wallet.user.email.includes("@line.temp")
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "核准中止：該會員仍在使用 LINE 暫時 Email (@line.temp)，開立發票將會失敗。請先聯繫會員補填資料，或由管理員手動更新該會員 Email 後再行核准。",
+        });
+      }
+
       let invoiceResult = null;
       if (tx.type === "DEPOSIT" && tx.amount > 0) {
         invoiceResult = await invoiceHelper.createDepositInvoice(
@@ -502,6 +515,7 @@ const manualAdjust = async (req, res) => {
 
 /**
  * 手動補開發票
+ * [優化] 新增補開時的 Email 安全檢核
  */
 const manualIssueDepositInvoice = async (req, res) => {
   try {
@@ -512,6 +526,18 @@ const manualIssueDepositInvoice = async (req, res) => {
     });
     if (!tx || tx.type !== "DEPOSIT" || tx.status !== "COMPLETED")
       return res.status(400).json({ message: "不符條件" });
+
+    // [安全檢核] 檢查 Email 是否為佔位符號
+    if (tx.wallet.user.email.includes("@line.temp")) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "補開失敗：該會員 Email 仍為 LINE 暫時信箱，無法發送電子發票通知。",
+        });
+    }
+
     const result = await invoiceHelper.createDepositInvoice(tx, tx.wallet.user);
     if (result.success) {
       await prisma.transaction.update({

@@ -1,13 +1,14 @@
 /**
  * dashboard-core.js
  * 負責：全域變數、工具函式、使用者資料同步、系統設定、動態上傳組件、通知系統
- * V2026.1.15_Optimized_V2 - 旗艦終極優化版 (增強圖片上傳反饋)
+ * V2026.1.15_Optimized_V2 - 旗艦終極優化版 (增強圖片上傳反饋與 Email 補填提醒)
  * * 變更紀錄：
  * 1. [新增功能]：上傳組件選取檔案後新增自動 Toast 提示張數與成功狀態。
  * 2. [效能優化]：重構 initImageUploader 渲染邏輯，使用 DocumentFragment 減少 DOM 操縱。
  * 3. [整合修復]：syncProfileToUI 現在會同步資料至密碼表單的隱藏使用者名稱欄位 (cp-username-hidden)。
  * 4. [邏輯修正]：修復 openShipmentDetails 的潛在遞迴錯誤。
  * 5. [穩定性]：強化 Toast 訊息容器偵測機制。
+ * 6. [優化整合]：syncProfileToUI 新增偵測 @line.temp 自動彈出補填信箱提醒並標紅顯示。
  */
 
 // --- [1. 全域變數與狀態管理] ---
@@ -129,6 +130,7 @@ window.loadUserProfile = async function () {
 
 /**
  * 將使用者資料渲染至畫面上所有相關的 ID
+ * [優化] 新增偵測 LINE 佔位符號 Email 並給予警告
  */
 function syncProfileToUI(user) {
   // 1. 迎賓文字
@@ -174,6 +176,28 @@ function syncProfileToUI(user) {
   userIdElements.forEach((el) => {
     el.textContent = finalMemberId;
   });
+
+  // --- [新增/優化] Email 佔位符號檢查與警示邏輯 ---
+  // 檢查 user.email 是否包含 @line.temp，這代表用戶尚未更新真實信箱
+  const isPlaceholder = user.email && user.email.includes("@line.temp");
+
+  if (isPlaceholder) {
+    // 延遲顯示，確保用戶已進入頁面
+    setTimeout(() => {
+      window.showMessage(
+        "⚠️ 您尚未設定真實 Email！為了確保電子發票與訂單通知能準確送達，請前往「帳號設定」更新您的電子信箱。",
+        "warning"
+      );
+    }, 1500);
+
+    // 同時將顯示 Email 的區域變更顏色以引起注意
+    const emailDisplay = document.getElementById("user-email");
+    if (emailDisplay) {
+      emailDisplay.style.color = "#d32f2f";
+      emailDisplay.style.fontWeight = "bold";
+      emailDisplay.title = "請務必更新真實電子信箱";
+    }
+  }
 }
 
 // --- [4. 系統配置與銀行資訊] ---

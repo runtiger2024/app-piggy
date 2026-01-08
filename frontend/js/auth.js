@@ -150,6 +150,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!response.ok) throw new Error(data.message || "登入失敗");
 
       showMessage("登入成功！正在跳轉至會員中心...", "success");
+
+      // --- 新增判斷邏輯 ---
+      let welcomeMsg = "LINE 登入成功！正在跳轉...";
+      if (data.user.isEmailPlaceholder) {
+        welcomeMsg =
+          "LINE 登入成功！提示：您目前使用暫時 Email，請進入系統後更新以利接收發票通知。";
+      }
+      showMessage(
+        welcomeMsg,
+        data.user.isEmailPlaceholder ? "warning" : "success"
+      );
+      // ------------------
+
       localStorage.setItem("token", data.token);
       localStorage.setItem("userName", data.user.name || data.user.email);
 

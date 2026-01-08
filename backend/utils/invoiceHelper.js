@@ -1,10 +1,18 @@
 // backend/utils/invoiceHelper.js
-// V2025.Furniture - 新增傢俱代採購服務費發票支援
+// V2025.Furniture.Optimized - 新增 Email 佔位符號檢核與傢俱代採購支援
 
 const axios = require("axios");
 const crypto = require("crypto");
 const prisma = require("../config/db.js");
 require("dotenv").config();
+
+/**
+ * [新增] 檢查 Email 是否為 LINE 佔位符號
+ * 若為 true，則應阻止發票開立
+ */
+const isPlaceholderEmail = (email) => {
+  return !email || email.includes("@line.temp");
+};
 
 // 強制清洗 BASE_URL
 const RAW_BASE_URL =
@@ -131,8 +139,18 @@ const sendAmegoRequest = async (endpoint, dataObj, config, merchantOrderNo) => {
 
 /**
  * 1. 開立發票 (集運單)
+ * [優化] 加入 Email 佔位符號檢查
  */
 const createInvoice = async (shipment, user) => {
+  // 檢查是否為 LINE 佔位符號 Email
+  if (isPlaceholderEmail(user.email)) {
+    return {
+      success: false,
+      message:
+        "開立失敗：使用者尚未設定真實 Email (@line.temp)，請通知客戶補填資料以接收發票。",
+    };
+  }
+
   const config = await getInvoiceConfig();
   if (!config.enabled)
     return { success: false, message: "系統設定：發票功能已關閉" };
@@ -281,7 +299,7 @@ const voidInvoice = async (invoiceNumber, reason = "訂單取消") => {
   try {
     const resData = await sendAmegoRequest(
       "/f0501",
-      dataObj,
+      config.hashKey ? dataObj : dataObj, // 修正對齊原有邏輯
       config,
       "VOID-" + invoiceNumber
     );
@@ -304,8 +322,18 @@ const voidInvoice = async (invoiceNumber, reason = "訂單取消") => {
 
 /**
  * 3. 儲值發票 (優先使用交易紀錄中的統編)
+ * [優化] 加入 Email 佔位符號檢查
  */
 const createDepositInvoice = async (transaction, user) => {
+  // 檢查是否為 LINE 佔位符號 Email
+  if (isPlaceholderEmail(user.email)) {
+    return {
+      success: false,
+      message:
+        "儲值發票開立失敗：使用者 Email 仍為 LINE 暫時信箱，無法發送通知。",
+    };
+  }
+
   const config = await getInvoiceConfig();
   if (!config.enabled) return { success: false, message: "發票功能未啟用" };
 
@@ -426,8 +454,18 @@ const createDepositInvoice = async (transaction, user) => {
 /**
  * 4. 傢俱代採購發票 (新增功能)
  * 發票內容為「傢俱代採購服務費」
+ * [優化] 加入 Email 佔位符號檢查
  */
 const createFurnitureInvoice = async (order, user) => {
+  // 檢查是否為 LINE 佔位符號 Email
+  if (isPlaceholderEmail(user.email)) {
+    return {
+      success: false,
+      message:
+        "代採購服務費發票開立失敗：檢測到 LINE 佔位符號 Email，請先更新真實信箱。",
+    };
+  }
+
   const config = await getInvoiceConfig();
   if (!config.enabled)
     return { success: false, message: "系統設定：發票功能已關閉" };
