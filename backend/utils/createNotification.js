@@ -71,7 +71,7 @@ const createNotification = async (
         altText: `【${config.label}】${title}`,
         contents: {
           type: "bubble",
-          size: "medium",
+          size: "mega",
           header: {
             type: "box",
             layout: "vertical",
