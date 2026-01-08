@@ -20,22 +20,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!lineLoginBtn) return;
 
     try {
-      // 動態載入 LINE SDK (若 HTML 未引入)
       if (typeof liff === "undefined") {
         await loadLiffSDK();
       }
 
       await liff.init({ liffId: MY_LIFF_ID });
 
-      // 檢查是否是從 LINE 授權後跳轉回來的
-      if (liff.isLoggedIn()) {
+      // --- 修正邏輯 ---
+      // 檢查 URL 中是否帶有 'code' 或 'state' 參數 (代表剛從 LINE 授權跳轉回來)
+      const urlParams = new URLSearchParams(window.location.search);
+      const isReturningFromAuth =
+        urlParams.has("code") || urlParams.has("state");
+
+      // 只有在「剛授權完跳轉回來」且「已登入」的情況下，才自動執行後端驗證
+      if (liff.isLoggedIn() && isReturningFromAuth) {
         handleLineLoginData();
+      } else {
+        // 否則，僅停留在登入頁，等待用戶點擊 lineLoginBtn
+        console.log("LINE LIFF 已就緒，等待用戶操作");
       }
     } catch (err) {
-      console.warn("LINE SDK 初始化失敗，請檢查 LIFF ID 是否正確:", err);
+      console.warn("LINE SDK 初始化失敗:", err);
     }
   }
 
+  // 登出函式建議 (供參考，應放在登出按鈕邏輯中)
+  function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userName");
+    // 必須執行 liff.logout() 才能中斷 LIFF 的登入狀態
+    if (liff.isLoggedIn()) {
+      liff.logout();
+    }
+    window.location.href = "login.html";
+  }
   /**
    * 處理 LINE 登入成功後的資料交換
    */
