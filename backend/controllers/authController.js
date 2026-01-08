@@ -1,12 +1,12 @@
 // backend/controllers/authController.js
-// V16.2 - 旗艦整合版：保留 V16.1 所有穩定特性，新增 LINE 登入與並行綁定機制
+// V16.3 - 旗艦優化版：修復 V16.2 的 piggyId 排序陷阱、LINE 註冊崩潰風險與重試邏輯
 
 const prisma = require("../config/db.js");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const generateToken = require("../utils/generateToken.js");
 const sgMail = require("@sendgrid/mail");
-const createLog = require("../utils/createLog.js"); // [大師優化] 引入日誌工具
+const createLog = require("../utils/createLog.js");
 
 // 設定 SendGrid API Key
 if (process.env.SENDGRID_API_KEY) {
@@ -14,8 +14,33 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 /**
- * 註冊使用者：包含 RP0000889 遞增編號邏輯
- * [大師級優化]：使用 $transaction 確保 User 與 Wallet 必定同時生成
+ * [大師級優化] 輔助函式：安全地獲取下一個遞增 piggyId
+ * 解決資料庫字串排序 (RP9 > RP0000889) 的邏輯陷阱
+ */
+const getNextPiggyId = async (tx) => {
+  // 取得所有具備 RP 前綴的編號
+  const users = await tx.user.findMany({
+    where: { piggyId: { startsWith: "RP" } },
+    select: { piggyId: true },
+  });
+
+  let maxNum = 888; // 系統起始預設值
+  users.forEach((u) => {
+    if (u.piggyId) {
+      const num = parseInt(u.piggyId.replace("RP", ""), 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  });
+
+  // 返回格式化後的下一個編號
+  return "RP" + String(maxNum + 1).padStart(7, "0");
+};
+
+/**
+ * 註冊使用者
+ * [修復]：區分 Email 重複與編號重複，避免盲目重試導致系統繁忙
  */
 const registerUser = async (req, res) => {
   try {
@@ -44,21 +69,11 @@ const registerUser = async (req, res) => {
     let retryCount = 0;
     const maxRetries = 5;
 
-    // --- [核心：帶有衝突重試的原子化註冊流程] ---
     while (!newUser && retryCount < maxRetries) {
       try {
         newUser = await prisma.$transaction(async (tx) => {
-          // 1. 生成唯一 piggyId
-          const lastUser = await tx.user.findFirst({
-            where: { piggyId: { startsWith: "RP" } },
-            orderBy: { piggyId: "desc" },
-          });
-
-          let nextPiggyId = "RP0000889";
-          if (lastUser && lastUser.piggyId) {
-            const currentNum = parseInt(lastUser.piggyId.replace("RP", ""), 10);
-            nextPiggyId = "RP" + String(currentNum + 1).padStart(7, "0");
-          }
+          // 1. 使用優化後的邏輯生成唯一 piggyId
+          const nextPiggyId = await getNextPiggyId(tx);
 
           // 2. 建立使用者
           const createdUser = await tx.user.create({
@@ -71,7 +86,7 @@ const registerUser = async (req, res) => {
             },
           });
 
-          // 3. 同步初始化錢包 (電子存摺)
+          // 3. 同步初始化錢包
           await tx.wallet.create({
             data: { userId: createdUser.id, balance: 0 },
           });
@@ -79,11 +94,12 @@ const registerUser = async (req, res) => {
           return createdUser;
         });
       } catch (dbError) {
+        // P2002 代表唯一約束衝突
         if (dbError.code === "P2002") {
           retryCount++;
           console.warn(`[註冊編號衝突] 正在進行第 ${retryCount} 次重試...`);
         } else {
-          throw dbError;
+          throw dbError; // 其他資料庫錯誤直接拋出
         }
       }
     }
@@ -91,10 +107,12 @@ const registerUser = async (req, res) => {
     if (!newUser) {
       return res
         .status(500)
-        .json({ success: false, message: "系統繁忙，請稍後再試" });
+        .json({
+          success: false,
+          message: "系統繁忙（編號生成失敗），請稍後再試",
+        });
     }
 
-    // [大師優化] 記錄註冊成功日誌
     await createLog(
       newUser.id,
       "USER_REGISTER",
@@ -122,7 +140,6 @@ const registerUser = async (req, res) => {
 
 /**
  * 登入使用者
- * [致命修正]：增加對 isActive 的檢查，防止註銷帳號登入
  */
 const loginUser = async (req, res) => {
   try {
@@ -137,7 +154,6 @@ const loginUser = async (req, res) => {
       where: { email: email.toLowerCase() },
     });
 
-    // [致命 Bug 修正點]
     if (!user || user.isActive === false) {
       return res
         .status(401)
@@ -169,8 +185,8 @@ const loginUser = async (req, res) => {
 };
 
 /**
- * LINE 登入：支援新用戶註冊與舊用戶自動綁定
- * [新增功能]：確保與一般登入並行，並生成推播所需的 lineUserId
+ * LINE 登入
+ * [修正]：確保 user 物件存在後才檢查 isActive，避免 TypeError 導致 500 錯誤
  */
 const lineLogin = async (req, res) => {
   try {
@@ -185,14 +201,13 @@ const lineLogin = async (req, res) => {
       where: { lineUserId },
     });
 
-    // 2. 若找不到，嘗試透過 Email 尋找並自動綁定（實現模式並行）
+    // 2. 若找不到，嘗試透過 Email 尋找並自動綁定
     if (!user && email) {
       const existingUser = await prisma.user.findUnique({
         where: { email: email.toLowerCase() },
       });
 
       if (existingUser) {
-        // 自動綁定 LINE ID
         user = await prisma.user.update({
           where: { id: existingUser.id },
           data: { lineUserId },
@@ -219,19 +234,7 @@ const lineLogin = async (req, res) => {
       while (!newUser && retryCount < maxRetries) {
         try {
           newUser = await prisma.$transaction(async (tx) => {
-            const lastUser = await tx.user.findFirst({
-              where: { piggyId: { startsWith: "RP" } },
-              orderBy: { piggyId: "desc" },
-            });
-
-            let nextPiggyId = "RP0000889";
-            if (lastUser && lastUser.piggyId) {
-              const currentNum = parseInt(
-                lastUser.piggyId.replace("RP", ""),
-                10
-              );
-              nextPiggyId = "RP" + String(currentNum + 1).padStart(7, "0");
-            }
+            const nextPiggyId = await getNextPiggyId(tx);
 
             const createdUser = await tx.user.create({
               data: {
@@ -259,16 +262,25 @@ const lineLogin = async (req, res) => {
         }
       }
       user = newUser;
-      await createLog(
-        user.id,
-        "USER_REGISTER_LINE",
-        user.id,
-        `LINE快速註冊: ${user.piggyId}`,
-        user.email
-      );
+
+      if (user) {
+        await createLog(
+          user.id,
+          "USER_REGISTER_LINE",
+          user.id,
+          `LINE快速註冊: ${user.piggyId}`,
+          user.email
+        );
+      }
     }
 
-    // [安全性檢查] 防止註銷帳號透過 LINE 登入
+    // [安全性檢查] 確保 user 存在且為啟動狀態
+    if (!user) {
+      return res
+        .status(500)
+        .json({ success: false, message: "LINE 註冊失敗，請聯繫客服" });
+    }
+
     if (user.isActive === false) {
       return res.status(401).json({ success: false, message: "此帳號已註銷" });
     }
@@ -304,7 +316,6 @@ const bindLine = async (req, res) => {
       return res.status(400).json({ success: false, message: "缺失 LINE ID" });
     }
 
-    // 檢查該 LINE ID 是否已被其他人綁定
     const conflict = await prisma.user.findUnique({ where: { lineUserId } });
     if (conflict && conflict.id !== userId) {
       return res
@@ -345,7 +356,7 @@ const getMe = async (req, res) => {
         name: true,
         permissions: true,
         phone: true,
-        lineUserId: true, // 新增返回欄位
+        lineUserId: true,
         defaultAddress: true,
         createdAt: true,
         defaultTaxId: true,
@@ -359,7 +370,7 @@ const getMe = async (req, res) => {
 };
 
 /**
- * 帳號註銷 (Apple Store 強制要求)
+ * 帳號註銷
  */
 const deleteMe = async (req, res) => {
   try {
@@ -372,7 +383,7 @@ const deleteMe = async (req, res) => {
         isActive: false,
         name: "已註銷會員",
         phone: null,
-        lineUserId: null, // 同步清除 LINE 綁定
+        lineUserId: null,
         defaultAddress: null,
         defaultTaxId: null,
         defaultInvoiceTitle: null,
@@ -542,12 +553,10 @@ const changePassword = async (req, res) => {
     if (!user)
       return res.status(404).json({ success: false, message: "找不到使用者" });
     if (!user.passwordHash)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "此帳號尚未設定密碼，請使用 LINE 登入",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "此帳號尚未設定密碼，請使用 LINE 登入",
+      });
 
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isMatch)
@@ -571,8 +580,8 @@ const changePassword = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
-  lineLogin, // [新增]
-  bindLine, // [新增]
+  lineLogin,
+  bindLine,
   getMe,
   deleteMe,
   updateMe,
