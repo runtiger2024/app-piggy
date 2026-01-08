@@ -243,7 +243,7 @@ const bulkUpdateShipmentStatus = async (req, res) => {
           "訂單已確認收款",
           `您的訂單 ${ship.id.slice(-8)} 已確認收款，將安排裝櫃。`,
           "SHIPMENT",
-          ship.id
+          "/dashboard.html?tab=shipments"
         );
 
         successCount++;
@@ -290,7 +290,7 @@ const bulkUpdateShipmentStatus = async (req, res) => {
             "訂單已取消",
             `您的訂單 ${ship.id.slice(-8)} 已取消。`,
             "SHIPMENT",
-            ship.id
+            "/dashboard.html?tab=shipments"
           );
         }
       });
@@ -338,7 +338,7 @@ const bulkUpdateShipmentStatus = async (req, res) => {
               `訂單狀態更新：${statusMsgs[status]}`,
               `您的訂單 ${s.id.slice(-8)} 目前狀態：${statusMsgs[status]}。`,
               "SHIPMENT",
-              s.id
+              "/dashboard.html?tab=shipments"
             );
             if (status === "SHIPPED") {
               await sendShipmentShippedNotification(s, s.user);
@@ -501,7 +501,7 @@ const updateShipmentStatus = async (req, res) => {
         "訂單已取消",
         `您的訂單 ${id.slice(-8)} 已取消並釋放包裹。`,
         "SHIPMENT",
-        id
+        "/dashboard.html?tab=shipments"
       );
 
       const refundMsg = result.refunded ? " (已退款)" : "";
@@ -564,7 +564,7 @@ const updateShipmentStatus = async (req, res) => {
         statusMsgs[status],
         `您的訂單 ${id.slice(-8)} 狀態更新：${statusMsgs[status]}`,
         "SHIPMENT",
-        id
+        "/dashboard.html?tab=shipments"
       );
       if (status === "SHIPPED") {
         await sendShipmentShippedNotification(updated, originalShipment.user);
@@ -634,7 +634,7 @@ const rejectShipment = async (req, res) => {
       "訂單被退回",
       `您的訂單 ${id.slice(-8)} 已被退回，原因：${returnReason || "無"}。`,
       "SHIPMENT",
-      id
+      "/dashboard.html?tab=shipments"
     );
 
     const refundMsg = result.refunded ? " (已退款至錢包)" : "";
@@ -905,7 +905,7 @@ const adjustShipmentPrice = async (req, res) => {
       "訂單金額調整通知",
       `您的訂單 ${id.slice(-8)} 金額已調整為 $${targetPrice}。原因：${reason}`,
       "SHIPMENT",
-      id
+      "/dashboard.html?tab=shipments"
     );
 
     res.status(200).json({
