@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- 2. LINE Login 初始化與邏輯 (LIFF) ---
   // [注意] 請在 LINE Developers 的 LIFF 頁籤建立後，將取得的 ID 填入下方
-  const MY_LIFF_ID = "2008843170-UepDAsyw"; // 請替換為您的 LIFF ID
+  const MY_LIFF_ID = "2008848533-2vczl7ua"; // 請替換為您的 LIFF ID
 
   /**
    * 初始化 LINE LIFF 並檢查登入狀態
