@@ -20,8 +20,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@prisma/client": "^6.19.1",
-    "prisma": "^6.19.1",
+    "@prisma/client": "6.19.1",
     "@sendgrid/mail": "^8.1.6",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
@@ -32,11 +31,12 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "prisma": "6.19.1",
     "qs": "^6.14.0",
     "sharp": "^0.33.2"
   },
   "devDependencies": {
     "dotenv-cli": "^11.0.0",
-    "nodemon": "^3.1.10"    
+    "nodemon": "^3.1.10"
   }
 }
