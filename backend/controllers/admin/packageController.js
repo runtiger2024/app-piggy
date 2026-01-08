@@ -1,5 +1,5 @@
 // backend/controllers/admin/packageController.js
-// V2025.Final.Optimized - Fixes Paths, Rate Calculation, and Notifications
+// V2025.Final.Optimized - 旗艦整合版：修復費率計算、路徑處理並全面支援 LINE 自動推播
 
 const prisma = require("../../config/db.js");
 const createLog = require("../../utils/createLog.js");
@@ -147,7 +147,7 @@ const bulkUpdatePackageStatus = async (req, res) => {
       data: { status },
     });
 
-    // 若狀態變更為 ARRIVED (已入庫)，發送通知
+    // 若狀態變更為 ARRIVED (已入庫)，觸發多渠道通知 (含 LINE 推播)
     if (status === "ARRIVED") {
       const packages = await prisma.package.findMany({
         where: { id: { in: ids } },
@@ -157,19 +157,19 @@ const bulkUpdatePackageStatus = async (req, res) => {
           productName: true,
           arrivedBoxesJson: true,
         },
-        include: { user: true }, // 需要 User email
+        include: { user: true },
       });
 
       // 並行處理通知發送
       await Promise.all(
         packages.map(async (p) => {
-          // 1. 站內通知
+          // 1. 站內通知 & LINE 推播 (由 createNotification 內部自動判定處理)
           await createNotification(
             p.userId,
             "包裹已入庫",
             `您的包裹 ${p.trackingNumber} 已送達倉庫並入庫。`,
             "PACKAGE",
-            "tab-packages"
+            "/dashboard?tab=packages"
           );
           // 2. Email 通知
           await sendPackageArrivedNotification(p, p.user);
@@ -201,7 +201,7 @@ const bulkDeletePackages = async (req, res) => {
     if (!Array.isArray(ids) || ids.length === 0)
       return res.status(400).json({ success: false, message: "未選擇包裹" });
 
-    // 先查詢圖片以進行刪除
+    // 先查詢圖片以進行實體檔案刪除
     const packages = await prisma.package.findMany({
       where: { id: { in: ids } },
       select: { productImages: true, warehouseImages: true },
@@ -270,11 +270,13 @@ const adminCreatePackage = async (req, res) => {
       },
     });
 
+    // 建立通知 (同時觸發 LINE 推播)
     await createNotification(
       userId,
       "管理員已代為預報",
       `您的包裹 ${trackingNumber} 已由客服建立。`,
-      "PACKAGE"
+      "PACKAGE",
+      "/dashboard?tab=packages"
     );
 
     await createLog(
@@ -339,7 +341,7 @@ const updatePackageStatus = async (req, res) => {
 
     const pkg = await prisma.package.findUnique({
       where: { id },
-      include: { user: true }, // 包含 User 資訊以便發信
+      include: { user: true },
     });
     if (!pkg) return res.status(404).json({ message: "包裹不存在" });
 
@@ -355,15 +357,15 @@ const updatePackageStatus = async (req, res) => {
       data: { status },
     });
 
-    // 觸發入庫通知
+    // 觸發入庫通知 (含 LINE 自動推播)
     if (status === "ARRIVED" && pkg.status !== "ARRIVED") {
       // 1. 站內通知
       await createNotification(
         pkg.userId,
         "包裹已入庫",
-        `您的包裹 ${pkg.trackingNumber} 已測量完畢並入庫，請前往打包。`,
+        `您的包裹 ${pkg.trackingNumber} 已送達倉庫並測量完畢，請前往打包。`,
         "PACKAGE",
-        "tab-packages"
+        "/dashboard?tab=packages"
       );
       // 2. Email 通知
       await sendPackageArrivedNotification(updatedPkg, pkg.user);
@@ -385,7 +387,7 @@ const updatePackageStatus = async (req, res) => {
 
 /**
  * @description [Critical Fix] 更新包裹詳情與運費計算
- * @summary 修復 0 元運費問題 & 類型大小寫問題，確保費率計算正確
+ * @summary 修復 0 元運費問題 & 類型大小寫問題，確保費率計算正確並觸發通知
  * @route PUT /api/admin/packages/:id/details
  */
 const updatePackageDetails = async (req, res) => {
@@ -432,9 +434,7 @@ const updatePackageDetails = async (req, res) => {
           totalFee += fee;
           return {
             ...box,
-            // [Critical Fix] 移除 .toLowerCase()！
-            // 必須保留原始大小寫 (例如 "Special Furniture A")，否則 ratesManager
-            // 在比對區分大小寫的費率 Key 時會失敗，導致降級為一般費率。
+            // [Critical Fix] 移除 .toLowerCase() 以保證費率 Key 比對正確
             type: (box.type || "general").trim(),
             weight,
             length: l,
@@ -459,7 +459,7 @@ const updatePackageDetails = async (req, res) => {
       keepImgs = JSON.parse(existingImages || "[]");
     } catch (e) {}
 
-    // 刪除未保留的舊圖
+    // 刪除未被勾選保留的舊圖
     const toDelete = currentImgs.filter((i) => !keepImgs.includes(i));
     deleteFiles(toDelete);
 
@@ -476,17 +476,17 @@ const updatePackageDetails = async (req, res) => {
       data: updateData,
     });
 
-    // 若更新詳情時觸發了入庫 (例如原本是 PENDING，現在量測完變 ARRIVED)
+    // 若更新詳情時觸發了入庫狀態轉移，發送通知
     if (status === "ARRIVED" && pkg.status !== "ARRIVED") {
-      // 1. 站內通知
+      // 觸發站內通知與 LINE 自動推播
       await createNotification(
         pkg.userId,
         "包裹已入庫",
-        `您的包裹 ${pkg.trackingNumber} 已更新測量數據。`,
+        `您的包裹 ${pkg.trackingNumber} 已測量數據完畢並正式入庫。`,
         "PACKAGE",
-        "tab-packages"
+        "/dashboard?tab=packages"
       );
-      // 2. Email 通知
+      // Email 通知
       await sendPackageArrivedNotification(updated, pkg.user);
     }
 
@@ -494,7 +494,7 @@ const updatePackageDetails = async (req, res) => {
       req.user.id,
       "UPDATE_PACKAGE_DETAILS",
       id,
-      "更新詳情(含運費計算 - Fix)"
+      "更新詳情(含運費計算與 LINE 推播觸發)"
     );
 
     res.status(200).json({

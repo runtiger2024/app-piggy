@@ -1,5 +1,5 @@
 // backend/server.js
-// V16.1 - 旗艦整合強化版：支援 LINE Webhook、強化 CORS 安全性與 ngrok 測試支援
+// V16.2 - 旗艦整合修正版：解決 LINE Webhook 簽章驗證問題並保留完整功能
 
 const express = require("express");
 const dotenv = require("dotenv");
@@ -63,14 +63,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// 解析 JSON 格式請求主體 (Webhook 與一般 API 皆需要)
-app.use(express.json());
+// --- [關鍵修正：擷取原始 Body 供 LINE 簽章驗證使用] ---
+// 必須在解析 JSON 之前透過 verify 勾子擷取原始 Buffer，否則 verifyLineSignature 會因 JSON 格式化差異而驗證失敗
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // --- [核心功能：首頁測試路由] ---
 app.get("/", (req, res) => {
   res.json({
     message:
-      "小跑豬後端伺服器 (System V16.1 - LINE Webhook & Integration Ready)!",
+      "小跑豬後端伺服器 (System V16.2 - LINE Webhook & Integration Ready)!",
   });
 });
 
