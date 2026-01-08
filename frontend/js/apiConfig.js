@@ -5,8 +5,7 @@
  * 1. 定義伺服器網址
  * [大師建議]：當你正式上架 App 時，App 會直接連線到 PROD_URL。
  */
-const PROD_URL =
-  "https://encephalographically-pseudophilanthropic-norberto.ngrok-free.dev";
+const PROD_URL = "https://runpiggy-app-backend.onrender.com";
 const DEV_URL = "http://localhost:3000";
 /**
  * 2. 進階環境判斷邏輯
