@@ -52,8 +52,12 @@ const createNotification = async (
 
       const config = TYPE_CONFIG[type.toUpperCase()] || TYPE_CONFIG.DEFAULT;
 
-      // [核心修復] 強化網址補全邏輯，確保連結絕對可用
-      let fullLink = null;
+      // [核心修復] 強化網址補全邏輯，預設連結導向指定的 Dashboard 頁面
+      const dashboardUrl =
+        "https://runpiggy-app-frontend.onrender.com/dashboard.html";
+      let fullLink = dashboardUrl;
+
+      // 若有傳入特定的 link (例如特定包裹或運單路徑)，則執行動態組合
       if (link) {
         if (link.startsWith("http")) {
           fullLink = link;
@@ -71,7 +75,7 @@ const createNotification = async (
         altText: `【${config.label}】${title}`,
         contents: {
           type: "bubble",
-          size: "mega",
+          size: "mega", // 使用 LINE 官方支援的合法尺寸
           header: {
             type: "box",
             layout: "vertical",
@@ -106,25 +110,23 @@ const createNotification = async (
               },
             ],
           },
-          // 如果有連結，才顯示底部的「查看詳情」按鈕
-          footer: fullLink
-            ? {
-                type: "box",
-                layout: "vertical",
-                contents: [
-                  {
-                    type: "button",
-                    style: "primary",
-                    color: config.color,
-                    action: {
-                      type: "uri",
-                      label: "點此查看詳情",
-                      uri: fullLink,
-                    },
-                  },
-                ],
-              }
-            : undefined,
+          // 底部「查看詳情」按鈕：一律指向指定的導覽網址
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                color: config.color,
+                action: {
+                  type: "uri",
+                  label: "點此查看詳情",
+                  uri: fullLink,
+                },
+              },
+            ],
+          },
         },
       };
 
