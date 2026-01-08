@@ -1,5 +1,5 @@
 // backend/controllers/authController.js
-// V16.3 - 旗艦優化版：修復 V16.2 的 piggyId 排序陷阱、LINE 註冊崩潰風險與重試邏輯
+// V16.4 - 旗艦優化修正版：調整編號起始值為 RP6006888 並優化 LINE 暫時郵件處理
 
 const prisma = require("../config/db.js");
 const bcrypt = require("bcryptjs");
@@ -14,8 +14,8 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 /**
- * [大師級優化] 輔助函式：安全地獲取下一個遞增 piggyId
- * 解決資料庫字串排序 (RP9 > RP0000889) 的邏輯陷阱
+ * [優化] 輔助函式：安全地獲取下一個遞增 piggyId
+ * [修正] 系統起始預設值調整為 6006887，確保下一位會員從 RP6006888 開始
  */
 const getNextPiggyId = async (tx) => {
   // 取得所有具備 RP 前綴的編號
@@ -24,7 +24,8 @@ const getNextPiggyId = async (tx) => {
     select: { piggyId: true },
   });
 
-  let maxNum = 888; // 系統起始預設值
+  // 為了從 RP6006888 開始，將初始最大值設為 6006887
+  let maxNum = 6006887;
   users.forEach((u) => {
     if (u.piggyId) {
       const num = parseInt(u.piggyId.replace("RP", ""), 10);
@@ -34,13 +35,13 @@ const getNextPiggyId = async (tx) => {
     }
   });
 
-  // 返回格式化後的下一個編號
+  // 返回格式化後的下一個編號 (例如: RP6006888)
   return "RP" + String(maxNum + 1).padStart(7, "0");
 };
 
 /**
  * 註冊使用者
- * [修復]：區分 Email 重複與編號重複，避免盲目重試導致系統繁忙
+ * [保留] 區分 Email 重複與編號重複之重試邏輯
  */
 const registerUser = async (req, res) => {
   try {
@@ -72,7 +73,7 @@ const registerUser = async (req, res) => {
     while (!newUser && retryCount < maxRetries) {
       try {
         newUser = await prisma.$transaction(async (tx) => {
-          // 1. 使用優化後的邏輯生成唯一 piggyId
+          // 1. 使用優化後的邏輯生成唯一 piggyId (從 RP6006888 起算)
           const nextPiggyId = await getNextPiggyId(tx);
 
           // 2. 建立使用者
@@ -99,18 +100,16 @@ const registerUser = async (req, res) => {
           retryCount++;
           console.warn(`[註冊編號衝突] 正在進行第 ${retryCount} 次重試...`);
         } else {
-          throw dbError; // 其他資料庫錯誤直接拋出
+          throw dbError;
         }
       }
     }
 
     if (!newUser) {
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message: "系統繁忙（編號生成失敗），請稍後再試",
-        });
+      return res.status(500).json({
+        success: false,
+        message: "系統繁忙（編號生成失敗），請稍後再試",
+      });
     }
 
     await createLog(
@@ -186,7 +185,7 @@ const loginUser = async (req, res) => {
 
 /**
  * LINE 登入
- * [修正]：確保 user 物件存在後才檢查 isActive，避免 TypeError 導致 500 錯誤
+ * [優化]：增加 isEmailPlaceholder 標記，用於前端識別暫時信箱並提醒用戶更新。
  */
 const lineLogin = async (req, res) => {
   try {
@@ -285,6 +284,10 @@ const lineLogin = async (req, res) => {
       return res.status(401).json({ success: false, message: "此帳號已註銷" });
     }
 
+    // [修正分析]：若用戶 Email 結尾為 @line.temp，標記為預留位置。
+    // 這能讓前端收到後彈出提醒，要求用戶補全 Email 以利後續發票開立。
+    const isPlaceholder = user.email.endsWith("@line.temp");
+
     const permissions = user.permissions || [];
     res.status(200).json({
       success: true,
@@ -295,6 +298,7 @@ const lineLogin = async (req, res) => {
         email: user.email,
         name: user.name,
         permissions: permissions,
+        isEmailPlaceholder: isPlaceholder,
       },
       token: generateToken(user.id, { permissions }),
     });
@@ -415,12 +419,32 @@ const updateMe = async (req, res) => {
   try {
     const userId = req.user.id;
     const userEmail = req.user.email;
-    const { name, phone, defaultAddress, defaultTaxId, defaultInvoiceTitle } =
-      req.body;
+    const {
+      name,
+      phone,
+      defaultAddress,
+      defaultTaxId,
+      defaultInvoiceTitle,
+      email,
+    } = req.body;
+
+    // 準備更新數據
+    const updateData = {
+      name,
+      phone,
+      defaultAddress,
+      defaultTaxId,
+      defaultInvoiceTitle,
+    };
+
+    // 如果傳入了新的 email，且不是暫時信箱，則允許更新 (需確保唯一性)
+    if (email && !email.endsWith("@line.temp")) {
+      updateData.email = email.toLowerCase();
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { name, phone, defaultAddress, defaultTaxId, defaultInvoiceTitle },
+      data: updateData,
       select: {
         id: true,
         piggyId: true,
@@ -446,6 +470,7 @@ const updateMe = async (req, res) => {
       .status(200)
       .json({ success: true, message: "個人資料更新成功", user: updatedUser });
   } catch (error) {
+    console.error("更新個人資料失敗:", error);
     res.status(500).json({ success: false, message: "更新失敗" });
   }
 };
