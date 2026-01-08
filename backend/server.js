@@ -32,8 +32,7 @@ const allowedOrigins = [
   "http://localhost:5500", // 常見的 Live Server 前端
   "http://127.0.0.1:5500",
   "https://runpiggy-app-backend.onrender.com", // 您的正式環境後端網址
-  "https://runpiggy-app-frontend.onrender.com/", // [待替換] 您的正式環境前端網址
-  "https://encephalographically-pseudophilanthropic-norberto.ngrok-free.dev", // [新增] 您目前的 ngrok 測試網址
+  "https://runpiggy-app-frontend.onrender.com", // [待替換] 您的正式環境前端網址
   "capacitor://localhost", // iOS App 專用 (Capacitor/Cordova 框架)
   "http://localhost", // Android App 專用
 ];
