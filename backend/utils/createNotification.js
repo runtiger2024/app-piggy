@@ -1,5 +1,5 @@
 // backend/utils/createNotification.js
-// V16.5 - 專業版：導入 Flex Message 支援、強化網址校驗、優化代碼結構
+// V17.0 - 旗艦最終版：強制前端網域修正、自動路徑校驗、確保推播連結正確
 
 const prisma = require("../config/db.js");
 const { sendPush } = require("./lineManager");
@@ -52,20 +52,42 @@ const createNotification = async (
 
       const config = TYPE_CONFIG[type.toUpperCase()] || TYPE_CONFIG.DEFAULT;
 
-      // [核心修復] 強化網址補全邏輯，預設連結導向指定的 Dashboard 頁面
-      const dashboardUrl =
-        "https://runpiggy-app-frontend.onrender.com/dashboard.html";
-      let fullLink = dashboardUrl;
+      // [核心修復] 定義正確的前端基礎網址，並強制進行連結校驗
+      const FRONTEND_BASE = "https://runpiggy-app-frontend.onrender.com";
+      let fullLink = `${FRONTEND_BASE}/dashboard.html`;
 
-      // 若有傳入特定的 link (例如特定包裹或運單路徑)，則執行動態組合
       if (link) {
-        if (link.startsWith("http")) {
-          fullLink = link;
-        } else if (process.env.FRONTEND_URL) {
-          // 確保中間只有一個斜線
-          const baseUrl = process.env.FRONTEND_URL.replace(/\/$/, "");
-          const relativePath = link.startsWith("/") ? link : `/${link}`;
-          fullLink = `${baseUrl}${relativePath}`;
+        let targetPath = link;
+
+        // 1. 交叉檢查：如果傳入的是包含後端網域的絕對網址，強制剝離並轉為相對路徑
+        if (link.includes("runpiggy-app-backend.onrender.com")) {
+          try {
+            const urlObj = new URL(link);
+            targetPath = urlObj.pathname + urlObj.search;
+          } catch (e) {
+            targetPath = "/dashboard.html";
+          }
+        }
+
+        // 2. 處理路徑補全與 .html 修正
+        if (targetPath.startsWith("http")) {
+          // 如果是其他外部連結或已修正的網址，直接採用
+          fullLink = targetPath;
+        } else {
+          // 確保路徑開頭有斜線
+          let cleanPath = targetPath.startsWith("/")
+            ? targetPath
+            : `/${targetPath}`;
+
+          // [關鍵優化] 自動修正 dashboard 路徑遺漏 .html 的問題 (前端架構需求)
+          if (
+            cleanPath.startsWith("/dashboard") &&
+            !cleanPath.includes(".html")
+          ) {
+            cleanPath = cleanPath.replace("/dashboard", "/dashboard.html");
+          }
+
+          fullLink = `${FRONTEND_BASE}${cleanPath}`;
         }
       }
 
@@ -75,7 +97,7 @@ const createNotification = async (
         altText: `【${config.label}】${title}`,
         contents: {
           type: "bubble",
-          size: "mega", // 使用 LINE 官方支援的合法尺寸
+          size: "mega", // 使用 LINE 官方支援的合法尺寸 (避免日誌中的 size 報錯)
           header: {
             type: "box",
             layout: "vertical",
@@ -110,7 +132,7 @@ const createNotification = async (
               },
             ],
           },
-          // 底部「查看詳情」按鈕：一律指向指定的導覽網址
+          // 底部「查看詳情」按鈕：強制指向校驗後的前端連結
           footer: {
             type: "box",
             layout: "vertical",
