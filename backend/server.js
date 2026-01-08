@@ -38,6 +38,12 @@ const allowedOrigins = [
   "http://localhost", // Android App 專用
 ];
 
+app.get("/", (req, res) => {
+  res.json({
+    message: "小跑豬後端伺服器 (System V16.0 - LINE Integration Ready)!",
+  });
+});
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -69,7 +75,7 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 // 2. [保留優化] 前端網頁路徑：支援 quote.html 等前端頁面讀取
-app.use(express.static(path.join(__dirname, "../frontend")));
+//app.use(express.static(path.join(__dirname, "../frontend")));
 
 // --- 註冊 API 路由 (保留原功能) ---
 app.use("/api/auth", authRoutes);
@@ -84,12 +90,6 @@ app.use("/api/notifications", notificationRoutes);
 
 // [保留功能] 註冊傢俱代採購功能路由
 app.use("/api/furniture", furnitureRoutes);
-
-app.get("/", (req, res) => {
-  res.json({
-    message: "小跑豬後端伺服器 (System V16.0 - LINE Integration Ready)!",
-  });
-});
 
 // 全域錯誤處理邏輯 (保留原功能)
 app.use((err, req, res, next) => {
