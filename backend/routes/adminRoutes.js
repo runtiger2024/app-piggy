@@ -15,7 +15,7 @@ const userController = require("../controllers/admin/userController");
 const reportController = require("../controllers/admin/reportController");
 const walletController = require("../controllers/admin/walletController");
 const furnitureAdminController = require("../controllers/admin/furnitureAdminController");
-
+const contentAdmin = require("../controllers/admin/contentAdminController");
 const { protect, checkPermission } = require("../middleware/authMiddleware.js");
 
 // ==========================================
@@ -453,4 +453,59 @@ router
     furnitureAdminController.deleteFurnitureOrder
   );
 
+// 公告管理
+router.get("/news", authMiddleware, adminMiddleware, contentAdmin.adminGetNews);
+router.post(
+  "/news",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminCreateNews
+);
+router.put(
+  "/news/:id",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminUpdateNews
+);
+router.delete(
+  "/news/:id",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminDeleteNews
+);
+
+// FAQ 管理
+router.get("/faq", authMiddleware, adminMiddleware, contentAdmin.adminGetFaqs);
+router.put(
+  "/faq/:id",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminUpdateFaq
+);
+router.post(
+  "/faq",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminUpdateFaq
+); // 共用 upsert
+router.delete(
+  "/faq/:id",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminDeleteFaq
+);
+
+// 關於我們
+router.get(
+  "/static/about",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminGetStatic
+);
+router.put(
+  "/static/about",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminUpdateStatic
+);
 module.exports = router;
