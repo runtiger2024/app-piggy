@@ -31,7 +31,7 @@ const getFaqs = async (req, res) => {
     }
 
     // 執行查詢，並依照 order 欄位排序 (由管理員定義顯示順序)
-    const faqs = await prisma.faq.findMany({
+    const faqs = await prisma.fAQ.findMany({
       where,
       orderBy: {
         order: "asc",
