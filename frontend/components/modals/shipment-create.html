@@ -58,7 +58,7 @@
                 padding-bottom: 5px;
               "
             >
-              💰 費用試算明細
+              💰 費用明細
             </h5>
 
             <div
@@ -157,11 +157,23 @@
 
           <div class="form-group">
             <label class="required">收件人</label
-            ><input type="text" id="ship-name" class="form-control" required />
+            ><input
+              type="text"
+              id="ship-name"
+              class="form-control"
+              placeholder="真實姓名"
+              required
+            />
           </div>
           <div class="form-group">
             <label class="required">電話</label
-            ><input type="tel" id="ship-phone" class="form-control" required />
+            ><input
+              type="tel"
+              id="ship-phone"
+              class="form-control"
+              placeholder="收件人聯絡電話"
+              required
+            />
           </div>
 
           <div class="form-group">
@@ -170,14 +182,16 @@
               <input
                 type="text"
                 id="ship-area-search"
-                placeholder="搜尋地區..."
+                placeholder="搜尋地區 (例：板橋)..."
                 class="form-control"
                 style="flex: 1"
               />
               <div id="ship-search-results" class="search-dropdown"></div>
             </div>
             <select id="ship-delivery-location" class="form-control" required>
-              <option value="" selected disabled>--- 載入中 ---</option>
+              <option value="" selected disabled>
+                --- 正在讀取配送地區 ---
+              </option>
             </select>
             <div
               id="ship-remote-area-info"
@@ -213,16 +227,19 @@
               type="text"
               id="ship-street-address"
               class="form-control"
-              placeholder="路/街/號/樓"
+              placeholder="路 / 街 / 號 / 樓層"
               required
             />
           </div>
+
           <div class="form-group">
-            <label class="required">身分證 (報關用)</label
+            <label class="required">身分證字號 (報關用)</label
             ><input
               type="text"
               id="ship-idNumber"
               class="form-control"
+              placeholder="第一個字母大寫 + 9 位數字 (第一位為1或2)"
+              maxlength="10"
               required
             />
           </div>
@@ -237,23 +254,29 @@
           >
             <h4 style="margin-bottom: 10px; color: #2c3e50">🛠️ 附加服務</h4>
 
+            <div
+              class="alert alert-field-pay"
+              style="
+                background: #fffde7;
+                color: #856404;
+                padding: 10px;
+                border-radius: 8px;
+                font-size: 12px;
+                line-height: 1.5;
+                border: 1px solid #fff9c4;
+                margin-bottom: 10px;
+              "
+            >
+              <i class="fas fa-hand-holding-usd"></i>
+              <strong>現場支付聲明：</strong><br />
+              此處勾選之服務費用由客戶直接現場支付給現場派送人員。因每個社區管理方式與中庭距離不同,
+              實際金額依司機現場報價為主。
+            </div>
+
             <div id="shipment-services-container">
               <div style="color: #999; font-size: 13px; padding: 5px 0">
                 <i class="fas fa-sync fa-spin"></i> 正在載入可用服務...
               </div>
-            </div>
-
-            <div
-              class="alert alert-warning"
-              style="
-                display: block;
-                margin-top: 10px;
-                font-size: 12px;
-                padding: 8px;
-              "
-            >
-              <i class="fas fa-exclamation-circle"></i>
-              部分特殊服務（如搬運、組裝）費用可能由司機現場核實後收取。
             </div>
           </div>
 
@@ -316,6 +339,22 @@
             >
               正在檢查餘額...
             </div>
+
+            <div
+              class="invoice-remark"
+              style="
+                margin-top: 10px;
+                font-size: 12px;
+                color: #666;
+                background: #f1f3f5;
+                padding: 8px;
+                border-radius: 6px;
+              "
+            >
+              <i class="fas fa-file-invoice"></i> <strong>發票開立說明：</strong
+              ><br />
+              默認開立電子發票至帳號設定中填寫的電子信箱。若需統編請於付款憑證上傳時填寫。
+            </div>
           </div>
 
           <div class="form-group" style="margin-top: 15px">
@@ -324,7 +363,7 @@
               type="text"
               id="ship-note"
               class="form-control"
-              placeholder="有什麼想告訴我們的嗎？"
+              placeholder="有任何特殊裝載需求請備註於此"
             />
           </div>
         </div>
@@ -332,10 +371,10 @@
 
       <div class="modal-footer sticky-footer-actions">
         <button type="button" class="btn btn-secondary modal-close-btn">
-          取消
+          取消重選
         </button>
         <button type="submit" class="btn btn-primary btn-place-order">
-          <i class="fas fa-paper-plane"></i> 提交訂單
+          <i class="fas fa-paper-plane"></i> 提交集運訂單
         </button>
       </div>
     </form>

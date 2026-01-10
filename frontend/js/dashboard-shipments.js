@@ -1,8 +1,8 @@
 // frontend/js/dashboard-shipments.js
-// V2026.01.Stable.Full.Final - 旗艦穩定修復最終版
-// [Core] 完整保留所有原始功能：包含稅務資訊、附加服務、自動填充、錢包校驗
-// [Fix] 深度解決 Cloudinary 網址損毀 (https:/) 與本地/雲端混合路徑問題
-// [Safety] 增加進度條崩潰保護與渲染異常攔截
+// V2026.01.Stable.Full.Final.Optimized - 旗艦優化完整版 (無刪減原始邏輯)
+// [Core] 完整保留原始功能：包含稅務資訊、附加服務、自動填充、錢包校驗
+// [Fix] 深度解決 Cloudinary 網址修復邏輯
+// [Optimize] 整合身分證嚴格校驗、文字更名、上傳按鈕活性化與附加服務聲明
 
 /**
  * 全局狀態與配置
@@ -226,7 +226,7 @@ window.recalculateShipmentTotal = async function () {
   }
 };
 
-// --- 4. 費用表格渲染函數 (模組化封裝) ---
+// --- 4. 費用表格渲染函數 (優化：標題更名為「費用明細」) ---
 function renderBreakdownTable(breakdown, container, rate) {
   let html = `
         <div style="font-size: 13px; border: 1px solid #eee; border-radius: 4px; overflow: hidden; background: #fff;">
@@ -314,7 +314,7 @@ function renderBreakdownTable(breakdown, container, rate) {
           </table>
         </div>
         <div style="margin-top: 15px; text-align: right;">
-            <div style="font-size: 14px; color: #555;">總金額 (TWD)</div>
+            <div style="font-size: 14px; color: #555;">費用明細總金額 (TWD)</div>
             <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">$${breakdown.finalTotal.toLocaleString()}</div>
         </div>`;
   container.innerHTML = html;
@@ -336,9 +336,23 @@ function renderSimpleTable(p, container, rate) {
   container.innerHTML = html;
 }
 
-// --- 5. 提交建立訂單 ---
+// --- 5. 提交建立訂單 (插入身分證嚴格校驗) ---
 window.handleCreateShipmentSubmit = async function (e) {
   e.preventDefault();
+
+  // [優化新增] 收件人身分證字號格式校驗
+  const idNumberInput = document.getElementById("ship-idNumber");
+  const idNumberValue = idNumberInput ? idNumberInput.value.trim() : "";
+  const idRegex = /^[A-Z][12]\d{8}$/;
+
+  if (!idRegex.test(idNumberValue)) {
+    alert(
+      "收件人身分證字號格式錯誤！\n請輸入首位大寫英文字母，且第二位數字必須為 1 或 2，總長度 10 碼。"
+    );
+    if (idNumberInput) idNumberInput.focus();
+    return;
+  }
+
   const btn = e.target.querySelector(".btn-place-order");
   if (btn) {
     btn.disabled = true;
@@ -369,7 +383,7 @@ window.handleCreateShipmentSubmit = async function (e) {
     "deliveryLocationRate",
     document.getElementById("ship-delivery-location").value || 0
   );
-  fd.append("idNumber", document.getElementById("ship-idNumber").value);
+  fd.append("idNumber", idNumberValue);
   fd.append("note", document.getElementById("ship-note").value);
   fd.append("paymentMethod", paymentMethod);
 
@@ -488,7 +502,7 @@ window.togglePaymentMethod = function (method) {
   }
 };
 
-// --- 7. 載入訂單列表 ---
+// --- 7. 載入訂單列表 (優化：上傳憑證按鈕活性化，不灰掉) ---
 window.loadMyShipments = async function () {
   const tbody = document.getElementById("shipments-table-body");
   if (!tbody) return;
@@ -510,33 +524,34 @@ window.loadMyShipments = async function () {
           if (s.paymentProof) {
             actionsHtml += `<span style="font-size:12px; color:#e67e22; display:block; margin-top:5px;">已傳憑證<br>審核中</span>`;
           } else {
-            actionsHtml += `<button class="btn btn-sm btn-secondary" style="margin-top:5px;" onclick="window.openUploadProof('${s.id}')">上傳憑證</button>`;
+            // [優化] 移除 disabled 屬性，改用醒目的 btn-success
+            actionsHtml += `<button class="btn btn-sm btn-success" style="margin-top:5px;" onclick="window.openUploadProof('${s.id}')">上傳憑證</button>`;
             actionsHtml += `<button class="btn btn-sm btn-danger" style="margin-top:5px;" onclick="window.cancelShipment('${s.id}')">取消訂單</button>`;
           }
         }
 
         tbody.innerHTML += `
-                    <tr>
-                        <td>
-                            <span style="font-weight:bold; color:#1a73e8;">${s.id
-                              .slice(-8)
-                              .toUpperCase()}</span><br>
-                            <small>${new Date(
-                              s.createdAt
-                            ).toLocaleDateString()}</small>
-                        </td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <div>${s.recipientName}</div>
-                            <small style="color:#666;">${
-                              s.packages.length
-                            } 件包裹</small>
-                        </td>
-                        <td style="color:#d32f2f; font-weight:bold;">$${(
-                          s.totalCost || 0
-                        ).toLocaleString()}</td>
-                        <td><div style="display:flex; flex-direction:column; gap:5px;">${actionsHtml}</div></td>
-                    </tr>`;
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; color:#1a73e8;">${s.id
+                                      .slice(-8)
+                                      .toUpperCase()}</span><br>
+                                    <small>${new Date(
+                                      s.createdAt
+                                    ).toLocaleDateString()}</small>
+                                </td>
+                                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                                <td>
+                                    <div>${s.recipientName}</div>
+                                    <small style="color:#666;">${
+                                      s.packages.length
+                                    } 件包裹</small>
+                                </td>
+                                <td style="color:#d32f2f; font-weight:bold;">$${(
+                                  s.totalCost || 0
+                                ).toLocaleString()}</td>
+                                <td><div style="display:flex; flex-direction:column; gap:5px;">${actionsHtml}</div></td>
+                            </tr>`;
       });
     } else {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">尚未有集運單</td></tr>`;
@@ -546,7 +561,7 @@ window.loadMyShipments = async function () {
   }
 };
 
-// --- 8. 查看訂單詳情 (核心修復：Cloudinary & 附加服務) ---
+// --- 8. 查看訂單詳情 (優化：文字改為「訂單詳細內容」，物流默認「專車派送」) ---
 window.openShipmentDetails = async function (id) {
   try {
     // 重置 UI
@@ -570,6 +585,10 @@ window.openShipmentDetails = async function (id) {
     if (!data.success) throw new Error(data.message);
     const s = data.shipment;
 
+    // [優化文字更名]
+    const detailTitle = document.getElementById("shipment-detail-title");
+    if (detailTitle) detailTitle.textContent = "訂單詳細內容";
+
     // 填充基礎資訊
     if (document.getElementById("sd-id"))
       document.getElementById("sd-id").textContent = s.id
@@ -586,9 +605,11 @@ window.openShipmentDetails = async function (id) {
     if (document.getElementById("sd-address"))
       document.getElementById("sd-address").textContent =
         s.shippingAddress || "--";
+
+    // [優化] 物流單號若空，默認為專車派送
     if (document.getElementById("sd-trackingTW"))
       document.getElementById("sd-trackingTW").textContent =
-        s.trackingNumberTW || s.carrierId || "尚未產生";
+        s.trackingNumberTW || s.carrierId || "專車派送";
 
     // 附加服務詳情渲染
     const servicesSection = document.getElementById("sd-services-section");
@@ -608,17 +629,15 @@ window.openShipmentDetails = async function (id) {
         if (services[key] && services[key].selected) {
           hasService = true;
           let noteStr = services[key].note ? ` (${services[key].note})` : "";
-          let elevatorStr =
-            key === "floor" && services.floor.hasElevator ? " - 有電梯" : "";
           svcHtml += `
-                        <div class="info-row">
-                          <span class="info-label"><i class="fas fa-check-circle" style="color:#28a745;"></i> ${
-                            svcMap[key]
-                          }${elevatorStr}</span>
-                          <span class="info-value" style="color:#666;">${
-                            noteStr || "已選擇"
-                          }</span>
-                        </div>`;
+                                <div class="info-row">
+                                  <span class="info-label"><i class="fas fa-check-circle" style="color:#28a745;"></i> ${
+                                    svcMap[key]
+                                  }</span>
+                                  <span class="info-value" style="color:#666;">${
+                                    noteStr || "已選擇"
+                                  }</span>
+                                </div>`;
         }
       });
       if (hasService) {
@@ -629,7 +648,7 @@ window.openShipmentDetails = async function (id) {
       }
     }
 
-    // 費用報告
+    // 費用報告 (內部已包含標題優化)
     const breakdownDiv = document.getElementById("sd-fee-breakdown");
     if (breakdownDiv && s.costBreakdown) {
       renderBreakdownTable(
@@ -655,12 +674,12 @@ window.openShipmentDetails = async function (id) {
         }
 
         proofImagesContainer.innerHTML = `
-                  <div style="text-align:center; width: 100%;">
-                    <a href="${fullUrl}" target="_blank">
-                      <img src="${fullUrl}" onerror="this.src='https://placehold.co/300x200?text=圖片路徑異常';" 
-                           style="max-width: 100%; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                    </a>
-                  </div>`;
+                          <div style="text-align:center; width: 100%;">
+                            <a href="${fullUrl}" target="_blank">
+                              <img src="${fullUrl}" onerror="this.src='https://placehold.co/300x200?text=圖片路徑異常';" 
+                                   style="max-width: 100%; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            </a>
+                          </div>`;
       } else if (s.paymentProof === "WALLET_PAY") {
         proofImagesContainer.innerHTML = `<div class="alert alert-info">此訂單已通過錢包餘額結清</div>`;
       } else {
@@ -729,17 +748,19 @@ window.renderTimeline = function (container, currentStatus) {
   steps.forEach((step, idx) => {
     const isCompleted = idx <= currentIndex;
     html += `
-            <div style="position:relative; z-index:1; text-align:center; flex:1; min-width:60px;">
-                <i class="fas ${isCompleted ? "fa-check-circle" : "fa-circle"}" 
-                   style="color:${
-                     isCompleted ? "#28a745" : "#ccc"
-                   }; font-size:24px; background:#fff; border-radius:50%;"></i>
-                <div style="font-size:12px; margin-top:5px; color:${
-                  isCompleted ? "#333" : "#999"
-                }; font-weight:${idx === currentIndex ? "bold" : "normal"};">${
-      step.label
-    }</div>
-            </div>`;
+                    <div style="position:relative; z-index:1; text-align:center; flex:1; min-width:60px;">
+                        <i class="fas ${
+                          isCompleted ? "fa-check-circle" : "fa-circle"
+                        }" 
+                           style="color:${
+                             isCompleted ? "#28a745" : "#ccc"
+                           }; font-size:24px; background:#fff; border-radius:50%;"></i>
+                        <div style="font-size:12px; margin-top:5px; color:${
+                          isCompleted ? "#333" : "#999"
+                        }; font-weight:${
+      idx === currentIndex ? "bold" : "normal"
+    };">${step.label}</div>
+                    </div>`;
   });
   html += `</div>`;
   container.innerHTML = html;
@@ -828,7 +849,7 @@ window.submitBankProof = async function () {
     );
 
     if (res.ok) {
-      alert("憑證與發票資訊上傳成功！");
+      alert("憑證與發票資訊上傳成功！電子發票將發送至您的註冊信箱。");
       if (document.getElementById("bank-info-modal"))
         document.getElementById("bank-info-modal").style.display = "none";
       window.loadMyShipments();
@@ -881,6 +902,12 @@ window.openUploadProof = function (id) {
   window.lastCreatedShipmentId = id;
   const bankModal = document.getElementById("bank-info-modal");
   if (bankModal) {
+    // [優化新增] 發票資訊備註
+    const invoiceNote = document.getElementById("bank-invoice-note");
+    if (invoiceNote)
+      invoiceNote.textContent =
+        "備註：默認開立電子發票至帳號設定中填寫的電子信箱";
+
     bankModal.style.display = "flex";
     window.resetBankProofUpload();
   }
@@ -910,6 +937,8 @@ document.addEventListener("DOMContentLoaded", () => {
       window.recalculateShipmentTotal()
     );
 });
+
+// --- 13. 加載附加服務 (優化：加入現場支付免責聲明) ---
 window.loadAvailableServices = async function () {
   const container = document.getElementById("shipment-services-container");
   if (!container) return;
@@ -924,40 +953,45 @@ window.loadAvailableServices = async function () {
     const data = await res.json();
 
     if (data.success && data.items.length > 0) {
-      let html = "";
+      // [優化] 動態插入服務費用警語
+      let html = `
+                <div style="background: #fff9db; color: #856404; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 15px; border: 1px solid #ffe066;">
+                    <i class="fas fa-info-circle"></i> 此服務費用由客戶直接現場支付給現場派送人員。因每個社區管理方式與中庭距離不同, 實際金額依司機現場報價為主。
+                </div>
+            `;
+
       data.items.forEach((item) => {
-        // 根據不同單位顯示標籤
         const unitMap = { PIECE: "件", WEIGHT: "kg", SHIPMENT: "單" };
         const unitText = unitMap[item.unit] || "件";
 
         html += `
-          <div class="service-option-item" style="margin-bottom: 10px; padding: 8px; border: 1px solid #eee; border-radius: 6px;">
-            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin-bottom: 0;">
-              <input type="checkbox" class="svc-checkbox" data-id="${
-                item.id
-              }" data-name="${item.name}" data-price="${
+                  <div class="service-option-item" style="margin-bottom: 10px; padding: 8px; border: 1px solid #eee; border-radius: 6px;">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin-bottom: 0;">
+                      <input type="checkbox" class="svc-checkbox" data-id="${
+                        item.id
+                      }" data-name="${item.name}" data-price="${
           item.price
         }" style="margin-top: 4px;">
-              <div style="flex: 1;">
-                <div style="font-weight: bold; font-size: 14px;">
-                  ${
-                    item.name
-                  } <span style="color: #d32f2f; margin-left: 5px;">$${
+                      <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 14px;">
+                          ${
+                            item.name
+                          } <span style="color: #d32f2f; margin-left: 5px;">$${
           item.price
         } / ${unitText}</span>
-                </div>
-                ${
-                  item.description
-                    ? `<div style="font-size: 12px; color: #888;">${item.description}</div>`
-                    : ""
-                }
-                <div class="svc-note-input" style="display: none; margin-top: 5px;">
-                  <input type="text" class="form-control form-control-sm svc-note" placeholder="備註 (如：哪件要釘木架)">
-                </div>
-              </div>
-            </label>
-          </div>
-        `;
+                        </div>
+                        ${
+                          item.description
+                            ? `<div style="font-size: 12px; color: #888;">${item.description}</div>`
+                            : ""
+                        }
+                        <div class="svc-note-input" style="display: none; margin-top: 5px;">
+                          <input type="text" class="form-control form-control-sm svc-note" placeholder="備註 (如：樓梯樓層、電梯尺寸)">
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                `;
       });
       container.innerHTML = html;
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>集運出貨單 / 報關明細 - 小跑豬</title>
+    <title>訂單詳細內容 / 報關明細 - 小跑豬集運</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
     <script src="js/styleLoader.js"></script>
     <style>
@@ -24,7 +24,7 @@
         width: 210mm;
         min-height: 297mm;
         margin: 0 auto;
-        padding: 15mm 15mm;
+        padding: 12mm 15mm;
         box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         position: relative;
         box-sizing: border-box;
@@ -46,7 +46,7 @@
           width: 100%;
           min-height: 100vh;
           margin: 0;
-          padding: 10mm 15mm;
+          padding: 10mm 12mm;
           box-shadow: none;
           border: none;
         }
@@ -88,18 +88,19 @@
       }
       .doc-meta {
         text-align: right;
-        font-size: 12px;
+        font-size: 11px;
         line-height: 1.4;
       }
       .doc-title-box {
         text-align: center;
-        margin: 15px 0;
+        margin: 10px 0;
       }
       .doc-title-box h2 {
         margin: 0;
         font-size: 22px;
         text-decoration: underline;
         text-underline-offset: 5px;
+        font-weight: 900;
       }
 
       /* 資訊網格區 */
@@ -107,7 +108,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 15px;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         border: 1px solid var(--border-color);
         padding: 10px;
       }
@@ -118,12 +119,12 @@
       }
       .info-row {
         display: flex;
-        font-size: 13px; /* 稍微縮小字體以容納更多資訊 */
+        font-size: 13px;
         align-items: baseline;
       }
       .info-label {
         font-weight: bold;
-        min-width: 90px; /* 加寬標籤欄位 */
+        min-width: 100px;
         color: #333;
       }
       .info-value {
@@ -138,19 +139,18 @@
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 15px;
-        font-size: 11px; /* 縮小字體以顯示更多細節 */
+        font-size: 10px;
       }
       .standard-table th,
       .standard-table td {
         border: 1px solid var(--border-color);
-        padding: 5px;
+        padding: 4px;
         text-align: center;
         vertical-align: middle;
       }
       .standard-table th {
         background-color: #f0f0f0;
         font-weight: bold;
-        padding: 6px;
       }
       .standard-table td.text-left {
         text-align: left;
@@ -161,21 +161,27 @@
       .wh-remark {
         color: #d32f2f;
         font-style: italic;
-        display: block;
-        margin-top: 2px;
         font-size: 0.9em;
       }
 
-      /* 總計區 */
+      /* 費用明細區域 (原本的總計區) */
       .totals-section {
         display: flex;
-        justify-content: flex-end;
+        flex-direction: column;
+        align-items: flex-end;
         margin-top: -16px;
         margin-bottom: 15px;
       }
+      .fee-title {
+        font-size: 14px;
+        font-weight: 900;
+        background: #000;
+        color: #fff;
+        padding: 2px 15px;
+        margin-right: 1px;
+      }
       .totals-box {
         border: 1px solid var(--border-color);
-        border-top: none;
         padding: 8px 15px;
         min-width: 250px;
         font-size: 13px;
@@ -189,7 +195,7 @@
       .total-row.final {
         font-weight: bold;
         font-size: 15px;
-        border-top: 1px solid #ccc;
+        border-top: 1px solid #000;
         padding-top: 5px;
         margin-top: 5px;
       }
@@ -199,7 +205,7 @@
         border: 2px solid #000;
         padding: 8px;
         margin-bottom: 15px;
-        font-size: 12px;
+        font-size: 11px;
       }
       .services-title {
         font-weight: bold;
@@ -211,19 +217,26 @@
       }
       .services-list {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 8px;
       }
       .service-item {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
       }
       .service-checkbox {
         margin-right: 5px;
-        font-family: "Segoe UI Symbol", sans-serif;
+        font-size: 14px;
       }
 
-      /* 底部簽名區 */
+      /* 底部備註 */
+      .invoice-note {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 10px;
+        font-style: italic;
+      }
+
       .bottom-section {
         display: flex;
         justify-content: space-between;
@@ -234,7 +247,7 @@
         width: 60%;
         border: 1px solid var(--border-color);
         padding: 8px;
-        min-height: 70px;
+        min-height: 60px;
       }
       .signature-box {
         width: 35%;
@@ -246,7 +259,7 @@
       .signature-line {
         width: 100%;
         border-bottom: 1px solid var(--border-color);
-        margin-top: 30px;
+        margin-top: 20px;
         margin-bottom: 8px;
       }
 
@@ -273,17 +286,8 @@
         width: 100%;
         height: 100px;
         object-fit: contain;
-        display: block;
-      }
-      .photo-caption {
-        font-size: 9px;
-        margin-top: 4px;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
       }
 
-      /* 操作按鈕 */
       .action-bar {
         position: fixed;
         top: 20px;
@@ -308,18 +312,17 @@
         top: 40%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 100px;
-        color: rgba(0, 0, 0, 0.03);
+        font-size: 80px;
+        color: rgba(0, 0, 0, 0.02);
         pointer-events: none;
         font-weight: bold;
-        white-space: nowrap;
         z-index: 0;
       }
     </style>
   </head>
   <body>
     <div class="action-bar no-print">
-      <button class="btn" onclick="window.print()">🖨️ 列印 / 儲存 PDF</button>
+      <button class="btn" onclick="window.print()">🖨️ 列印訂單詳細內容</button>
       <button class="btn" onclick="window.close()" style="background: #5f6368">
         關閉視窗
       </button>
@@ -329,37 +332,36 @@
       id="loading"
       style="text-align: center; color: white; margin-top: 100px"
     >
-      資料載入中...
+      正在產生報價報告與明細...
     </div>
 
     <div id="print-content" class="page-container" style="display: none">
-      <div class="watermark">RUNPIGGY LOGISTICS</div>
+      <div class="watermark">RUNPIGGY REPORT</div>
 
       <div class="doc-header">
         <div class="company-brand">
           <img src="assets/logo.png" alt="Logo" />
           <div class="company-title">
             <h1>小跑豬集運</h1>
-            <span>RUNPIGGY INTERNATIONAL</span>
+            <span>RUNPIGGY INTERNATIONAL LOGISTICS</span>
           </div>
         </div>
         <div class="doc-meta">
-          <div>統一編號：60660304</div>
-          <div>Email: 2runtigers@gmail.com</div>
-          <div>LINE: @runpiggy</div>
+          <div>官方網站：runpiggy.com</div>
+          <div>客服 LINE: @runpiggy</div>
           <div>列印時間: <span id="print-date"></span></div>
         </div>
       </div>
 
       <div class="doc-title-box">
-        <h2>集運出貨明細單 / PACKING LIST</h2>
+        <h2>訂單詳細內容 / PACKING LIST</h2>
       </div>
 
       <div class="info-grid">
         <div class="info-column">
           <div class="info-row">
-            <span class="info-label">訂單編號：</span>
-            <span class="info-value" id="p-id"></span>
+            <span class="info-label">集運單號：</span>
+            <span class="info-value" id="p-id" style="font-weight: bold"></span>
           </div>
           <div class="info-row">
             <span class="info-label">建立日期：</span>
@@ -370,12 +372,8 @@
             <span class="info-value" id="p-status"></span>
           </div>
           <div class="info-row">
-            <span class="info-label">台灣單號：</span>
+            <span class="info-label">物流追蹤碼：</span>
             <span class="info-value" id="p-tw-tracking"></span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">裝櫃日期：</span>
-            <span class="info-value" id="p-loading-date">-</span>
           </div>
         </div>
         <div class="info-column">
@@ -393,11 +391,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">配送地址：</span>
-            <span
-              class="info-value"
-              id="p-address"
-              style="font-size: 12px"
-            ></span>
+            <span class="info-value" id="p-address"></span>
           </div>
         </div>
       </div>
@@ -405,7 +399,7 @@
       <div
         id="invoice-section"
         class="info-grid"
-        style="display: none; border-top: none; margin-top: -16px"
+        style="display: none; border-top: none; margin-top: -11px"
       >
         <div class="info-column">
           <div class="info-row">
@@ -419,12 +413,11 @@
         </div>
         <div class="info-column">
           <div class="info-row">
-            <span class="info-label">載具條碼：</span>
-            <span class="info-value" id="p-carrier">-</span>
-          </div>
-          <div class="info-row">
             <span class="info-label">發票號碼：</span>
-            <span class="info-value" id="p-invoice-num">-</span>
+            <span class="info-value" id="p-invoice-num">尚未開立</span>
+          </div>
+          <div class="info-row" style="font-size: 10px; color: #666">
+            ※ 默認開立電子發票至帳號設定之電子信箱
           </div>
         </div>
       </div>
@@ -432,38 +425,35 @@
       <table class="standard-table">
         <thead>
           <tr>
-            <th style="width: 4%">No.</th>
-            <th style="width: 18%">物流單號 (Tracking No.)</th>
-            <th style="width: 25%">商品名稱 (Description)</th>
-            <th style="width: 6%">數量</th>
-            <th style="width: 13%">入庫實重 (KG)</th>
-            <th style="width: 10%">材積 (材)</th>
-            <th style="width: 24%">備註 (Remark)</th>
+            <th style="width: 3%">#</th>
+            <th style="width: 15%">物流單號</th>
+            <th style="width: 25%">商品名稱/購買網址</th>
+            <th style="width: 18%">型號與規格</th>
+            <th style="width: 5%">數量</th>
+            <th style="width: 12%">重量(KG)</th>
+            <th style="width: 22%">備註 (Warehouse Remark)</th>
           </tr>
         </thead>
         <tbody id="p-pkg-body"></tbody>
       </table>
 
       <div class="totals-section">
+        <div class="fee-title">費用明細</div>
         <div class="totals-box">
           <div class="total-row">
-            <span>總商品件數：</span>
-            <span id="p-total-qty">0</span>
-          </div>
-          <div class="total-row">
             <span>入庫總箱數：</span>
-            <span id="p-total-boxes">0</span>
+            <span id="p-total-boxes">0 箱</span>
           </div>
           <div class="total-row">
-            <span>總重量：</span>
+            <span>核定總實重：</span>
             <span id="p-total-weight">0.0 kg</span>
           </div>
           <div class="total-row">
-            <span>總材積：</span>
+            <span>核定總材積：</span>
             <span id="p-total-cai">0.0 材</span>
           </div>
           <div class="total-row final">
-            <span>運費總計：</span>
+            <span>應付運費總計：</span>
             <span id="p-total-cost">NT$ 0</span>
           </div>
         </div>
@@ -475,12 +465,13 @@
         style="display: none"
       >
         <div class="services-title">
-          <span>🛠️ 附加服務需求 (Additional Services)</span>
-          <span style="font-weight: normal; font-size: 11px">※ 司機存查</span>
+          <span>🛠️ 附加服務明細 (Additional Services)</span>
+          <span style="font-weight: normal; font-size: 10px"
+            >※ 此費用由客戶直接現場支付給司機</span
+          >
         </div>
         <div id="p-services-list" class="services-list"></div>
         <div
-          class="service-warning"
           style="
             margin-top: 5px;
             text-align: center;
@@ -488,28 +479,34 @@
             padding-top: 5px;
             font-weight: bold;
             color: #d32f2f;
+            font-size: 10px;
           "
         >
-          ⚠️
-          提醒：實際報價以現場情況為準，附加費用請客戶直接支付給派送司機確認。
+          ⚠️ 提醒：因每個社區管理方式與中庭距離不同,
+          實際金額依司機現場報價為主。
         </div>
       </div>
 
       <div class="bottom-section">
         <div class="remarks-box">
-          <strong>客戶訂單備註 / Order Notes:</strong><br />
-          <span id="p-note" style="white-space: pre-wrap; color: #555"></span>
+          <strong>客戶留言 / Order Remarks:</strong><br />
+          <span
+            id="p-note"
+            style="white-space: pre-wrap; color: #444; font-size: 11px"
+          ></span>
         </div>
         <div class="signature-box">
           <div class="signature-line"></div>
-          <div>收件人簽名 / Signature</div>
+          <div>收件人簽收蓋章 / Signature</div>
         </div>
       </div>
 
       <div class="page-break"></div>
 
       <div class="photos-section" id="photo-section" style="margin-top: 20px">
-        <div class="photos-header">📷 貨物/倉庫照片記錄 (Photos)</div>
+        <div class="photos-header">
+          📷 貨物入庫照片存查記錄 (Warehouse Photos)
+        </div>
         <div class="photos-grid" id="p-photos-grid"></div>
       </div>
     </div>
@@ -519,14 +516,13 @@
       document.addEventListener("DOMContentLoaded", async () => {
         const params = new URLSearchParams(window.location.search);
         const shipmentId = params.get("id");
-
         const adminToken = localStorage.getItem("admin_token");
         const clientToken = localStorage.getItem("token");
         const isPrivileged = !!adminToken;
         const token = adminToken || clientToken;
 
         if (!shipmentId || !token) {
-          alert("無效的連結或未登入");
+          alert("連結失效或權限不足");
           window.close();
           return;
         }
@@ -534,7 +530,9 @@
         try {
           const response = await fetch(
             `${API_BASE_URL}/api/shipments/${shipmentId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
           );
           const data = await response.json();
           if (!response.ok) throw new Error(data.message);
@@ -545,86 +543,55 @@
           document.getElementById("print-content").style.display = "block";
 
           const now = new Date();
-          document.getElementById(
-            "print-date"
-          ).textContent = `${now.getFullYear()}/${(now.getMonth() + 1)
-            .toString()
-            .padStart(2, "0")}/${now
-            .getDate()
-            .toString()
-            .padStart(2, "0")} ${now
-            .getHours()
-            .toString()
-            .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+          document.getElementById("print-date").textContent =
+            now.toLocaleString();
         } catch (error) {
-          alert("載入失敗：" + error.message);
-          document.getElementById("loading").textContent =
-            "載入失敗，請關閉視窗重試";
+          document.getElementById(
+            "loading"
+          ).innerHTML = `<span style="color:red">載入失敗: ${error.message}</span>`;
         }
       });
 
-      function formatSensitiveData(str, type, isPrivileged) {
+      function formatSensitive(str, type, isPrivileged) {
         if (!str) return "-";
         if (isPrivileged) return str;
-
-        if (type === "phone") {
-          if (str.length > 7) {
-            return str.substring(0, 2) + "****" + str.substring(str.length - 4);
-          }
-          return str;
-        } else if (type === "id") {
-          // 修正：依照需求顯示「*****」+ 末4碼
-          if (str.length > 4) {
-            return "*****" + str.slice(-4);
-          }
-          return "*****" + str;
-        }
+        if (type === "phone")
+          return str.substring(0, 4) + "****" + str.substring(str.length - 2);
+        if (type === "id")
+          return str.substring(0, 1) + "*********" + str.slice(-1);
         return str;
       }
 
       function renderShipment(ship, isPrivileged) {
-        // 狀態對照
-        const shipmentStatusMap = {
-          PENDING_PAYMENT: "待付款",
-          PENDING_REVIEW: "付款審核中",
-          PROCESSING: "已收款，安排裝櫃",
-          SHIPPED: "已裝櫃",
-          CUSTOMS_CHECK: "海關查驗中",
-          UNSTUFFING: "拆櫃派送中",
-          COMPLETED: "已完成",
-          RETURNED: "訂單被退回",
-          CANCELLED: "已取消",
-        };
-        let statusText = shipmentStatusMap[ship.status] || ship.status;
-        if (ship.status === "PENDING_PAYMENT" && ship.paymentProof) {
-          statusText = "已付款 (待審核)";
-        }
-        if (ship.status === "RETURNED" && ship.returnReason) {
-          statusText += ` (原因: ${ship.returnReason})`;
-        }
-
-        // --- 基本資料 ---
-        document.getElementById("p-id").textContent = ship.id
-          .slice(-8)
-          .toUpperCase();
+        // 基本資訊 (優先顯示自定義單號)
+        document.getElementById("p-id").textContent = (
+          ship.shipmentNo || ship.id
+        ).toUpperCase();
         document.getElementById("p-date").textContent = new Date(
           ship.createdAt
         ).toLocaleDateString();
-        document.getElementById("p-status").textContent = statusText;
-        document.getElementById("p-tw-tracking").textContent =
-          ship.trackingNumberTW || "尚未產生";
-        document.getElementById("p-loading-date").textContent = ship.loadingDate
-          ? new Date(ship.loadingDate).toLocaleDateString()
-          : "-";
 
-        // --- 收件人資料 (個資處理) ---
+        const statusMap = {
+          PENDING_PAYMENT: "待付款",
+          PROCESSING: "已付款/處理中",
+          SHIPPED: "已裝櫃出貨",
+          COMPLETED: "已完成",
+        };
+        document.getElementById("p-status").textContent =
+          statusMap[ship.status] || ship.status;
+
+        // 台灣追蹤碼優化
+        document.getElementById("p-tw-tracking").textContent =
+          ship.trackingNumberTW || "專車派送";
+
+        // 收件人
         document.getElementById("p-name").textContent = ship.recipientName;
-        document.getElementById("p-phone").textContent = formatSensitiveData(
+        document.getElementById("p-phone").textContent = formatSensitive(
           ship.phone,
           "phone",
           isPrivileged
         );
-        document.getElementById("p-idnum").textContent = formatSensitiveData(
+        document.getElementById("p-idnum").textContent = formatSensitive(
           ship.idNumber,
           "id",
           isPrivileged
@@ -632,160 +599,138 @@
         document.getElementById("p-address").textContent = ship.shippingAddress;
         document.getElementById("p-note").textContent = ship.note || "無";
 
-        // --- 發票與載具詳細資料 (如果有則顯示) ---
-        const hasInvoiceInfo =
-          ship.taxId ||
-          ship.invoiceTitle ||
-          ship.carrierType ||
-          ship.invoiceNumber;
-        if (hasInvoiceInfo) {
+        // 發票區
+        if (ship.taxId || ship.invoiceTitle || ship.invoiceNumber) {
           document.getElementById("invoice-section").style.display = "grid";
           document.getElementById("p-tax-id").textContent = ship.taxId || "-";
           document.getElementById("p-invoice-title").textContent =
             ship.invoiceTitle || "-";
-
-          // 組合載具顯示
-          let carrierDisplay = "-";
-          if (ship.carrierType && ship.carrierId) {
-            carrierDisplay = `${ship.carrierType}: ${ship.carrierId}`;
-          } else if (ship.carrierId) {
-            carrierDisplay = ship.carrierId;
-          }
-          document.getElementById("p-carrier").textContent = carrierDisplay;
-
-          // 組合發票號碼顯示
-          let invoiceDisplay = ship.invoiceNumber || "-";
-          if (ship.invoiceStatus === "VOID") invoiceDisplay += " (已作廢)";
-          document.getElementById("p-invoice-num").textContent = invoiceDisplay;
+          document.getElementById("p-invoice-num").textContent =
+            ship.invoiceNumber || "尚未開立";
         }
 
-        // --- 附加服務 ---
+        // 附加服務清單 (根據同事需求擴充)
         const svcs = ship.additionalServices || {};
-        const svcContainer = document.getElementById("p-services-list");
-        const svcSection = document.getElementById("p-services-section");
+        const svcList = document.getElementById("p-services-list");
         let svcHtml = "";
-        let hasService = false;
+        let hasSvc = false;
 
-        const svcMap = [
-          { key: "floor", label: "上樓搬運" },
-          { key: "wood", label: "回收木架" },
-          { key: "assembly", label: "傢俱組裝" },
-          { key: "old", label: "回收舊傢俱" },
+        const allSvcKeys = [
+          { key: "floor_stairs", label: "搬運上樓(樓梯)" },
+          { key: "floor_elevator", label: "搬運上樓(電梯)" },
+          { key: "wood_strip", label: "拆木架" },
+          { key: "wood_strip_recycle", label: "拆木架&回收" },
+          { key: "wrap_wood", label: "打木架(加強)" },
+          { key: "wrap_bubble", label: "氣泡膜" },
+          { key: "floor", label: "搬運上樓" }, // 兼容舊資料
+          { key: "wood", label: "木架處理" }, // 兼容舊資料
         ];
 
-        svcMap.forEach((s) => {
-          const data = svcs[s.key];
+        allSvcKeys.forEach((item) => {
+          const data = svcs[item.key];
           if (data && data.selected) {
-            hasService = true;
-            let detail = "";
-            if (s.key === "floor") {
-              detail += data.hasElevator
-                ? " (有電梯)"
-                : " <b style='color:red; border-bottom:1px solid red;'>★ 無電梯</b>";
-            }
-            if (data.note)
-              detail += ` <span style="font-style:italic">(${data.note})</span>`;
-            svcHtml += `<div class="service-item"><span class="service-checkbox">☑</span> <strong>${s.label}</strong>${detail}</div>`;
+            hasSvc = true;
+            svcHtml += `<div class="service-item"><span class="service-checkbox">☑</span> <strong>${
+              item.label
+            }</strong> ${data.note ? `(${data.note})` : ""}</div>`;
           } else {
-            svcHtml += `<div class="service-item" style="opacity:0.4;"><span class="service-checkbox">☐</span> <span>${s.label}</span></div>`;
+            svcHtml += `<div class="service-item" style="opacity:0.3"><span class="service-checkbox">☐</span> ${item.label}</div>`;
           }
         });
 
-        if (hasService) {
-          svcContainer.innerHTML = svcHtml;
-          svcSection.style.display = "block";
+        if (hasSvc) {
+          svcList.innerHTML = svcHtml;
+          document.getElementById("p-services-section").style.display = "block";
         }
 
-        // --- 包裹表格 ---
+        // 包裹表格與照片 (含電器型號規格)
         const tbody = document.getElementById("p-pkg-body");
         const photosGrid = document.getElementById("p-photos-grid");
-        let totalQty = 0;
-        let grandTotalWeight = 0;
-        let grandTotalCai = 0;
-        let grandTotalBoxes = 0;
+        let totalBoxes = 0,
+          totalW = 0,
+          totalC = 0,
+          totalQty = 0;
 
-        ship.packages.forEach((pkg, index) => {
+        ship.packages.forEach((pkg, idx) => {
           const tr = document.createElement("tr");
-
-          let weightInfo = "-";
-          let caiInfo = "-";
-          let pkgWeight = 0;
-          let pkgCai = 0;
-          let boxCount = 0;
+          let pkgW = 0,
+            pkgC = 0,
+            boxes = 0;
 
           if (pkg.arrivedBoxes && pkg.arrivedBoxes.length > 0) {
-            pkgWeight = pkg.arrivedBoxes.reduce(
+            pkgW = pkg.arrivedBoxes.reduce(
               (acc, b) => acc + (parseFloat(b.weight) || 0),
               0
             );
-            pkgCai = pkg.arrivedBoxes.reduce(
+            pkgC = pkg.arrivedBoxes.reduce(
               (acc, b) => acc + (parseFloat(b.cai) || 0),
               0
             );
-            boxCount = pkg.arrivedBoxes.length;
-
-            weightInfo = `<div>${pkgWeight.toFixed(
-              1
-            )} kg</div><div style="font-size:10px; color:#666">共 ${boxCount} 箱</div>`;
-            caiInfo = pkgCai.toFixed(2);
-          } else {
-            weightInfo = "(待測量)";
+            boxes = pkg.arrivedBoxes.length;
           }
 
-          grandTotalWeight += pkgWeight;
-          grandTotalCai += pkgCai;
-          grandTotalBoxes += boxCount;
+          totalBoxes += boxes;
+          totalW += pkgW;
+          totalC += pkgC;
           totalQty += pkg.quantity;
 
-          // 整合備註：顯示客戶備註 + 倉庫備註
-          let noteHtml = pkg.note || "";
-          if (pkg.warehouseRemark) {
-            if (noteHtml) noteHtml += "<br>";
-            noteHtml += `<span class="wh-remark">[倉] ${pkg.warehouseRemark}</span>`;
-          }
+          // 商品與連結
+          let productDesc = `<b>${pkg.productName}</b>`;
+          if (pkg.productUrl)
+            productDesc += `<br><span style="color:#1a73e8; font-size:8px;">URL: ${pkg.productUrl.substring(
+              0,
+              40
+            )}...</span>`;
+
+          // 型號規格
+          let modelSpec = `${pkg.modelNumber || "-"} / ${pkg.spec || "-"}`;
 
           tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td class="text-left" style="font-family: monospace; font-weight:bold;">${
-              pkg.trackingNumber
-            }</td>
-            <td class="text-left">${pkg.productName}</td>
+            <td>${idx + 1}</td>
+            <td style="font-family:monospace;">${pkg.trackingNumber}</td>
+            <td class="text-left">${productDesc}</td>
+            <td class="text-left">${modelSpec}</td>
             <td>${pkg.quantity}</td>
-            <td>${weightInfo}</td>
-            <td>${caiInfo}</td> 
-            <td class="text-left" style="font-size: 10px;">${noteHtml}</td>
+            <td>${pkgW.toFixed(1)}<br><small>(${boxes}箱)</small></td>
+            <td class="text-left">${pkg.note || ""} ${
+            pkg.warehouseRemark
+              ? `<br><span class="wh-remark">[倉] ${pkg.warehouseRemark}</span>`
+              : ""
+          }</td>
           `;
           tbody.appendChild(tr);
 
-          // 照片處理
-          const allImages = [
+          // 照片展示
+          const imgs = [
             ...(pkg.productImages || []),
             ...(pkg.warehouseImages || []),
           ];
-          if (Array.isArray(allImages)) {
-            allImages.forEach((imgUrl) => {
-              const div = document.createElement("div");
-              div.className = "photo-wrapper";
-              div.innerHTML = `<img src="${API_BASE_URL}${imgUrl}" alt="photo"><div class="photo-caption">${pkg.productName}</div>`;
-              photosGrid.appendChild(div);
-            });
-          }
+          imgs.forEach((url) => {
+            const div = document.createElement("div");
+            div.className = "photo-wrapper";
+            // 修正 Cloudinary 或本地路徑
+            const src = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
+            div.innerHTML = `<img src="${src}"><div style="font-size:8px; margin-top:2px;">${pkg.productName}</div>`;
+            photosGrid.appendChild(div);
+          });
         });
 
-        // --- 統計數據更新 ---
-        document.getElementById("p-total-qty").textContent = totalQty;
-        document.getElementById("p-total-boxes").textContent = grandTotalBoxes; // 新增箱數統計
-        document.getElementById("p-total-weight").textContent =
-          grandTotalWeight.toFixed(1) + " kg";
-        document.getElementById("p-total-cai").textContent =
-          grandTotalCai.toFixed(2) + " 材"; // 新增材積統計
+        // 更新統計
+        document.getElementById(
+          "p-total-boxes"
+        ).textContent = `${totalBoxes} 箱`;
+        document.getElementById(
+          "p-total-weight"
+        ).textContent = `${totalW.toFixed(1)} kg`;
+        document.getElementById("p-total-cai").textContent = `${totalC.toFixed(
+          2
+        )} 材`;
         document.getElementById("p-total-cost").textContent = `NT$ ${(
           ship.totalCost || 0
         ).toLocaleString()}`;
 
-        if (photosGrid.children.length === 0) {
+        if (photosGrid.children.length === 0)
           document.getElementById("photo-section").style.display = "none";
-        }
       }
     </script>
   </body>

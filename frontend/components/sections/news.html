@@ -1,0 +1,244 @@
+<div class="news-section-wrapper animate-slide-up">
+  <div
+    class="section-header-box"
+    style="
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    "
+  >
+    <div class="header-title">
+      <h3 style="margin: 0; font-weight: 800; color: #1e293b">
+        <i
+          class="fas fa-bullhorn"
+          style="color: #1a73e8; margin-right: 10px"
+        ></i
+        >最新消息
+      </h3>
+      <p style="margin: 5px 0 0 32px; font-size: 13px; color: #64748b">
+        關注小跑豬官方公告，掌握物流動態與優惠
+      </p>
+    </div>
+    <button
+      class="btn btn-sm btn-outline-secondary"
+      onclick="window.loadNewsList(true)"
+    >
+      <i class="fas fa-sync-alt"></i> 重新整理
+    </button>
+  </div>
+
+  <div
+    class="news-filter-bar"
+    style="
+      background: #fff;
+      padding: 15px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    "
+  >
+    <div
+      class="search-input-group"
+      style="position: relative; flex: 1; min-width: 250px"
+    >
+      <i
+        class="fas fa-search"
+        style="
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+        "
+      ></i>
+      <input
+        type="text"
+        id="news-search-input"
+        class="form-control"
+        placeholder="搜尋公告標題或內容..."
+        style="padding-left: 35px; border-radius: 10px"
+        oninput="window.filterNews()"
+      />
+    </div>
+
+    <div class="filter-chips-wrapper" style="display: flex; gap: 8px">
+      <button
+        class="news-filter-chip active"
+        data-category="ALL"
+        onclick="window.switchNewsCategory('ALL', this)"
+      >
+        全部
+      </button>
+      <button
+        class="news-filter-chip"
+        data-category="SYSTEM"
+        onclick="window.switchNewsCategory('SYSTEM', this)"
+      >
+        系統通知
+      </button>
+      <button
+        class="news-filter-chip"
+        data-category="PROMOTION"
+        onclick="window.switchNewsCategory('PROMOTION', this)"
+      >
+        優惠活動
+      </button>
+      <button
+        class="news-filter-chip"
+        data-category="HOLIDAY"
+        onclick="window.switchNewsCategory('HOLIDAY', this)"
+      >
+        節假日安排
+      </button>
+    </div>
+  </div>
+
+  <div id="news-list-container" class="news-grid-layout">
+    <div style="text-align: center; padding: 50px; color: #94a3b8">
+      <div class="loading-spinner"></div>
+      <p style="margin-top: 15px">正在同步官方最新公告...</p>
+    </div>
+  </div>
+
+  <div
+    id="news-pagination"
+    class="pagination-wrapper"
+    style="margin-top: 25px; display: none; justify-content: center"
+  ></div>
+</div>
+
+<style>
+  /* 公告分頁專屬樣式 */
+  .news-grid-layout {
+    display: grid;
+    grid-template-columns: 1fr; /* 預設單欄列表，手機端最易讀 */
+    gap: 15px;
+  }
+
+  /* 公告卡片樣式 */
+  .news-card {
+    background: #fff;
+    border-radius: 18px;
+    border: 1px solid #eef2f6;
+    padding: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .news-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    border-color: #1a73e8;
+  }
+
+  .news-card.important {
+    border-left: 5px solid #ff4d4f;
+  }
+
+  .news-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .news-tag {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 50px;
+    text-transform: uppercase;
+  }
+
+  /* 各類標籤顏色 */
+  .tag-system {
+    background: #e6f7ff;
+    color: #1890ff;
+  }
+  .tag-promotion {
+    background: #f6ffed;
+    color: #52c41a;
+  }
+  .tag-holiday {
+    background: #fff7e6;
+    color: #fa8c16;
+  }
+  .tag-general {
+    background: #f5f5f5;
+    color: #8c8c8c;
+  }
+
+  .news-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .news-date {
+    font-size: 12px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+  }
+
+  .news-excerpt {
+    font-size: 14px;
+    color: #475569;
+    margin-top: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* 限制顯示兩行 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.6;
+  }
+
+  /* 過濾標籤按鈕 (Chips) */
+  .news-filter-chip {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+  }
+
+  .news-filter-chip:hover {
+    background: #f8fafc;
+    border-color: #1a73e8;
+    color: #1a73e8;
+  }
+
+  .news-filter-chip.active {
+    background: #1a73e8;
+    border-color: #1a73e8;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
+  }
+
+  /* 響應式微調 */
+  @media (max-width: 600px) {
+    .news-filter-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .filter-chips-wrapper {
+      overflow-x: auto;
+      padding-bottom: 5px;
+    }
+  }
+</style>

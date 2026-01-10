@@ -1,5 +1,5 @@
 // backend/server.js
-// V16.2 - 旗艦整合修正版：解決 LINE Webhook 簽章驗證問題並保留完整功能
+// V17.0 - 旗艦功能整合版：新增公告、FAQ、關於功能並保留 LINE Webhook 完整邏輯
 
 const express = require("express");
 const dotenv = require("dotenv");
@@ -9,7 +9,7 @@ const cors = require("cors");
 // 載入環境變數
 dotenv.config();
 
-// 載入所有業務路由
+// --- [載入業務路由] ---
 const authRoutes = require("./routes/authRoutes");
 const packageRoutes = require("./routes/packageRoutes");
 const calculatorRoutes = require("./routes/calculatorRoutes");
@@ -19,31 +19,34 @@ const quoteRoutes = require("./routes/quoteRoutes");
 const recipientRoutes = require("./routes/recipientRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-const furnitureRoutes = require("./routes/furnitureRoutes"); // [保留功能] 傢俱代採購功能路由
+const furnitureRoutes = require("./routes/furnitureRoutes");
 
-// [新增功能] 載入 LINE Webhook 相關控制器與安全驗證中介軟體
+// [新增功能] 載入公告、FAQ、關於我路由
+const newsRoutes = require("./routes/newsRoutes");
+const faqRoutes = require("./routes/faqRoutes");
+const aboutRoutes = require("./routes/aboutRoutes");
+
+// [核心功能] 載入 LINE Webhook 相關控制器與安全驗證中介軟體
 const { handleWebhook } = require("./controllers/lineController");
 const { verifyLineSignature } = require("./middleware/lineAuth");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- [大師優化：強化 CORS 安全設定與支援 ngrok 隧道] ---
-// 為了讓後端能同時支援「網頁版」、「手機 APP」以及「ngrok 測試環境」
+// --- [大師優化：強化 CORS 安全設定與支援旗艦版跨端請求] ---
 const allowedOrigins = [
-  "http://localhost:3000", // 本地開發後端
-  "http://localhost:5500", // 常見的 Live Server 前端
+  "http://localhost:3000",
+  "http://localhost:5500",
   "http://127.0.0.1:5500",
-  "https://runpiggy-app-backend.onrender.com", // 您的正式環境後端網址
-  "https://runpiggy-app-frontend.onrender.com", // [待替換] 您的正式環境前端網址
-  "capacitor://localhost", // iOS App 專用 (Capacitor/Cordova 框架)
+  "https://runpiggy-app-backend.onrender.com",
+  "https://runpiggy.shop", // [待替換] 您的正式前端網址
+  "capacitor://localhost", // iOS App 專用
   "http://localhost", // Android App 專用
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // 允許沒有 origin 的請求 (例如：手機 App 的本機請求、Postman 調試、LINE Webhook)
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
@@ -51,24 +54,22 @@ app.use(
         callback(new Error("不允許跨來源存取 (CORS Blocked)"));
       }
     },
-    credentials: true, // 允許攜帶 Cookie 或授權標頭
+    credentials: true,
   })
 );
 
 // --- [新增優化：跳過 ngrok 瀏覽器警告頁面] ---
-// 當您使用免費版 ngrok 時，系統會先跳出一個警告網頁。
-// 此中介軟體能讓程式自動跳過該頁面，確保 LINE 登入與推播功能能正確抓取資料。
 app.use((req, res, next) => {
   res.setHeader("ngrok-skip-browser-warning", "true");
   next();
 });
 
 // --- [關鍵修正：擷取原始 Body 供 LINE 簽章驗證使用] ---
-// 必須在解析 JSON 之前透過 verify 勾子擷取原始 Buffer，否則 verifyLineSignature 會因 JSON 格式化差異而驗證失敗
+// 注意：此設定必須位於所有路由之前
 app.use(
   express.json({
     verify: (req, res, buf) => {
-      req.rawBody = buf;
+      req.rawBody = buf; // 這裡擷取的原始數據對 LINE Webhook 驗證至關重要
     },
   })
 );
@@ -76,38 +77,35 @@ app.use(
 // --- [核心功能：首頁測試路由] ---
 app.get("/", (req, res) => {
   res.json({
-    message:
-      "小跑豬後端伺服器 (System V16.2 - LINE Webhook & Integration Ready)!",
+    message: "小跑豬旗艦版後端伺服器 (V17.0 - News, FAQ & LINE Ready)!",
   });
 });
 
-// --- [新增 API 路由：LINE Webhook] ---
-// 必須經過簽章驗證 (verifyLineSignature) 以確保請求來自 LINE 官方
+// --- [LINE 整合路由] ---
+// 必須經過簽章驗證以確保請求來自 LINE 官方
 app.post("/api/line/webhook", verifyLineSignature, handleWebhook);
 
-// --- 靜態檔案設定 ---
-
-// 1. 圖片上傳路徑 (保留原功能)
+// --- [靜態檔案路徑] ---
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
-// 2. [保留優化] 前端網頁路徑：支援 quote.html 等前端頁面讀取
-// app.use(express.static(path.join(__dirname, "../frontend")));
-
-// --- 註冊 API 路由 (保留原功能) ---
+// --- [註冊業務 API 路由] ---
 app.use("/api/auth", authRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/calculator", calculatorRoutes);
 app.use("/api/shipments", shipmentRoutes);
-app.use("/api/admin", adminRoutes); // 管理員專用
-app.use("/api/quotes", quoteRoutes); // 估價單分享
+app.use("/api/admin", adminRoutes);
+app.use("/api/quotes", quoteRoutes);
 app.use("/api/recipients", recipientRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/notifications", notificationRoutes);
-
-// [保留功能] 註冊傢俱代採購功能路由
 app.use("/api/furniture", furnitureRoutes);
 
-// --- 全域錯誤處理邏輯 (保留原功能) ---
+// --- [新增 API 路由：最新消息、FAQ、關於我們] ---
+app.use("/api/news", newsRoutes);
+app.use("/api/faq", faqRoutes);
+app.use("/api/about", aboutRoutes);
+
+// --- [全域錯誤處理邏輯] ---
 app.use((err, req, res, next) => {
   console.error("[系統錯誤]", err.stack);
   res.status(500).json({ success: false, message: "後端伺服器發生異常" });
@@ -116,9 +114,7 @@ app.use((err, req, res, next) => {
 // 啟動伺服器
 app.listen(PORT, () => {
   console.log(`[啟動成功] 伺服器正在 http://localhost:${PORT} 上運行...`);
-  console.log(`[CORS 狀態] 已啟用動態白名單保護，支援 ngrok 隧道測試`);
-  console.log(`[LINE 整合] Webhook 路由已就緒: /api/line/webhook`);
-  console.log(
-    `[靜態路由] 已連結至前端目錄: ${path.join(__dirname, "../frontend")}`
-  );
+  console.log(`[核心狀態] CORS 保護已啟用，支援手機 APP 協議 (Capacitor)`);
+  console.log(`[功能就緒] 最新消息 (News) 與 常見問題 (FAQ) API 已掛載`);
+  console.log(`[LINE 整合] Webhook 路由驗證就緒: /api/line/webhook`);
 });

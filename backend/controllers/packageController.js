@@ -1,5 +1,5 @@
 // backend/controllers/packageController.js
-// V2025.V16.2 - 旗艦極限穩定版：效能巔峰優化 & 嚴格認領校驗整合
+// V2026.1.2 - 旗艦優化版：整合電器類校驗與報關欄位擴充
 
 const prisma = require("../config/db.js");
 const ratesManager = require("../utils/ratesManager.js");
@@ -8,6 +8,14 @@ const createLog = require("../utils/createLog.js");
 // --- 輔助函式：雲端模式下無需執行本機刪檔 ---
 const deleteFiles = (filePaths) => {
   return;
+};
+
+/**
+ * @description 輔助函式：判斷是否為電器類關鍵字
+ */
+const isElectricalAppliance = (productName) => {
+  const keywords = ["電", "機", "扇", "視", "冰箱", "爐", "燈", "器", "泵"];
+  return keywords.some((key) => productName.includes(key));
 };
 
 /**
@@ -67,11 +75,19 @@ const getUnclaimedPackages = async (req, res) => {
 
 /**
  * @description 包裹預報 (單筆)
+ * [優化] 新增 modelNumber, spec 欄位，並針對電器類強化 URL 檢核
  */
 const createPackageForecast = async (req, res) => {
   try {
-    const { trackingNumber, productName, quantity, note, productUrl } =
-      req.body;
+    const {
+      trackingNumber,
+      productName,
+      quantity,
+      note,
+      productUrl,
+      modelNumber,
+      spec,
+    } = req.body;
     const userId = req.user.id;
     const userEmail = req.user.email;
 
@@ -79,6 +95,17 @@ const createPackageForecast = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "請提供單號和商品名稱" });
+    }
+
+    // [優化新增] 電器類強制要求網址
+    if (
+      isElectricalAppliance(productName) &&
+      (!productUrl || productUrl.trim() === "")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "電器類商品因報關需求，必須提供「購買連結」",
+      });
     }
 
     const hasUrl = productUrl && productUrl.trim() !== "";
@@ -110,6 +137,8 @@ const createPackageForecast = async (req, res) => {
         quantity: quantity ? parseInt(quantity) : 1,
         note,
         productUrl: productUrl || null,
+        modelNumber: modelNumber || null,
+        spec: spec || null,
         productImages: imagePaths,
         userId: userId,
         status: "PENDING",
@@ -161,6 +190,8 @@ const bulkForecast = async (req, res) => {
           trackingNumber: pkg.trackingNumber.trim(),
           productName: pkg.productName,
           quantity: pkg.quantity ? parseInt(pkg.quantity) : 1,
+          modelNumber: pkg.modelNumber || null,
+          spec: pkg.spec || null,
           note: pkg.note || "批量匯入",
           userId: userId,
           status: "PENDING",
@@ -192,13 +223,11 @@ const claimPackage = async (req, res) => {
     const userEmail = req.user.email;
     const proofFile = req.file;
 
-    // 嚴格查詢：單號必須完全相符且存在於資料庫中
     const pkg = await prisma.package.findUnique({
       where: { trackingNumber: trackingNumber.trim() },
       include: { user: true },
     });
 
-    // 如果找不到包裹，直接拒絕，絕不自動新增
     if (!pkg)
       return res.status(404).json({
         success: false,
@@ -206,22 +235,18 @@ const claimPackage = async (req, res) => {
           "認領失敗：找不到此物流單號。請確認單號輸入正確，且包裹已顯示在無主列表中。",
       });
 
-    // 檢查是否為無主包裹
     if (
       pkg.user.email !== "unclaimed@runpiggy.com" &&
       pkg.user.email !== "admin@runpiggy.com"
     ) {
       if (pkg.userId !== userId) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "認領失敗：此包裹已被其他會員預報。",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "認領失敗：此包裹已被其他會員預報。",
+        });
       }
     }
 
-    // 執行更新，將包裹歸屬權移交給當前會員
     await prisma.package.update({
       where: { id: pkg.id },
       data: {
@@ -357,6 +382,8 @@ const updateMyPackage = async (req, res) => {
       note,
       existingImages,
       productUrl,
+      modelNumber,
+      spec,
     } = req.body;
     const userId = req.user.id;
     const userEmail = req.user.email;
@@ -391,6 +418,8 @@ const updateMyPackage = async (req, res) => {
         quantity: quantity ? parseInt(quantity) : undefined,
         note,
         productUrl,
+        modelNumber: modelNumber || undefined,
+        spec: spec || undefined,
         productImages: keepImagesList.slice(0, 5),
       },
     });

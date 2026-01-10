@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "Shipment" ADD COLUMN     "adminNote" TEXT,
-ALTER COLUMN "status" SET DEFAULT 'AWAITING_REVIEW';

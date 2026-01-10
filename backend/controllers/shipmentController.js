@@ -1,8 +1,5 @@
 // backend/controllers/shipmentController.js
-// V2026.01.Final.CloudinaryFixed.Plus - 憑證顯示與雲端路徑全自動修復版
-// [Update] 導入自我修復正則表達式，解決 Cloudinary 網址協議損毀 (https:/) 與混合內容問題
-// [Update] 解決數據解析導致的 0 顯示問題 (重量與體積累加邏輯優化)
-// [Added] 深度檢閱報告數據同步：透明化報表渲染、防破圖憑證顯示
+// V2026.01.Final.Pro - 旗艦功能優化版：整合自定義編號、專車派送與嚴格校驗
 
 const prisma = require("../config/db.js");
 const {
@@ -13,8 +10,26 @@ const {
 const ratesManager = require("../utils/ratesManager.js");
 
 /**
+ * 輔助函式：驗證身分證字號 (首字大寫英文 + 9位數字，數字第一位必須是 1 或 2)
+ */
+const validateIdNumber = (id) => {
+  const idRegex = /^[A-Z][12]\d{8}$/;
+  return idRegex.test(id);
+};
+
+/**
+ * 輔助函式：生成易讀的集運單編號 (格式: RP-會員ID-日期-4位隨機)
+ */
+const generateShipmentNo = (piggyId) => {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const random = Math.floor(1000 + Math.random() * 9000);
+  const prefix = piggyId ? piggyId.replace("RP", "") : "CUST";
+  return `SP-${prefix}-${date}-${random}`;
+};
+
+/**
  * --- 1. 核心輔助計算函式 (高透明度修正版) ---
- * 此函數負責生成「深度檢閱」所需的所有計算明細，並確保物理數據計算不因缺失尺寸而歸零
+ * 此函數負責生成「費用明細」(原：深度檢閱) 內容
  */
 const calculateShipmentDetails = (packages, rates, deliveryRate) => {
   const safeRates = rates || {};
@@ -29,13 +44,11 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
   };
 
   let totalRawBaseCost = 0;
-  let totalActualWeight = 0; // 總實重
-  let totalVolumetricCai = 0; // 總材數
-
-  let hasOversized = false;
-  let hasOverweight = false;
+  let totalActualWeight = 0;
+  let totalVolumetricCai = 0;
 
   let breakdown = {
+    reportTitle: "費用明細", // 優化文字：由「深度檢閱」改為「費用明細」
     packages: [],
     subtotal: 0,
     minChargeDiff: 0,
@@ -45,7 +58,6 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
 
   packages.forEach((pkg) => {
     try {
-      // 強化 arrivedBoxesJson 解析，兼容 String 與 Json 格式
       let boxes = pkg.arrivedBoxesJson || [];
       if (typeof boxes === "string") {
         try {
@@ -61,7 +73,7 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
         breakdown.packages.push({
           trackingNumber: pkg.trackingNumber,
           productName: pkg.productName,
-          note: "舊資料或無測量數據",
+          note: "無測量數據",
           finalFee: legacyFee,
         });
         return;
@@ -76,22 +88,17 @@ const calculateShipmentDetails = (packages, rates, deliveryRate) => {
         const rateInfo = ratesManager.getCategoryRate(safeRates, box.type);
         const typeName = rateInfo.name || box.type || "一般";
 
-        // [關鍵修正]：重量累加必須在尺寸判斷外，確保即使沒量尺寸也能計算總重
         totalActualWeight += weight;
 
         let boxNotes = [];
-        if (roundedWeight >= (CONSTANTS.OVERWEIGHT_LIMIT || 40)) {
-          hasOverweight = true;
+        if (roundedWeight >= (CONSTANTS.OVERWEIGHT_LIMIT || 40))
           boxNotes.push("超重");
-        }
         if (
           l >= (CONSTANTS.OVERSIZED_LIMIT || 150) ||
           w >= (CONSTANTS.OVERSIZED_LIMIT || 150) ||
           h >= (CONSTANTS.OVERSIZED_LIMIT || 150)
-        ) {
-          hasOversized = true;
+        )
           boxNotes.push("超長");
-        }
 
         if (l > 0 && w > 0 && h > 0) {
           const cai = Math.ceil(
@@ -215,6 +222,14 @@ const createShipment = async (req, res) => {
     const userId = req.user.id;
     const isWalletPay = paymentMethod === "WALLET";
 
+    // [優化] 驗證身分證格式
+    if (!validateIdNumber(idNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "收件人身分證格式錯誤 (需大寫英文開頭，第一位數字為1或2)",
+      });
+    }
+
     if (typeof packageIds === "string") packageIds = JSON.parse(packageIds);
     if (!packageIds || packageIds.length === 0)
       return res.status(400).json({ success: false, message: "請選擇包裹" });
@@ -228,12 +243,15 @@ const createShipment = async (req, res) => {
       },
     });
 
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     const systemRates = await ratesManager.getRates();
     const calcResult = calculateShipmentDetails(
       packagesToShip,
       systemRates,
       deliveryLocationRate
     );
+
+    const newShipmentNo = generateShipmentNo(user.piggyId);
 
     const newShipment = await prisma.$transaction(async (tx) => {
       let transactionId = null;
@@ -248,7 +266,7 @@ const createShipment = async (req, res) => {
             amount: -calcResult.totalCost,
             type: "PAYMENT",
             status: "COMPLETED",
-            description: "支付集運單費用",
+            description: `支付集運單編號: ${newShipmentNo}`,
           },
         });
         transactionId = txRecord.id;
@@ -256,6 +274,7 @@ const createShipment = async (req, res) => {
 
       const shipment = await tx.shipment.create({
         data: {
+          shipmentNo: newShipmentNo, // 使用新生成的編號
           recipientName,
           phone,
           shippingAddress,
@@ -265,6 +284,7 @@ const createShipment = async (req, res) => {
           totalCost: calcResult.totalCost,
           status: isWalletPay ? "PROCESSING" : "PENDING_PAYMENT",
           paymentProof: isWalletPay ? "WALLET_PAY" : null,
+          carrierType: "專車派送", // [優化] 默認專車派送
           transactionId,
           additionalServices:
             typeof additionalServices === "string"
@@ -311,7 +331,7 @@ const getMyShipments = async (req, res) => {
 };
 
 /**
- * --- 5. [API] 上傳付款憑證 (Cloudinary 破圖修復核心) ---
+ * --- 5. [API] 上傳付款憑證 ---
  */
 const uploadPaymentProof = async (req, res) => {
   try {
@@ -321,15 +341,11 @@ const uploadPaymentProof = async (req, res) => {
 
     let finalPath = req.file.path;
 
-    // [關鍵修正]：導入自我修復邏輯
-    // 1. 強制 HTTPS 防止 Mixed Content
-    // 2. 修復協議後的斜槓數量 (正則表達式確保協議後方必定有兩個斜線，修復 https:/)
     if (finalPath.startsWith("http")) {
       finalPath = finalPath
         .replace(/^http:\/\//i, "https://")
         .replace(/^https?:\/+(?!\/)/, "https://");
     } else {
-      // 本地開發文件路徑清理
       finalPath = finalPath.replace(/\\/g, "/");
       if (finalPath.startsWith("public/")) {
         finalPath = "/" + finalPath.replace("public/", "");
@@ -359,7 +375,7 @@ const uploadPaymentProof = async (req, res) => {
 };
 
 /**
- * --- 6. [API] 獲取單一集運單詳情 (深度檢閱核心) ---
+ * --- 6. [API] 獲取單一集運單詳情 (訂單詳細內容) ---
  */
 const getShipmentById = async (req, res) => {
   try {
@@ -377,7 +393,6 @@ const getShipmentById = async (req, res) => {
         .status(404)
         .json({ success: false, message: "找不到該集運單" });
 
-    // 即時計算費用明細與物理統計 (確保數據不為 0)
     const systemRates = await ratesManager.getRates();
     const detailCalc = calculateShipmentDetails(
       shipment.packages,
@@ -385,7 +400,6 @@ const getShipmentById = async (req, res) => {
       shipment.deliveryLocationRate || 0
     );
 
-    // [關鍵修正]：渲染前修復 Cloudinary 網址 (HTTPS 與單斜線修復)
     let finalPaymentProof = shipment.paymentProof;
     if (finalPaymentProof && finalPaymentProof.startsWith("http")) {
       finalPaymentProof = finalPaymentProof
@@ -393,10 +407,17 @@ const getShipmentById = async (req, res) => {
         .replace(/^https?:\/+(?!\/)/, "https://");
     }
 
+    // [優化] 加入銀行帳務轉帳資訊
+    const bankSetting = await prisma.systemSetting.findUnique({
+      where: { key: "bank_info" },
+    });
+
     const processedShipment = {
       ...shipment,
+      reportTitle: "訂單詳細內容", // 優化文字：由「集運單詳情」改為「訂單詳細內容」
       paymentProof: finalPaymentProof,
       costBreakdown: detailCalc.breakdown,
+      bankInfo: bankSetting ? bankSetting.value : null,
       physicalStats: {
         totalCbm: Number(detailCalc.totalCbm) || 0,
         totalWeight: Number(detailCalc.totalActualWeight) || 0,

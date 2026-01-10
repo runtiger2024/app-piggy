@@ -1,0 +1,240 @@
+<div class="faq-section-wrapper animate-slide-up">
+  <div class="section-header-box" style="margin-bottom: 25px">
+    <h3 style="margin: 0; font-weight: 800; color: #1e293b">
+      <i
+        class="fas fa-question-circle"
+        style="color: #1a73e8; margin-right: 10px"
+      ></i
+      >常見問題 (FAQ)
+    </h3>
+    <p style="margin: 8px 0 20px 32px; font-size: 14px; color: #64748b">
+      我們整理了客戶最常遇到的問題，若仍有疑問請隨時與線上客服聯繫。
+    </p>
+
+    <div
+      class="faq-search-container"
+      style="position: relative; max-width: 600px; margin-left: 32px"
+    >
+      <i
+        class="fas fa-search"
+        style="
+          position: absolute;
+          left: 15px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+        "
+      ></i>
+      <input
+        type="text"
+        id="faq-search-input"
+        class="form-control"
+        placeholder="輸入關鍵字搜尋問題內容..."
+        style="
+          padding-left: 42px;
+          height: 50px;
+          border-radius: 14px;
+          border: 2px solid #e2e8f0;
+          font-size: 15px;
+        "
+        oninput="window.filterFAQ()"
+      />
+    </div>
+  </div>
+
+  <div
+    class="faq-categories"
+    style="
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      margin-left: 32px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+    "
+  >
+    <button
+      class="faq-tab active"
+      data-category="ALL"
+      onclick="window.switchFAQCategory('ALL', this)"
+    >
+      全部問題
+    </button>
+    <button
+      class="faq-tab"
+      data-category="LOGISTICS"
+      onclick="window.switchFAQCategory('LOGISTICS', this)"
+    >
+      物流轉運
+    </button>
+    <button
+      class="faq-tab"
+      data-category="PAYMENT"
+      onclick="window.switchFAQCategory('PAYMENT', this)"
+    >
+      費用帳務
+    </button>
+    <button
+      class="faq-tab"
+      data-category="CUSTOMS"
+      onclick="window.switchFAQCategory('CUSTOMS', this)"
+    >
+      報關查驗
+    </button>
+    <button
+      class="faq-tab"
+      data-category="ACCOUNT"
+      onclick="window.switchFAQCategory('ACCOUNT', this)"
+    >
+      帳號功能
+    </button>
+  </div>
+
+  <div
+    id="faq-list-container"
+    class="faq-accordion-group"
+    style="margin-left: 32px"
+  >
+    <div class="text-center" style="padding: 40px; color: #94a3b8">
+      <div class="loading-spinner"></div>
+      <p style="margin-top: 15px">正在為您準備常見問題清單...</p>
+    </div>
+  </div>
+
+  <div
+    class="faq-footer"
+    style="
+      margin-top: 40px;
+      margin-left: 32px;
+      padding: 25px;
+      background: #f8fafc;
+      border-radius: 18px;
+      border: 1px solid #eef2f6;
+      text-align: center;
+    "
+  >
+    <p style="margin-bottom: 15px; font-weight: 700; color: #475569">
+      仍找不到答案？
+    </p>
+    <div style="display: flex; justify-content: center; gap: 15px">
+      <a
+        href="https://line.me/ti/p/@runpiggy"
+        target="_blank"
+        class="btn btn-primary"
+        style="border-radius: 12px; padding: 10px 25px"
+      >
+        <i class="fab fa-line"></i> 聯繫 LINE 客服
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* FAQ 摺疊式樣式 */
+  .faq-item {
+    background: #fff;
+    border: 1px solid #eef2f6;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .faq-item:hover {
+    border-color: #1a73e8;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+
+  /* 問題標題欄 */
+  .faq-question {
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 700;
+    color: #1e293b;
+    user-select: none;
+  }
+
+  .faq-question i.toggle-icon {
+    color: #94a3b8;
+    transition: transform 0.3s ease;
+  }
+
+  /* 答案內容區 */
+  .faq-answer {
+    padding: 0 20px;
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0, 1, 0, 1);
+    background: #fafbfc;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* 展開狀態 */
+  .faq-item.active {
+    border-color: #1a73e8;
+  }
+
+  .faq-item.active .faq-answer {
+    padding: 15px 20px 25px 20px;
+    max-height: 1000px;
+    transition: all 0.3s cubic-bezier(1, 0, 1, 0);
+  }
+
+  .faq-item.active .faq-question {
+    color: #1a73e8;
+  }
+
+  .faq-item.active i.toggle-icon {
+    transform: rotate(180deg);
+    color: #1a73e8;
+  }
+
+  /* 分類標籤樣式 */
+  .faq-tab {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    padding: 8px 18px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+  }
+
+  .faq-tab:hover {
+    background: #f8fafc;
+    border-color: #1a73e8;
+    color: #1a73e8;
+  }
+
+  .faq-tab.active {
+    background: #1a73e8;
+    color: #fff;
+    border-color: #1a73e8;
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
+  }
+
+  /* 行動端適配 */
+  @media (max-width: 600px) {
+    .faq-section-wrapper {
+      padding: 0 5px;
+    }
+    .faq-search-container,
+    .faq-categories,
+    .faq-accordion-group,
+    .faq-footer {
+      margin-left: 0 !important;
+    }
+    .faq-tab {
+      padding: 6px 14px;
+      font-size: 12px;
+    }
+  }
+</style>

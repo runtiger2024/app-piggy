@@ -106,6 +106,20 @@
             </button>
           </div>
         </div>
+
+        <div
+          id="bank-invoice-note"
+          style="
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed #ccc;
+            font-size: 11px;
+            color: #666;
+          "
+        >
+          <i class="fas fa-info-circle"></i>
+          備註：默認開立電子發票至帳號設定中填寫的電子信箱
+        </div>
       </div>
 
       <div
@@ -250,7 +264,7 @@
         class="btn btn-secondary"
         onclick="document.getElementById('bank-info-modal').style.display='none'"
       >
-        稍後上傳
+        稍後再傳
       </button>
       <button
         id="btn-bank-submit-proof"
@@ -265,7 +279,7 @@
 </div>
 
 <style>
-  /* 原始複製按鈕樣式 */
+  /* 複製按鈕基礎樣式 */
   .btn-copy {
     background: #fff;
     border: 1px solid #ccc;
@@ -278,7 +292,7 @@
     background: #eee;
   }
 
-  /* 優化：現代化上傳區樣式 */
+  /* 上傳區現代化樣式 */
   .upload-zone-wrapper {
     position: relative;
     width: 100%;
@@ -324,14 +338,12 @@
 
 <script>
   /**
-   * [新增] 監聽統編輸入邏輯
+   * 監聽統編輸入：有填寫時標記抬頭為必填
    */
   function handleTaxIdChange(input) {
     const star = document.getElementById("title-required-star");
-    if (input.value.trim().length > 0) {
-      star.style.display = "inline";
-    } else {
-      star.style.display = "none";
+    if (star) {
+      star.style.display = input.value.trim().length > 0 ? "inline" : "none";
     }
   }
 
@@ -347,51 +359,57 @@
     if (input.files && input.files[0]) {
       const reader = new FileReader();
       reader.onload = function (e) {
-        img.src = e.target.result;
-        container.style.display = "block";
-        label.style.display = "none";
-        submitBtn.disabled = false; // 選中圖片後啟用提交按鈕
+        if (img) img.src = e.target.result;
+        if (container) container.style.display = "block";
+        if (label) label.style.display = "none";
+        if (submitBtn) submitBtn.disabled = false; // 選中圖片後啟用
       };
       reader.readAsDataURL(input.files[0]);
     }
   }
 
   /**
-   * 重置上傳區域
+   * 重置上傳區域狀態
    */
   function resetBankProofUpload() {
     const input = document.getElementById("bank-transfer-proof");
     const container = document.getElementById("bank-proof-preview-container");
     const label = document.getElementById("bank-proof-label");
     const submitBtn = document.getElementById("btn-bank-submit-proof");
+    const taxInput = document.getElementById("bank-tax-id");
+    const titleInput = document.getElementById("bank-invoice-title");
+    const star = document.getElementById("title-required-star");
 
-    input.value = "";
-    container.style.display = "none";
-    label.style.display = "flex";
-    submitBtn.disabled = true;
+    if (input) input.value = "";
+    if (container) container.style.display = "none";
+    if (label) label.style.display = "flex";
+    if (submitBtn) submitBtn.disabled = true;
+    if (taxInput) taxInput.value = "";
+    if (titleInput) titleInput.value = "";
+    if (star) star.style.display = "none";
   }
 
   /**
-   * 提交憑證邏輯 (含統編與抬頭驗證)
+   * 提交憑證邏輯 (含驗證與發票欄位)
    */
   async function submitBankProof() {
-    const shipmentId = window.lastCreatedShipmentId; // 抓取剛建立的單號
+    const shipmentId = window.lastCreatedShipmentId;
     const fileInput = document.getElementById("bank-transfer-proof");
-    const file = fileInput.files[0];
+    const file = fileInput ? fileInput.files[0] : null;
 
-    // [新增] 抓取發票資訊
     const taxId = document.getElementById("bank-tax-id").value.trim();
     const invoiceTitle = document
       .getElementById("bank-invoice-title")
       .value.trim();
 
-    if (!shipmentId) return alert("找不到對應訂單");
+    if (!shipmentId) return alert("系統錯誤：找不到訂單單號");
     if (!file) return alert("請先選擇照片");
 
-    // [新增] 強制驗證邏輯：填寫統編時，抬頭為必填
+    // 必填校驗：填寫統編時抬頭不可為空
     if (taxId.length > 0 && invoiceTitle.length === 0) {
-      alert("填寫統一編號時，公司抬頭為必填項目");
-      document.getElementById("bank-invoice-title").focus();
+      alert("⚠️ 提醒：填寫統一編號時，公司抬頭為必填項目");
+      const titleInput = document.getElementById("bank-invoice-title");
+      if (titleInput) titleInput.focus();
       return;
     }
 
@@ -400,13 +418,12 @@
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
 
     const fd = new FormData();
-    // 注意：根據後端 shipmentController.js 的定義，欄位名稱應為 "paymentProof"
-    fd.append("paymentProof", file);
+    fd.append("paymentProof", file); // 與後端 shipmentController 對應
     fd.append("taxId", taxId);
     fd.append("invoiceTitle", invoiceTitle);
 
     try {
-      // 根據 dashboard-shipments.js 的修復，路徑應為 /payment 並使用 PUT 方法以確保穩定
+      // 呼叫更新憑證 API
       const res = await fetch(
         `${API_BASE_URL}/api/shipments/${shipmentId}/payment`,
         {
@@ -417,16 +434,17 @@
       );
 
       if (res.ok) {
-        alert("憑證與發票資訊上傳成功！管理員將儘速審核。");
+        alert("憑證與發票資訊上傳成功！管理員將儘速審核訂單。");
         document.getElementById("bank-info-modal").style.display = "none";
+        // 觸發外部列表更新
         if (typeof window.loadMyShipments === "function")
           window.loadMyShipments();
       } else {
         const data = await res.json();
-        alert(data.message || "上傳失敗");
+        alert(data.message || "上傳失敗，請稍後再試");
       }
     } catch (err) {
-      alert("網路錯誤");
+      alert("網路連線錯誤，請檢查您的網路狀態");
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-check-circle"></i> 確認提交憑證';

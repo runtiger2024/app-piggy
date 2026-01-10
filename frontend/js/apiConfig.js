@@ -1,5 +1,6 @@
-// frontend/js/apiConfig.js (V3.0 旗艦 App 兼容版)
+// frontend/js/apiConfig.js (V4.0 旗艦 App 兼容增強版)
 // 支援環境：網頁瀏覽器、Android App (Capacitor/Cordova)、iOS App
+// [優化]：整合最新消息、關於我們、常見問題等新功能路徑配置
 
 /**
  * 1. 定義伺服器網址
@@ -7,6 +8,7 @@
  */
 const PROD_URL = "https://runpiggy-app-backend.onrender.com";
 const DEV_URL = "http://localhost:3000";
+
 /**
  * 2. 進階環境判斷邏輯
  * 除了原本的 localhost，我們額外加入了手機 App 常用協議的判斷。
@@ -34,7 +36,28 @@ const isDev = (function () {
 const API_BASE_URL = isDev ? DEV_URL : PROD_URL;
 
 /**
- * 3. 診斷資訊 (保留原功能)
+ * 3. [新增] API 功能路徑映射 (對應同事優化清單之新功能)
+ * 統一管理新模組的接口路徑，方便前端開發調用
+ */
+const API_ENDPOINTS = {
+  // 基礎路徑
+  BASE: API_BASE_URL,
+
+  // 最新消息 (公告區)
+  NEWS: `${API_BASE_URL}/api/news`,
+
+  // 關於小跑豬 (家具專線說明)
+  ABOUT: `${API_BASE_URL}/api/about`,
+
+  // 常見問題 (FAQ)
+  FAQ: `${API_BASE_URL}/api/faq`,
+
+  // 錢包與銀行資訊 (帳務增加轉帳資訊)
+  BANK_INFO: `${API_BASE_URL}/api/wallet/bank-info`,
+};
+
+/**
+ * 4. 診斷資訊 (保留原功能)
  * 這對你在手機上調試 App 時非常重要，能看到 App 到底連去哪了。
  */
 console.log(
@@ -44,8 +67,16 @@ console.log(
   "color: #1a73e8; font-weight: bold;"
 );
 console.log(`[環境診斷] API 請求目標: ${API_BASE_URL}`);
+console.log(`[環境診斷] 公告與 FAQ 路徑已就緒`);
 
-// 4. 匯出邏輯 (相容 CommonJS 模組化環境)
+// 5. 匯出邏輯 (相容 CommonJS 模組化環境)
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { API_BASE_URL };
+  module.exports = {
+    API_BASE_URL,
+    API_ENDPOINTS,
+  };
 }
+
+// 為了讓舊有程式碼相容，確保全域變數依然存在
+window.API_BASE_URL = API_BASE_URL;
+window.API_ENDPOINTS = API_ENDPOINTS;

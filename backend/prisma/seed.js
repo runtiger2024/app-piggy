@@ -1,9 +1,9 @@
 // backend/prisma/seed.js
-// V2026.01.Stable.Full - 旗艦版系統種子腳本
-// [Retain] 完整保留 Randy 最高權限、無主包裹、測試帳號
-// [Retain] 完整保留 一般/特殊A/B/C 海運費率配置
-// [Added] 新增附加服務配置 (木架、上樓、組裝)
-// [Added] 新增偏遠地區 (Remote Areas) 加價清單配置
+// V2026.01.Final - 旗艦整合優化版 (修復 StaticContent 命名問題)
+// [Retain] 完整保留 Randy 最高權限、無主包裹、測試帳號與基礎費率
+// [Update] 修正模型名稱：aboutContent -> staticContent 以符合最新 Schema
+// [Update] 附加服務清單 (上樓、拆木架、氣泡膜) 依照同事反饋全面更新
+// [Added] 初始化最新消息、關於小跑豬與常見問題模組
 
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
@@ -12,7 +12,7 @@ require("dotenv").config();
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 開始執行完整系統種子腳本 (RunPiggy Seeding)...");
+  console.log("🌱 開始執行優化版系統種子腳本 (RunPiggy Enhanced Seeding)...");
 
   // ==========================================
   // 1. 設定最高權限管理員 (Randy Admin)
@@ -41,6 +41,7 @@ async function main() {
     "FURNITURE_VIEW",
     "FURNITURE_EDIT",
     "FURNITURE_DELETE",
+    "CONTENT_MANAGE", // 內容管理權限 (News, FAQ, About)
   ];
 
   const admin = await prisma.user.upsert({
@@ -60,55 +61,49 @@ async function main() {
       piggyId: "RP0000001",
     },
   });
-  console.log(`✅ 最高權限管理員已就緒: ${admin.email} (ID: ${admin.piggyId})`);
+  console.log(`✅ 最高權限管理員已就緒: ${admin.email}`);
 
   // ==========================================
   // 2. 初始化系統設定 (System Settings)
   // ==========================================
-  console.log("⚙️ 正在初始化系統費率與配置...");
+  console.log("⚙️ 正在優化系統費率與配置...");
 
   const defaultSettings = [
     {
       key: "furniture_config",
       category: "FURNITURE",
       group: "RATE",
-      description: "家具代採購匯率、服務費率與最低服務費設定",
-      value: {
-        exchangeRate: 4.6, // 當前人民幣匯率
-        serviceFeeRate: 0.2, // 服務費率 20%
-        minServiceFee: 500, // 最低服務費 500 TWD
-      },
+      description: "家具代採購匯率與服務費設定",
+      value: { exchangeRate: 4.6, serviceFeeRate: 0.2, minServiceFee: 500 },
     },
     {
       key: "rates_config",
       category: "SHIPPING",
       group: "RATE",
-      description: "海運費率 (一般/特殊A/B/C) 與附加費用設定",
+      description: "海運費率與報關規則 (含電器類規定)",
       value: {
         categories: {
           general: {
             name: "一般傢俱",
-            items: "沙發、床架、桌椅、櫃子、書架...",
+            items: "沙發、床架、桌椅、櫃子...",
             weightRate: 22,
             volumeRate: 125,
           },
           special_a: {
             name: "特殊傢俱A",
-            items:
-              "大理石、岩板傢俱、普通馬桶、床墊、地板、格柵、屏風、浴室架、水龍頭、浴室櫃、臉盆、浴缸、窗簾..",
+            items: "岩板、馬桶、床墊、浴缸、窗簾...",
             weightRate: 32,
             volumeRate: 184,
           },
           special_b: {
             name: "特殊傢俱B",
-            items:
-              "門、背景岩板、鏡子、玻璃屏風、智能傢俱、建材類、燈具、保險箱、鏡櫃..",
+            items: "門、鏡子、燈具、保險箱、建材...",
             weightRate: 40,
             volumeRate: 224,
           },
           special_c: {
-            name: "特殊傢俱C",
-            items: "智能馬桶、冰箱、洗衣機、冷氣、熱泵、帶電大家電",
+            name: "特殊傢俱C (電器類)",
+            items: "智能馬桶、冰箱、洗衣機、電器商品 (報關需型號與規格)",
             weightRate: 50,
             volumeRate: 274,
           },
@@ -116,13 +111,10 @@ async function main() {
         constants: {
           VOLUME_DIVISOR: 6000,
           CBM_TO_CAI_FACTOR: 35.315,
-          MINIMUM_CHARGE: 2000, // 海運低消 $2000
-          OVERSIZED_LIMIT: 300, // 長度超過 300cm
-          OVERSIZED_FEE: 800, // 超長費 $800
-          OVERWEIGHT_LIMIT: 100, // 重量超過 100kg
-          OVERWEIGHT_FEE: 800, // 超重費 $800
-          FORKLIFT_NOTE:
-            "若貨物超重(單件>=100kg)，請客戶於台灣端自行安排堆高機。",
+          MINIMUM_CHARGE: 2000,
+          OVERSIZED_LIMIT: 300,
+          OVERWEIGHT_LIMIT: 100,
+          DEFAULT_CARRIER: "專車派送",
         },
       },
     },
@@ -130,52 +122,44 @@ async function main() {
       key: "additional_services_config",
       category: "SHIPPING",
       group: "SERVICE",
-      description: "附加服務費率設定 (木架、送上樓、組裝)",
+      description: "附加服務費率 (依同事優化清單配置)",
       value: {
-        woodFrame: { name: "木架打框", baseFee: 200, unit: "cai", rate: 20 },
-        floorService: {
-          name: "送貨上樓",
-          baseFee: 100,
-          perFloor: 50,
-          elevatorDiscount: true,
-        },
-        assembly: { name: "家具組裝", minFee: 500, rate: 0.1 }, // 按貨值 10% 或最低 500
-        disposal: { name: "舊家具清運", note: "需現場估價" },
-      },
-    },
-    {
-      key: "remote_areas_config",
-      category: "SHIPPING",
-      group: "LOCATION",
-      description: "台灣偏遠地區加價配置表",
-      value: {
-        100: ["宜蘭縣-頭城鎮", "宜蘭縣-蘇澳鎮", "南投縣-集集鎮"],
-        200: ["花蓮縣-全區", "台東縣-全區", "屏東縣-恆春鎮"],
-        500: ["金門縣-全區", "連江縣-全區", "澎湖縣-全區"],
-        0: ["台北市", "新北市", "桃園市", "台中市", "高雄市"], // 一般地區
-      },
-    },
-    {
-      key: "announcement",
-      category: "SYSTEM",
-      group: "INFO",
-      description: "首頁系統公告內容",
-      value: {
-        enabled: true,
-        text: "【重要通知】小跑豬家具專線已全面升級，提供專業木架打框與送貨上樓服務！",
-        color: "primary",
+        disclaimer:
+          "此服務費用由客戶直接現場支付給現場派送人員，實際金額依司機現場報價為主",
+        services: [
+          { id: "floor_stairs", name: "搬運上樓 (樓梯)", type: "FIELD_PAY" },
+          { id: "floor_elevator", name: "搬運上樓 (電梯)", type: "FIELD_PAY" },
+          { id: "wood_strip", name: "拆木架 (不含回收)", type: "FIELD_PAY" },
+          {
+            id: "wood_strip_recycle",
+            name: "拆木架 & 回收廢棄物",
+            type: "FIELD_PAY",
+          },
+          {
+            id: "wrap_wood",
+            name: "加強包裝：打木架",
+            type: "PREPAY",
+            rate: 25,
+          },
+          {
+            id: "wrap_bubble",
+            name: "加強包裝：氣泡膜",
+            type: "PREPAY",
+            rate: 15,
+          },
+        ],
       },
     },
     {
       key: "bank_info",
       category: "PAYMENT",
       group: "INFO",
-      description: "客戶匯款轉帳指定的銀行帳號資訊",
+      description: "銀行轉帳資訊",
       value: {
         bankName: "第一銀行 (007)",
-        branch: "南京東路分行",
         account: "60110066477",
         holder: "跑得快國際貿易有限公司",
+        invoiceNote: "預設開立電子發票至帳號設定之 Email",
       },
     },
   ];
@@ -197,16 +181,72 @@ async function main() {
       },
     });
   }
-  console.log("✅ 系統配置 (費率/附加服務/偏遠地區/銀行資訊) 初始化完成");
 
   // ==========================================
-  // 3. 設定無主包裹專用帳號 (Unclaimed User)
+  // 3. 初始化內容模組 (News, StaticContent, FAQ)
+  // ==========================================
+  console.log("📝 正在初始化公告、關於我們與常見問題...");
+
+  // 最新消息 (News)
+  await prisma.news.upsert({
+    where: { id: "welcome-news-1" },
+    update: {},
+    create: {
+      id: "welcome-news-1",
+      title: "小跑豬旗艦版會員系統正式上線",
+      content:
+        "提供專業家具專線集運，支援免費驗貨、打木架與全省送貨上樓。電器類包裹請務必填寫型號規格。",
+      category: "SYSTEM",
+      isImportant: true,
+    },
+  });
+
+  // 關於小跑豬 (修正：使用 StaticContent 且 key 為唯一標識)
+  await prisma.staticContent.upsert({
+    where: { key: "ABOUT_US_FURNITURE" },
+    update: {},
+    create: {
+      key: "ABOUT_US_FURNITURE",
+      title: "關於小跑豬家具專線",
+      content:
+        "我們專注於大型家具運輸，提供從大陸工廠代採購、驗貨到台灣端送貨上樓的一條龍服務。電器類包裹因海關規定，請務必提供完整型號與規格。",
+    },
+  });
+
+  // 常見問題 (FAQ) - 使用 deleteMany 確保不重複，或手動定義 ID 使用 upsert
+  await prisma.fAQ.deleteMany({}); // 先清空，確保排序正確
+  const faqs = [
+    {
+      question: "訂單編號是如何組成的？",
+      answer:
+        "我們的訂單 ID 採用『RP-會員號-日期-隨機碼』組合，方便您辨識與查詢。",
+      category: "ACCOUNT",
+      order: 1,
+    },
+    {
+      question: "為什麼上傳憑證按鈕是灰色的？",
+      answer: "請確認訂單狀態是否為『待付款』，若已進入審核中則無法重複上傳。",
+      category: "PAYMENT",
+      order: 2,
+    },
+    {
+      question: "附加服務需要先付錢嗎？",
+      answer:
+        "上樓費與拆木架回收費由客戶直接支付給派送司機，打木架等加固費則隨運費結算。",
+      category: "LOGISTICS",
+      order: 3,
+    },
+  ];
+
+  for (const f of faqs) {
+    await prisma.fAQ.create({ data: f });
+  }
+
+  // ==========================================
+  // 4. 設定特定帳號 (Unclaimed & Test)
   // ==========================================
   const unclaimedEmail = "unclaimed@runpiggy.com";
-  const unclaimedPassword =
-    process.env.UNCLAIMED_PASSWORD || "UnclaimedStorage2025!";
-  const unclaimedHash = await bcrypt.hash(unclaimedPassword, salt);
-
+  const unclaimedHash = await bcrypt.hash("UnclaimedStorage2025!", salt);
   await prisma.user.upsert({
     where: { email: unclaimedEmail },
     update: { isActive: true },
@@ -215,33 +255,24 @@ async function main() {
       name: "無主包裹庫存箱",
       piggyId: "RP9999999",
       passwordHash: unclaimedHash,
-      permissions: [],
       isActive: true,
     },
   });
-  console.log(`📦 無主包裹專用帳號已就緒: ${unclaimedEmail}`);
 
-  // ==========================================
-  // 4. 開發環境測試帳號
-  // ==========================================
-  if (process.env.NODE_ENV === "development" || true) {
-    const testHash = await bcrypt.hash("123456", salt);
-    await prisma.user.upsert({
-      where: { email: "user@example.com" },
-      update: {},
-      create: {
-        email: "user@example.com",
-        name: "測試一般會員",
-        piggyId: "RP0000888",
-        passwordHash: testHash,
-        permissions: [],
-        isActive: true,
-      },
-    });
-    console.log("👤 測試會員帳號已就緒: user@example.com / 123456");
-  }
+  const testHash = await bcrypt.hash("123456", salt);
+  await prisma.user.upsert({
+    where: { email: "user@example.com" },
+    update: {},
+    create: {
+      email: "user@example.com",
+      name: "測試一般會員",
+      piggyId: "RP0000888",
+      passwordHash: testHash,
+      isActive: true,
+    },
+  });
 
-  console.log("✨ 所有數據種子 (Seeding) 執行完畢，小跑豬集運系統已準備就緒！");
+  console.log("✨ 優化版數據種子執行完畢！");
 }
 
 main()

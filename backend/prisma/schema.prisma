@@ -1,5 +1,5 @@
 // backend/prisma/schema.prisma
-// V16.0 - 旗艦整合版：支援 LINE 登入並行與訊息推播功能 (新增 lineUserId)
+// V17.0 - 旗艦優化增強版：整合物流追蹤優化、報關欄位擴充、系統資訊模組
 
 generator client {
   provider = "prisma-client-js"
@@ -68,6 +68,10 @@ model Package {
   
   productUrl          String?   
 
+  // [優化新增] 報關與電器類需求欄位
+  modelNumber         String?  // 型號
+  spec                String?  // 規格
+
   productImages        Json     @default("[]")
   warehouseImages      Json     @default("[]")
   warehouseThumbnails Json     @default("[]")
@@ -94,13 +98,18 @@ model Package {
 // --- 3. 集運單資料模型 ---
 model Shipment {
   id                    String    @id @default(cuid())
+  
+  // [優化新增] 具辨識性的訂單編號 (格式如：MEM-20260110-001)
+  shipmentNo            String?   @unique
+
   recipientName         String
   phone                 String
   shippingAddress       String
-  idNumber              String
+  idNumber              String    // 註：驗證邏輯將於後端 Controller 執行 (首字母大寫+1或2開頭數字)
   taxId                 String?
   invoiceTitle          String?
   note                  String?
+  
   // 管理員審核備註：專用於記錄改價、審核意見，與客戶備註分開
   adminNote             String?   @db.Text
   
@@ -115,7 +124,8 @@ model Shipment {
   trackingNumberTW      String?
   paymentProof          String?
   
-  carrierType           String?   
+  // [優化調整] 預設物流方式為專車派送
+  carrierType           String?   @default("專車派送")
   carrierId             String?   
   loadingDate           DateTime? 
   returnReason          String?   
@@ -185,7 +195,7 @@ model Recipient {
   name        String
   phone       String
   address     String
-  idNumber    String?
+  idNumber    String?  // 註：驗證邏輯將於後端 Controller 執行
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -296,4 +306,37 @@ model ShipmentServiceItem {
   isActive    Boolean  @default(true) // 是否在前端顯示供客戶勾選
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// --- 13. 最新消息 (公告區) ---
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  category    String   @default("GENERAL") // SYSTEM, PROMOTION, HOLIDAY
+  isImportant Boolean  @default(false)      // [新增] 是否為重要公告 (前端顯示紅標)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// --- 14. 靜態資訊模組 (關於小跑豬、服務協議等) ---
+model StaticContent {
+  id        String   @id @default(cuid())
+  key       String   @unique // 如：ABOUT_US_FURNITURE, TERMS_OF_SERVICE
+  title     String
+  content   String   @db.Text
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+// --- 15. 常見問題 (FAQ) ---
+model FAQ {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String   @db.Text
+  category  String?  // LOGISTICS, PAYMENT, CUSTOMS, ACCOUNT
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)      // [新增] 是否啟用
+  updatedAt DateTime @updatedAt
 }

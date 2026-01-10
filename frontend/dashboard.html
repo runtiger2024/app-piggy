@@ -98,10 +98,16 @@
         border-radius: 16px;
         gap: 5px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .dashboard-tabs::-webkit-scrollbar {
+        display: none;
       }
 
       .tab-btn {
         flex: 1;
+        min-width: 80px;
         padding: 12px 5px;
         border-radius: 12px;
         font-size: 14px;
@@ -114,6 +120,7 @@
         flex-direction: column;
         align-items: center;
         gap: 4px;
+        white-space: nowrap;
       }
 
       .tab-btn.active {
@@ -162,7 +169,7 @@
         border: 1px solid #eee;
       }
 
-      /* --- [核心修復] 靜態包裹結帳區樣式 (解決遮蔽問題) --- */
+      /* --- [核心修復] 靜態包裹結帳區樣式 --- */
       .checkout-summary-text {
         font-size: 1.1rem;
         font-weight: 800;
@@ -198,7 +205,6 @@
         transform: scale(0.97);
       }
 
-      /* 圖片上傳區樣式：新增相對定位以利縮圖覆蓋 */
       .upload-zone {
         display: flex;
         flex-direction: column;
@@ -224,69 +230,38 @@
         display: none;
       }
 
-      /* [新功能樣式] 無主包裹與搜尋工具列 */
-      .recipient-tools {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 15px;
-        flex-wrap: wrap;
-      }
-      .search-input-group {
-        position: relative;
-        flex: 1;
-        min-width: 200px;
-      }
-      .search-input-group i {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-      }
-      .search-input-group input {
-        padding-left: 35px;
-        border-radius: 10px;
-      }
-
-      /* 無主包裹縮圖樣式 */
-      .unclaimed-thumb-wrapper {
-        position: relative;
-        width: 60px;
-        height: 60px;
-        margin-top: 5px;
-        cursor: pointer;
-        border-radius: 6px;
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-      }
-      .unclaimed-thumb {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .unclaimed-thumb-wrapper i {
-        position: absolute;
-        bottom: 2px;
-        right: 2px;
-        background: rgba(0, 0, 0, 0.5);
-        color: #fff;
-        padding: 2px;
-        font-size: 10px;
-        border-radius: 2px;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
+      /* [優化] 符合 A4 列印格式 */
+      @media print {
+        body {
+          background: white;
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+        .dashboard-header,
+        .dashboard-tabs-wrapper,
+        .quick-actions-grid,
+        .live-status-bar,
+        .forecast-section,
+        .universal-bottom-nav {
+          display: none !important;
+        }
+        .dashboard-main-card {
+          box-shadow: none;
+          border: none;
+          padding: 0;
+        }
+        .container {
+          width: 100%;
+          max-width: none;
+          padding: 0;
+          margin: 0;
+        }
+        .shipment-print-container {
+          width: 210mm;
+          min-height: 297mm;
+          padding: 20mm;
+          margin: 0 auto;
         }
       }
 
-      /* 行動端適配 */
       @media (max-width: 800px) {
         .hero-dashboard {
           flex-direction: column;
@@ -304,7 +279,7 @@
         }
         .packages-checkout-zone {
           padding: 20px 15px;
-          margin-bottom: 80px; /* 留白給手機版底部導覽列 */
+          margin-bottom: 80px;
         }
       }
     </style>
@@ -498,7 +473,7 @@
                     type="text"
                     id="trackingNumber"
                     class="form-control"
-                    placeholder="掃描或輸入單號"
+                    placeholder="掃描或輸入大陸快遞單號"
                     required
                   />
                 </div>
@@ -508,7 +483,7 @@
                     type="text"
                     id="productName"
                     class="form-control"
-                    placeholder="例：書桌"
+                    placeholder="例：小米電風扇"
                     required
                   />
                 </div>
@@ -523,6 +498,35 @@
                   />
                 </div>
               </div>
+
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                  gap: 15px;
+                  margin-top: 15px;
+                "
+              >
+                <div class="form-group">
+                  <label>商品型號 (電器類必填)</label>
+                  <input
+                    type="text"
+                    id="modelNumber"
+                    class="form-control"
+                    placeholder="例：V10 / BPL01DM"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>商品規格 (電器類必填)</label>
+                  <input
+                    type="text"
+                    id="spec"
+                    class="form-control"
+                    placeholder="例：220V/500W"
+                  />
+                </div>
+              </div>
+
               <div class="form-group" style="margin-top: 15px">
                 <label style="display: flex; justify-content: space-between">
                   <span>商品照片 (報關用)</span>
@@ -537,7 +541,7 @@
                     id="forecast-uploader"
                   >
                     <i class="fas fa-camera"></i>
-                    <span>點擊上傳照片</span>
+                    <span>點擊上傳商品照片</span>
                   </label>
                   <input
                     type="file"
@@ -549,7 +553,7 @@
                 </div>
               </div>
               <div class="form-group" style="margin-top: 15px">
-                <label>商品購買連結</label>
+                <label>商品購買連結 (電器類報關必填)</label>
                 <input
                   type="url"
                   id="productUrl"
@@ -563,7 +567,7 @@
                   type="text"
                   id="note"
                   class="form-control"
-                  placeholder="特殊需求..."
+                  placeholder="如有特殊包裝需求請在此備註"
                 />
               </div>
               <div style="text-align: right; margin-top: 20px">
@@ -592,13 +596,22 @@
               <i class="fas fa-file-invoice-dollar"></i> <span>集運訂單</span>
             </button>
             <button id="tab-wallet" class="tab-btn">
-              <i class="fas fa-history"></i> <span>帳務</span>
+              <i class="fas fa-wallet"></i> <span>帳務儲值</span>
+            </button>
+            <button id="tab-news" class="tab-btn">
+              <i class="fas fa-bullhorn"></i> <span>最新消息</span>
+            </button>
+            <button id="tab-faq" class="tab-btn">
+              <i class="fas fa-question-circle"></i> <span>常見問題</span>
             </button>
             <button id="tab-recipients" class="tab-btn">
               <i class="fas fa-users"></i> <span>收件人</span>
             </button>
             <button id="tab-unclaimed" class="tab-btn">
-              <i class="fas fa-question-circle"></i> <span>無主包裹</span>
+              <i class="fas fa-ghost"></i> <span>無主包裹</span>
+            </button>
+            <button id="tab-about" class="tab-btn">
+              <i class="fas fa-info-circle"></i> <span>關於我們</span>
             </button>
           </div>
         </div>
@@ -625,6 +638,16 @@
             <div id="wallet-section" class="tab-content" style="display: none">
               <div id="section-container-wallet"></div>
             </div>
+            <div id="news-section" class="tab-content" style="display: none">
+              <div id="section-container-news"></div>
+            </div>
+            <div id="faq-section" class="tab-content" style="display: none">
+              <div id="section-container-faq"></div>
+            </div>
+            <div id="about-section" class="tab-content" style="display: none">
+              <div id="section-container-about"></div>
+            </div>
+
             <div
               id="unclaimed-section"
               class="tab-content"
@@ -637,18 +660,17 @@
                     type="text"
                     id="unclaimed-search"
                     class="form-control"
-                    placeholder="輸入單號快速搜尋無主包裹..."
+                    placeholder="搜尋無主物流單號..."
                   />
                 </div>
               </div>
-
               <div class="table-responsive">
                 <table class="app-table">
                   <thead>
                     <tr>
                       <th>入庫時間</th>
                       <th>物流單號</th>
-                      <th>商品名稱 (縮圖)</th>
+                      <th>商品名稱/照片</th>
                       <th>重量</th>
                       <th>操作</th>
                     </tr>
@@ -670,18 +692,18 @@
     </div>
 
     <nav id="mobile-bottom-nav" class="universal-bottom-nav">
-      <a href="index.html" class="nav-item">
-        <i class="fas fa-home"></i><span>首頁</span>
-      </a>
-      <a href="quote.html" class="nav-item">
-        <i class="fas fa-calculator"></i><span>試算</span>
-      </a>
-      <a href="furniture-procurement.html" class="nav-item">
-        <i class="fas fa-couch"></i><span>代採購</span>
-      </a>
-      <a href="dashboard.html" class="nav-item active">
-        <i class="fas fa-user"></i><span>會員</span>
-      </a>
+      <a href="index.html" class="nav-item"
+        ><i class="fas fa-home"></i><span>首頁</span></a
+      >
+      <a href="quote.html" class="nav-item"
+        ><i class="fas fa-calculator"></i><span>試算</span></a
+      >
+      <a href="furniture-procurement.html" class="nav-item"
+        ><i class="fas fa-couch"></i><span>代採購</span></a
+      >
+      <a href="dashboard.html" class="nav-item active"
+        ><i class="fas fa-user"></i><span>會員</span></a
+      >
     </nav>
 
     <div id="modal-container-profile-edit"></div>
@@ -728,7 +750,7 @@
         }
       }
 
-      // 載入所有 HTML 組件與彈窗
+      // [優化] 加載所有組件 (含新增的公告與 FAQ)
       Promise.all([
         loadHtml(
           "section-container-packages",
@@ -743,6 +765,9 @@
           "components/sections/recipients.html"
         ),
         loadHtml("section-container-wallet", "components/sections/wallet.html"),
+        loadHtml("section-container-news", "components/sections/news.html"),
+        loadHtml("section-container-faq", "components/sections/faq.html"),
+        loadHtml("section-container-about", "components/sections/about.html"),
         loadHtml(
           "modal-container-profile-edit",
           "components/modals/profile-edit.html"
@@ -782,14 +807,14 @@
           "components/modals/shipment-details.html"
         ),
       ]).then(() => {
-        // 防止重複監聽 DOMContentLoaded
+        // [大師修正] 防止重複監聽
         const originalAddEventListener = document.addEventListener;
         document.addEventListener = function (type, listener, options) {
           if (type === "DOMContentLoaded") listener();
           else originalAddEventListener.call(document, type, listener, options);
         };
 
-        // 按序加載 JS 邏輯腳本 (確保功能正確鏈結)
+        // 按序加載 JS 邏輯腳本
         const scripts = [
           "js/apiConfig.js",
           "js/shippingData.js",
@@ -799,9 +824,13 @@
           "js/dashboard-shipments.js",
           "js/dashboard-recipient.js",
           "js/dashboard-wallet.js",
-          "js/dashboard-unclaimed.js", // [修正] 補上缺少的無主件認領邏輯，否則圖片預覽不會觸發
+          "js/dashboard-unclaimed.js",
           "js/dashboard-notifications.js",
           "js/dashboard-main.js",
+          // [新增邏輯]
+          "js/dashboard-news.js",
+          "js/dashboard-faq.js",
+          "js/dashboard-about.js",
         ];
 
         const loadScript = (src) => {
@@ -819,7 +848,7 @@
             await loadScript(src);
           }
 
-          // 核心按鈕事件綁定
+          // 按鈕事件重綁定
           const btnSelect = document.getElementById("btn-select-recipient");
           if (btnSelect && typeof window.openRecipientSelector === "function") {
             const newBtn = btnSelect.cloneNode(true);
@@ -830,7 +859,6 @@
             });
           }
 
-          // 初始化快速導向
           const btnQuickForecast =
             document.getElementById("btn-quick-forecast");
           if (btnQuickForecast) {

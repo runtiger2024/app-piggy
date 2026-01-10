@@ -1403,3 +1403,142 @@
   border-bottom: 1px dashed #e2e8f0;
   padding-bottom: 8px;
 }
+/* ============================================================
+ * [列印媒體查詢 @media print 深度優化版]
+ * 適用對象：訂單詳細內容、費用明細、集運報告列印
+ * 優化內容：A4 尺寸鎖定、隱藏 UI 組件、術語自動替換顯示、分頁崩潰保護
+ * ============================================================ */
+
+@media print {
+  /* 1. A4 頁面與邊距設定 */
+  @page {
+    size: A4;
+    margin: 15mm 15mm 15mm 15mm; /* 標準 A4 邊距 */
+  }
+
+  /* 2. 基礎列印重設：強制白底黑字 */
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact; /* 確保顏色（如費用高亮）能印出來 */
+    print-color-adjust: exact;
+  }
+
+  /* 3. 隱藏不必要的 UI 組件（導覽、按鈕、結帳條） */
+  .dashboard-header,
+  .dashboard-tabs-wrapper,
+  .quick-actions-grid,
+  .live-status-bar,
+  .forecast-section,
+  .universal-bottom-nav,
+  .action-bar,
+  .modal-close,
+  .modal-footer,
+  .btn,
+  #checkout-bar,
+  .notif-trigger,
+  .notification-badge,
+  .search-box,
+  .filter-select,
+  #message-container {
+    display: none !important;
+  }
+
+  /* 4. 容器寬度擴展與陰影移除 */
+  .app-layout-wrapper,
+  .container,
+  .dashboard-main-card,
+  .modal-content {
+    max-width: none !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    position: static !important;
+    transform: none !important;
+  }
+
+  /* 5. 表格強化：確保框線清晰 */
+  .app-table,
+  .standard-table {
+    border: 1px solid #000 !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+  }
+
+  .app-table th,
+  .app-table td,
+  .standard-table th,
+  .standard-table td {
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+    color: #000 !important;
+    background: transparent !important;
+    font-size: 10pt !important;
+  }
+
+  /* 6. 文字更名與標題優化（同事反饋需求） */
+  /* 將「深度簡閱報告」相關標題改為「訂單詳細內容」 */
+  .shipment-report-title::after {
+    content: "訂單詳細內容";
+    display: block;
+    font-size: 18pt;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  /* 將「費用報告單」相關標題改為「費用明細」 */
+  .fee-report-box h5,
+  .cost-calculation-box h5 {
+    font-size: 14pt !important;
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 5px !important;
+  }
+
+  /* 7. 費用明細總覽區塊優化 */
+  .totals-box {
+    border: 1px solid #000 !important;
+    padding: 10px 15px !important;
+    background: #f9f9f9 !important;
+    float: right;
+    min-width: 250px;
+  }
+
+  /* 8. 分頁控制：避免訂單行或照片被截斷 */
+  .tx-card,
+  .shipment-row-card,
+  .detail-box-card,
+  .photo-wrapper,
+  .order-style tbody tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1px solid #eee !important;
+    margin-bottom: 10px !important;
+  }
+
+  .page-break {
+    page-break-before: always !important;
+    break-before: always !important;
+  }
+
+  /* 9. 勝出計費標準高亮（確保列印時綠色背景可見） */
+  .calc-comparison-row.is-winner {
+    background-color: #f0fdf4 !important;
+    border: 1px solid #22c55e !important;
+    color: #15803d !important;
+  }
+
+  /* 10. 簽名區域定位 */
+  .bottom-section {
+    margin-top: 50px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+  }
+}

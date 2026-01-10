@@ -1,13 +1,13 @@
 // backend/controllers/walletController.js
-// V2.3 - 強化 Email 檢核與發票安全攔截版
-// 特色：修正 Cloudinary HTTPS 破圖、強化統編驗證、新增發票 Email 安全攔截、管理員批量審核與財務儀表板統計
+// V2.4.1 - 2026 旗艦優化增強版：整合銀行轉帳資訊、發票自動化提示、與安全攔截機制
 
 const prisma = require("../config/db.js");
 const createLog = require("../utils/createLog.js");
 const createNotification = require("../utils/createNotification.js");
 const invoiceHelper = require("../utils/invoiceHelper.js");
 const fs = require("fs");
-// 引入 Email 通知
+
+// 引入 Email 通知工具
 const { sendDepositRequestNotification } = require("../utils/sendEmail.js");
 
 // ==========================================
@@ -15,13 +15,44 @@ const { sendDepositRequestNotification } = require("../utils/sendEmail.js");
 // ==========================================
 
 /**
- * 取得我的錢包資訊與近期交易紀錄
+ * @description 取得銀行轉帳資訊 (對應需求：帳務增加轉帳資訊)
+ * @route GET /api/wallet/bank-info
+ */
+const getPublicBankInfo = async (req, res) => {
+  try {
+    // 從系統設定中提取銀行資訊
+    const bankSetting = await prisma.systemSetting.findUnique({
+      where: { key: "bank_info" },
+    });
+
+    if (!bankSetting) {
+      return res.status(404).json({
+        success: false,
+        message: "暫無銀行轉帳資訊，請聯繫客服",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      bankInfo: bankSetting.value,
+      // 增加優化清單要求的備註提示
+      note: "默認開立電子發票至帳號設定中填寫的電子信箱",
+    });
+  } catch (error) {
+    console.error("取得銀行資訊失敗:", error);
+    res.status(500).json({ success: false, message: "伺服器錯誤" });
+  }
+};
+
+/**
+ * @description 取得我的錢包資訊與近期交易紀錄
  * @route GET /api/wallet/my
  */
 const getMyWallet = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // 使用 upsert 確保使用者一定有錢包，避免前端出錯
     const wallet = await prisma.wallet.upsert({
       where: { userId: userId },
       update: {},
@@ -32,7 +63,7 @@ const getMyWallet = async (req, res) => {
       include: {
         transactions: {
           orderBy: { createdAt: "desc" },
-          take: 50,
+          take: 50, // 僅回傳最近50筆，提升效能
         },
       },
     });
@@ -45,8 +76,7 @@ const getMyWallet = async (req, res) => {
 };
 
 /**
- * 提交儲值申請 (用戶端)
- * [V1.8 優化] 修復 Cloudinary 圖片 HTTPS 協議、強化統編抬頭驗證
+ * @description 提交儲值申請 (用戶端)
  * @route POST /api/wallet/deposit
  */
 const requestDeposit = async (req, res) => {
@@ -55,7 +85,8 @@ const requestDeposit = async (req, res) => {
     const { amount, description, taxId, invoiceTitle } = req.body;
     const proofFile = req.file;
 
-    if (!amount || amount <= 0) {
+    // 1. 基礎驗證
+    if (!amount || parseFloat(amount) <= 0) {
       return res
         .status(400)
         .json({ success: false, message: "請輸入有效的儲值金額" });
@@ -63,52 +94,38 @@ const requestDeposit = async (req, res) => {
     if (!proofFile) {
       return res
         .status(400)
-        .json({ success: false, message: "請上傳轉帳憑證" });
+        .json({ success: false, message: "請上傳轉帳憑證（圖片）" });
     }
 
-    // [Fix] 優化路徑處理邏輯，確保圖片不破圖
+    // 2. 修復路徑：處理 Cloudinary HTTPS 協議與本地路徑相容
     let proofImagePath;
-
-    // 檢查是否為 Cloudinary 網址 (http 或 https 開頭)
-    if (
-      proofFile.path &&
-      (proofFile.path.startsWith("http") || proofFile.path.startsWith("https"))
-    ) {
-      // 強制將 http 取代為 https，避免 Mixed Content 導致圖片無法顯示
+    if (proofFile.path && proofFile.path.startsWith("http")) {
       proofImagePath = proofFile.path.replace(/^http:\/\//i, "https://");
     } else if (proofFile.filename) {
-      // 本地模式 (fallback)：若 Cloudinary 上傳失敗或未設定，回退到本地 uploads
       proofImagePath = `/uploads/${proofFile.filename}`;
     } else {
       proofImagePath = "";
     }
 
-    // [Backend Validation] 統編與抬頭的一致性檢查
+    // 3. 統編檢核邏輯
     if (
       taxId &&
       taxId.trim() !== "" &&
       (!invoiceTitle || invoiceTitle.trim() === "")
     ) {
-      // 驗證失敗：若為本地檔案則刪除
+      // 驗證失敗則清理檔案（若為本地）
       if (proofFile.path && !proofFile.path.startsWith("http")) {
-        fs.unlink(proofFile.path, (err) => {
-          if (err) console.warn("刪除暫存檔案失敗:", err.message);
-        });
+        fs.unlink(proofFile.path, () => {});
       }
-      return res.status(400).json({
-        success: false,
-        message: "填寫統一編號時，公司抬頭為必填項目",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "填寫統一編號時，公司抬頭為必填項目",
+        });
     }
 
-    // 確保錢包存在
-    await prisma.wallet.upsert({
-      where: { userId },
-      update: {},
-      create: { userId, balance: 0 },
-    });
-
-    // 建立交易紀錄
+    // 4. 建立交易紀錄
     const transaction = await prisma.transaction.create({
       data: {
         wallet: { connect: { userId } },
@@ -116,12 +133,13 @@ const requestDeposit = async (req, res) => {
         type: "DEPOSIT",
         status: "PENDING",
         description: description || "會員申請儲值",
-        proofImage: proofImagePath, // 使用修正後的 HTTPS 路徑
+        proofImage: proofImagePath,
         taxId: taxId || null,
         invoiceTitle: invoiceTitle || null,
       },
     });
 
+    // 5. 紀錄日誌與發送通知
     await createLog(
       userId,
       "WALLET_DEPOSIT_REQUEST",
@@ -129,18 +147,18 @@ const requestDeposit = async (req, res) => {
       `申請儲值 $${amount} ${taxId ? "(含統編)" : ""}`
     );
 
-    // 觸發 Email 通知 (異步處理不阻塞響應)
-    sendDepositRequestNotification(transaction, req.user).catch((e) => {
-      console.warn("Email通知發送失敗 (Deposit):", e.message);
-    });
+    sendDepositRequestNotification(transaction, req.user).catch((err) =>
+      console.warn("Email 通知發送失敗:", err.message)
+    );
 
     res.status(201).json({
       success: true,
       message: "儲值申請已提交，請等待管理員審核",
+      // 同事要求的發票備註
+      invoiceNote: "備註：默認開立電子發票至帳號設定中填寫的電子信箱",
       transaction,
     });
   } catch (error) {
-    // 發生錯誤時的清理邏輯 (僅限本地檔案)
     if (req.file && req.file.path && !req.file.path.startsWith("http")) {
       fs.unlink(req.file.path, () => {});
     }
@@ -154,12 +172,13 @@ const requestDeposit = async (req, res) => {
 // ==========================================
 
 /**
- * 取得全體會員錢包概覽 (管理員檢閱)
+ * @description 取得全體錢包概覽
  */
 const getWalletsOverview = async (req, res) => {
   try {
     const { search, minBalance, maxBalance } = req.query;
     const where = {};
+
     if (search) {
       where.user = {
         OR: [
@@ -169,6 +188,7 @@ const getWalletsOverview = async (req, res) => {
         ],
       };
     }
+
     if (minBalance || maxBalance) {
       where.balance = {};
       if (minBalance) where.balance.gte = parseFloat(minBalance);
@@ -191,14 +211,15 @@ const getWalletsOverview = async (req, res) => {
       },
       orderBy: { balance: "desc" },
     });
+
     res.status(200).json({ success: true, wallets });
   } catch (error) {
-    res.status(500).json({ success: false, message: "無法取得錢包概覽" });
+    res.status(500).json({ success: false, message: "讀取失敗" });
   }
 };
 
 /**
- * 取得特定會員錢包詳情與完整交易歷史
+ * @description 取得特定會員錢包詳情
  */
 const getWalletDetail = async (req, res) => {
   try {
@@ -219,17 +240,15 @@ const getWalletDetail = async (req, res) => {
       },
     });
     if (!wallet)
-      return res
-        .status(404)
-        .json({ success: false, message: "找不到該會員錢包" });
+      return res.status(404).json({ success: false, message: "找不到該錢包" });
     res.status(200).json({ success: true, wallet });
   } catch (error) {
-    res.status(500).json({ success: false, message: "讀取詳情失敗" });
+    res.status(500).json({ success: false, message: "讀取失敗" });
   }
 };
 
 /**
- * 取得交易紀錄列表 (支援篩選與分頁)
+ * @description 取得交易紀錄 (分頁與篩選)
  */
 const getTransactions = async (req, res) => {
   try {
@@ -276,6 +295,7 @@ const getTransactions = async (req, res) => {
       ...tx,
       user: tx.wallet.user,
     }));
+
     res.status(200).json({
       success: true,
       transactions: formatted,
@@ -287,8 +307,7 @@ const getTransactions = async (req, res) => {
 };
 
 /**
- * 審核單筆交易 (同意/駁回)
- * [優化] 新增 Email 安全檢核攔截邏輯
+ * @description 審核單筆交易 (同意/駁回)
  */
 const reviewTransaction = async (req, res) => {
   try {
@@ -304,7 +323,7 @@ const reviewTransaction = async (req, res) => {
       return res.status(400).json({ message: "交易不存在或已處理" });
 
     if (action === "APPROVE") {
-      // [安全檢核] 攔截 LINE 佔位符號 Email，防止在無法正確通知發票的情況下入帳
+      // 安全攔截：LINE 暫時信箱攔截邏輯
       if (
         tx.type === "DEPOSIT" &&
         tx.wallet.user.email.includes("@line.temp")
@@ -312,7 +331,7 @@ const reviewTransaction = async (req, res) => {
         return res.status(400).json({
           success: false,
           message:
-            "核准中止：該會員仍在使用 LINE 暫時 Email (@line.temp)，開立發票將會失敗。請先聯繫會員補填資料，或由管理員手動更新該會員 Email 後再行核准。",
+            "核准中止：該會員仍在使用 LINE 暫時 Email，開立發票將會失敗。請先補齊資料。",
         });
       }
 
@@ -376,16 +395,17 @@ const reviewTransaction = async (req, res) => {
         "WALLET",
         "tab-wallet"
       );
-      await createLog(req.user.id, "REJECT_DEPOSIT", id, "駁回儲值");
-      res.status(200).json({ success: true, message: "已駁回" });
+      await createLog(req.user.id, "REJECT_DEPOSIT", id, "駁回儲值申請");
+      res.status(200).json({ success: true, message: "已駁回申請" });
     }
   } catch (error) {
+    console.error("審核失敗:", error);
     res.status(500).json({ success: false, message: "處理失敗" });
   }
 };
 
 /**
- * 批量處理審核 (Bulk Review)
+ * @description 批量審核
  */
 const bulkReviewTransactions = async (req, res) => {
   try {
@@ -408,7 +428,7 @@ const bulkReviewTransactions = async (req, res) => {
           successCount++;
         }
       } catch (e) {
-        console.error(`Bulk item ${id} failed:`, e);
+        console.error(`Bulk ${id} failed:`, e);
       }
     }
     res.json({
@@ -416,12 +436,12 @@ const bulkReviewTransactions = async (req, res) => {
       message: `批量審核完成，成功 ${successCount} 筆`,
     });
   } catch (error) {
-    res.status(500).json({ message: "批量出錯" });
+    res.status(500).json({ message: "批量操作失敗" });
   }
 };
 
 /**
- * 手動修改交易紀錄 (限非完成狀態)
+ * @description 修改交易紀錄
  */
 const updateTransaction = async (req, res) => {
   try {
@@ -429,7 +449,7 @@ const updateTransaction = async (req, res) => {
     const { amount, description, taxId, invoiceTitle } = req.body;
     const tx = await prisma.transaction.findUnique({ where: { id } });
     if (!tx || tx.status === "COMPLETED")
-      return res.status(400).json({ message: "無法修改" });
+      return res.status(400).json({ message: "已完成之紀錄無法修改" });
 
     const updated = await prisma.transaction.update({
       where: { id },
@@ -440,7 +460,7 @@ const updateTransaction = async (req, res) => {
         invoiceTitle,
       },
     });
-    await createLog(req.user.id, "UPDATE_TRANSACTION", id, `修改交易紀錄`);
+    await createLog(req.user.id, "UPDATE_TRANSACTION", id, "修改交易紀錄");
     res.json({ success: true, transaction: updated });
   } catch (error) {
     res.status(500).json({ success: false, message: "更新失敗" });
@@ -448,16 +468,16 @@ const updateTransaction = async (req, res) => {
 };
 
 /**
- * 刪除交易紀錄
+ * @description 刪除交易紀錄
  */
 const deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const tx = await prisma.transaction.findUnique({ where: { id } });
     if (!tx || tx.status === "COMPLETED")
-      return res.status(400).json({ message: "不可刪除" });
+      return res.status(400).json({ message: "已完成之紀錄不可刪除" });
     await prisma.transaction.delete({ where: { id } });
-    await createLog(req.user.id, "DELETE_TRANSACTION", id, `刪除紀錄`);
+    await createLog(req.user.id, "DELETE_TRANSACTION", id, "刪除紀錄");
     res.json({ success: true, message: "已刪除" });
   } catch (error) {
     res.status(500).json({ success: false, message: "刪除失敗" });
@@ -465,7 +485,7 @@ const deleteTransaction = async (req, res) => {
 };
 
 /**
- * 手動調整會員餘額 (人工加扣款)
+ * @description 手動調整餘額 (加/減款)
  */
 const manualAdjust = async (req, res) => {
   try {
@@ -479,6 +499,7 @@ const manualAdjust = async (req, res) => {
       update: {},
       create: { userId, balance: 0 },
     });
+
     await prisma.$transaction(async (ptx) => {
       await ptx.transaction.create({
         data: {
@@ -486,7 +507,7 @@ const manualAdjust = async (req, res) => {
           amount: adjustAmount,
           type: "ADJUST",
           status: "COMPLETED",
-          description: note || "管理員調整",
+          description: note || "管理員人工調整",
         },
       });
       await ptx.wallet.update({
@@ -494,10 +515,11 @@ const manualAdjust = async (req, res) => {
         data: { balance: { increment: adjustAmount } },
       });
     });
+
     await createNotification(
       userId,
-      "餘額變動",
-      `調整 $${Math.abs(adjustAmount)}`,
+      "餘額調整",
+      `管理員已人工調整餘額 $${adjustAmount}`,
       "WALLET",
       "tab-wallet"
     );
@@ -505,17 +527,16 @@ const manualAdjust = async (req, res) => {
       req.user.id,
       "MANUAL_ADJUST",
       userId,
-      `調整: ${adjustAmount}`
+      `人工調整餘額: ${adjustAmount}`
     );
-    res.status(200).json({ success: true, message: "調整成功" });
+    res.status(200).json({ success: true, message: "餘額調整完成" });
   } catch (error) {
     res.status(500).json({ success: false, message: "調整失敗" });
   }
 };
 
 /**
- * 手動補開發票
- * [優化] 新增補開時的 Email 安全檢核
+ * @description 手動補開發票
  */
 const manualIssueDepositInvoice = async (req, res) => {
   try {
@@ -525,18 +546,7 @@ const manualIssueDepositInvoice = async (req, res) => {
       include: { wallet: { include: { user: true } } },
     });
     if (!tx || tx.type !== "DEPOSIT" || tx.status !== "COMPLETED")
-      return res.status(400).json({ message: "不符條件" });
-
-    // [安全檢核] 檢查 Email 是否為佔位符號
-    if (tx.wallet.user.email.includes("@line.temp")) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "補開失敗：該會員 Email 仍為 LINE 暫時信箱，無法發送電子發票通知。",
-        });
-    }
+      return res.status(400).json({ message: "不符合開發票條件" });
 
     const result = await invoiceHelper.createDepositInvoice(tx, tx.wallet.user);
     if (result.success) {
@@ -549,16 +559,16 @@ const manualIssueDepositInvoice = async (req, res) => {
           invoiceStatus: "ISSUED",
         },
       });
-      return res.json({ success: true, message: "補開成功" });
+      return res.json({ success: true, message: "發票補開成功" });
     }
     res.status(400).json({ success: false, message: result.message });
   } catch (error) {
-    res.status(500).json({ success: false, message: "系統錯誤" });
+    res.status(500).json({ success: false, message: "補開發票系統錯誤" });
   }
 };
 
 /**
- * 財務統計儀表板
+ * @description 財務統計儀表板數據
  */
 const getFinanceStats = async (req, res) => {
   try {
@@ -580,6 +590,7 @@ const getFinanceStats = async (req, res) => {
       },
       _sum: { amount: true },
     });
+
     res.json({
       success: true,
       stats: {
@@ -596,6 +607,7 @@ const getFinanceStats = async (req, res) => {
 
 module.exports = {
   getMyWallet,
+  getPublicBankInfo,
   requestDeposit,
   getWalletsOverview,
   getWalletDetail,

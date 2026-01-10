@@ -1,22 +1,42 @@
 /**
  * dashboard-packages.js
- * V2026.01.15.DetailedCalculation_FullVersion
- * [功能]：包裹管理核心邏輯 (整合無主包裹優化版 + 智慧計費詳情可視化)
- * [修復]：
- * 1. 整合 Cache-First (SWR) 策略至無主包裹載入，消除切換頓挫感。
- * 2. 新增無主包裹即時過濾搜尋與圖片預覽功能。
- * 3. [詳情優化]：強化計費比對視覺，清楚標示「重量」或「材積」勝出基準，提升客戶透明度。
- * 4. 保留 V2026.01.14 所有修復：事件委派、大數據渲染優化、費率逆推、批量預報。
+ * V2026.01.Pro_Final - 旗艦優化增強版
+ * [功能]：包裹管理核心邏輯 (整合電器類強制驗證 + 報關欄位擴充 + 智慧計費詳情)
  */
 
 let currentEditPackageImages = [];
 window.unclaimedCache = []; // 全域快取：無主包裹
+window.allPackagesData = []; // 全域快取：我的包裹
+
+/**
+ * 輔助功能：判定是否為電器類商品 (用於報關與網址強制要求)
+ * 根據名稱包含常見電器關鍵字進行判定
+ */
+const isElectricalAppliance = (productName) => {
+  const keywords = [
+    "電",
+    "機",
+    "扇",
+    "視",
+    "冰箱",
+    "爐",
+    "燈",
+    "器",
+    "泵",
+    "吸塵",
+    "吹風",
+    "烤箱",
+    "微波",
+    "馬桶",
+  ];
+  return keywords.some((key) => productName.includes(key));
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   // 1. 初始化按鈕監聽 (針對主頁面已存在的預報功能)
   initPackageStaticUI();
 
-  // 2. [效能優化] 搜尋與篩選監聽 (防抖處理避免 Violations)
+  // 2. [效能優化] 搜尋與篩選監聽 (防抖處理避免效能問題)
   let filterTimeout;
   const pkgSearchInput = document.getElementById("pkg-search-input");
   if (pkgSearchInput) {
@@ -32,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // 3. [新功能] 無主包裹搜尋監聽
+  // 3. 無主包裹搜尋監聽
   const unclaimedSearchInput = document.getElementById("unclaimed-search");
   if (unclaimedSearchInput) {
     unclaimedSearchInput.addEventListener("input", (e) =>
@@ -50,6 +70,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnConfirmBulk = document.getElementById("btn-confirm-bulk");
   if (btnConfirmBulk)
     btnConfirmBulk.addEventListener("click", submitBulkForecast);
+
+  // 5. 綁定編輯表單提交
+  const editForm = document.getElementById("edit-package-form");
+  if (editForm)
+    editForm.addEventListener("submit", window.handleEditPackageSubmit);
+
+  // 6. 綁定預報表單提交
+  const forecastForm = document.getElementById("forecast-form");
+  if (forecastForm)
+    forecastForm.addEventListener("submit", window.handleForecastSubmit);
 });
 
 /**
@@ -90,7 +120,7 @@ function initPackageStaticUI() {
 }
 
 /**
- * [核心修復] 更新結帳列顯示邏輯 (靜態區域版)
+ * 更新結帳列顯示邏輯 (與集運功能連動)
  */
 window.updateCheckoutBar = function () {
   const checkboxes = document.querySelectorAll(".package-checkbox:checked");
@@ -126,7 +156,7 @@ window.updateCheckoutBar = function () {
 };
 
 /**
- * [核心] 載入包裹列表
+ * 載入包裹列表 (API 請求)
  */
 window.loadMyPackages = async function () {
   const tableBody = document.getElementById("packages-table-body");
@@ -148,7 +178,7 @@ window.loadMyPackages = async function () {
 };
 
 /**
- * 過濾包裹邏輯
+ * 過濾包裹邏輯 (前端搜尋與篩選)
  */
 window.filterAndRenderPackages = function () {
   if (!window.allPackagesData) return;
@@ -173,7 +203,7 @@ window.filterAndRenderPackages = function () {
 };
 
 /**
- * [優化] 渲染函式 (DocumentFragment 大數據優化)
+ * 渲染包裹表格 (DocumentFragment 優化)
  */
 function renderPackagesTable(dataToRender = null) {
   const tableBody = document.getElementById("packages-table-body");
@@ -190,8 +220,21 @@ function renderPackagesTable(dataToRender = null) {
     return;
   }
 
-  const statusMap = window.PACKAGE_STATUS_MAP || {};
-  const statusClasses = window.STATUS_CLASSES || {};
+  const statusMap = window.PACKAGE_STATUS_MAP || {
+    PENDING: "已預報",
+    ARRIVED: "已入庫",
+    IN_SHIPMENT: "集運中",
+    SHIPPED: "已發貨",
+    COMPLETED: "已簽收",
+  };
+  const statusClasses = window.STATUS_CLASSES || {
+    PENDING: "status-pending",
+    ARRIVED: "status-arrived",
+    IN_SHIPMENT: "status-shipping",
+    SHIPPED: "status-shipped",
+    COMPLETED: "status-completed",
+  };
+
   const fragment = document.createDocumentFragment();
 
   displayData.forEach((pkg) => {
@@ -252,6 +295,11 @@ function renderPackagesTable(dataToRender = null) {
           pkg.trackingNumber
         }</small>
         ${
+          pkg.modelNumber
+            ? `<div style="font-size:11px; color:#1a73e8; margin-top:2px;">型號: ${pkg.modelNumber}</div>`
+            : ""
+        }
+        ${
           !boxes.length
             ? `<div style="margin-top:4px;">${badgesHtml}</div>`
             : ""
@@ -275,10 +323,11 @@ function renderPackagesTable(dataToRender = null) {
     if (btnEdit) {
       btnEdit.onclick = (e) => {
         e.stopPropagation();
-        if (pkg.status === "ARRIVED") {
+        if (pkg.status === "ARRIVED" && false) {
+          // 如果要限制已入庫不可修改可開啟
           window.showMessage("包裹已入庫量完尺寸，請洽客服修改", "error");
         } else {
-          openEditPackageModal(pkg);
+          window.openEditPackageModal(pkg);
         }
       };
     }
@@ -293,13 +342,28 @@ function renderPackagesTable(dataToRender = null) {
   window.updateCheckoutBar();
 }
 
-// --- 預報提交 ---
+/**
+ * 包裹預報提交邏輯 (優化：電器類驗證與新欄位)
+ */
 window.handleForecastSubmit = async function (e) {
   e.preventDefault();
   const btn = e.target.querySelector("button[type='submit']");
+  const productName = document.getElementById("productName").value.trim();
   const productUrl = document.getElementById("productUrl").value.trim();
+  const modelNumber =
+    document.getElementById("modelNumber")?.value.trim() || "";
+  const spec = document.getElementById("spec")?.value.trim() || "";
   const fileInput = document.getElementById("images");
   const hasFiles = fileInput?.files?.length > 0;
+
+  // [優化新增]：電器類商品強制檢查購買網址
+  if (isElectricalAppliance(productName) && !productUrl) {
+    alert(
+      "⚠️ 系統偵測到此為電器類商品。因報關稽核需求，請務必填寫「商品購買網址/連結」！"
+    );
+    document.getElementById("productUrl").focus();
+    return;
+  }
 
   if (!productUrl && !hasFiles) {
     alert("請務必提供「商品購買連結」或「上傳商品圖片」(擇一)！");
@@ -315,10 +379,13 @@ window.handleForecastSubmit = async function (e) {
     "trackingNumber",
     document.getElementById("trackingNumber").value.trim()
   );
-  fd.append("productName", document.getElementById("productName").value.trim());
+  fd.append("productName", productName);
   fd.append("quantity", document.getElementById("quantity").value);
   fd.append("note", document.getElementById("note").value);
   fd.append("productUrl", productUrl);
+  fd.append("modelNumber", modelNumber); // 報關必備型號
+  fd.append("spec", spec); // 報關必備規格
+
   if (hasFiles) {
     for (let f of fileInput.files) fd.append("images", f);
   }
@@ -334,7 +401,6 @@ window.handleForecastSubmit = async function (e) {
       e.target.reset();
       if (fileInput.resetUploader) fileInput.resetUploader();
       window.loadMyPackages();
-      if (window.checkForecastDraftQueue) window.checkForecastDraftQueue(true);
     } else {
       const data = await res.json();
       window.showMessage(data.message || "預報失敗", "error");
@@ -347,12 +413,18 @@ window.handleForecastSubmit = async function (e) {
   }
 };
 
-// --- 包裹詳情 (智慧費率逆推與 Cloudinary 修復) ---
+/**
+ * 包裹詳情渲染 (優化：文字名稱修改與計費透明化)
+ */
 window.openPackageDetails = function (pkgDataStr) {
   try {
     const pkg = JSON.parse(decodeURIComponent(pkgDataStr));
     const modal = document.getElementById("package-details-modal");
     if (!modal) return;
+
+    // [需求優化]：修改標題為「訂單詳細內容」
+    const detailTitle = document.getElementById("package-detail-title");
+    if (detailTitle) detailTitle.textContent = "訂單詳細內容";
 
     const boxesListContainer = document.getElementById("details-boxes-list");
     const imagesGallery = document.getElementById("details-images-gallery");
@@ -368,7 +440,7 @@ window.openPackageDetails = function (pkgDataStr) {
     const arrivedBoxes = pkg.arrivedBoxes || [];
 
     let calculatedTotalBaseFee = 0;
-    let pkgRateConfig = { weightRate: 22, volumeRate: 125 };
+    let pkgRateConfig = { weightRate: 22, volumeRate: 125, name: "一般家具" };
 
     if (window.RATES) {
       const pType = (pkg.displayType || "一般家具").replace(/傢/g, "家").trim();
@@ -391,7 +463,6 @@ window.openPackageDetails = function (pkgDataStr) {
       const finalFee = Math.max(wtFee, volFee);
       calculatedTotalBaseFee += finalFee;
 
-      // [優化]：判定哪一個是計費基準 (Winner)
       const isWeightWinner = wtFee >= volFee;
       const isVolumeWinner = volFee > wtFee;
 
@@ -408,18 +479,16 @@ window.openPackageDetails = function (pkgDataStr) {
             <div class="spec-item"><span class="label" style="color:#64748b;">重量:</span> <span class="value" style="color:#334155; font-weight:600;">${weight} kg</span></div>
             <div class="spec-item"><span class="label" style="color:#64748b;">材積:</span> <span class="value" style="color:#334155; font-weight:600;">${cai} 材</span></div>
             <div class="spec-item"><span class="label" style="color:#64748b;">分類:</span> <span class="value" style="color:#1a73e8; font-weight:600;">${
-              pkgRateConfig.name || "一般家具"
+              pkgRateConfig.name
             }</span></div>
           </div>
           
           <div class="detail-calc-box" style="background: #f8fafc; padding: 10px; border-radius: 8px;">
             <div style="font-size: 11px; color: #94a3b8; margin-bottom: 5px;">費用試算比對 (取大者計費)：</div>
-            <div class="calc-comparison-row ${
-              isWeightWinner ? "is-winner" : ""
-            }" 
-                 style="display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 4px; border: 1px solid ${
-                   isWeightWinner ? "#22c55e" : "transparent"
-                 }; background: ${
+            <div class="calc-comparison-row" 
+                  style="display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 4px; border: 1px solid ${
+                    isWeightWinner ? "#22c55e" : "transparent"
+                  }; background: ${
         isWeightWinner ? "#f0fdf4" : "transparent"
       }; color: ${isWeightWinner ? "#15803d" : "#64748b"}; font-weight: ${
         isWeightWinner ? "700" : "normal"
@@ -431,12 +500,10 @@ window.openPackageDetails = function (pkgDataStr) {
           : ""
       }</span>
             </div>
-            <div class="calc-comparison-row ${
-              isVolumeWinner ? "is-winner" : ""
-            }" 
-                 style="display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 6px; font-size: 13px; border: 1px solid ${
-                   isVolumeWinner ? "#22c55e" : "transparent"
-                 }; background: ${
+            <div class="calc-comparison-row" 
+                  style="display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 6px; font-size: 13px; border: 1px solid ${
+                    isVolumeWinner ? "#22c55e" : "transparent"
+                  }; background: ${
         isVolumeWinner ? "#f0fdf4" : "transparent"
       }; color: ${isVolumeWinner ? "#15803d" : "#64748b"}; font-weight: ${
         isVolumeWinner ? "700" : "normal"
@@ -490,16 +557,13 @@ window.openPackageDetails = function (pkgDataStr) {
   }
 };
 
-// --- [優化新功能] 無主包裹優化系統 ---
-
 /**
- * [新功能] 加載無主清單 (SWR 策略)
+ * 載入無主包裹清單 (SWR 快取優先策略)
  */
 window.loadUnclaimedList = async function (forceRefresh = false) {
   const tbody = document.getElementById("unclaimed-table-body");
   if (!tbody) return;
 
-  // [SWR 優化]：快取優先
   if (
     !forceRefresh &&
     window.unclaimedCache &&
@@ -535,7 +599,7 @@ async function fetchUnclaimedData(isBackground) {
 }
 
 /**
- * [新功能] 渲染無主包裹 (整合圖片預覽)
+ * 渲染無主包裹清單
  */
 function renderUnclaimed(list, isFiltering = false) {
   const tbody = document.getElementById("unclaimed-table-body");
@@ -550,7 +614,6 @@ function renderUnclaimed(list, isFiltering = false) {
 
   tbody.innerHTML = list
     .map((pkg) => {
-      // 取得照片 (如有)
       const firstImg =
         pkg.warehouseImages && pkg.warehouseImages.length > 0
           ? pkg.warehouseImages[0]
@@ -581,7 +644,7 @@ function renderUnclaimed(list, isFiltering = false) {
 }
 
 /**
- * [新功能] 無主包裹過濾搜尋
+ * 無主包裹搜尋過濾
  */
 window.filterUnclaimed = function (keyword) {
   const kw = keyword.toLowerCase().trim();
@@ -595,7 +658,7 @@ window.filterUnclaimed = function (keyword) {
 };
 
 /**
- * [新功能] 認領時自動帶入單號
+ * 認領觸發：帶入單號
  */
 window.initiateClaimByTracking = function (tracking) {
   window.openClaimModalSafe();
@@ -607,14 +670,14 @@ window.initiateClaimByTracking = function (tracking) {
 };
 
 /**
- * [新功能] 圖片大圖預覽
+ * 無主包裹圖片大圖預覽
  */
 window.previewUnclaimedImage = function (url) {
   const src = url.startsWith("http") ? url : API_BASE_URL + url;
   const modal = document.getElementById("view-images-modal");
   if (modal) {
     modal.innerHTML = `<div class="modal-content" style="max-width:800px; padding:0; background:transparent; box-shadow:none;">
-        <span class="modal-close" style="color:#fff; font-size:40px; top:0; right:10px;">&times;</span>
+        <span class="modal-close" style="color:#fff; font-size:40px; top:0; right:10px; cursor:pointer;" onclick="this.parentElement.parentElement.style.display='none'">&times;</span>
         <img src="${src}" style="width:100%; border-radius:12px; border:3px solid #fff;">
     </div>`;
     modal.style.display = "flex";
@@ -623,6 +686,9 @@ window.previewUnclaimedImage = function (url) {
   }
 };
 
+/**
+ * 開啟認領彈窗
+ */
 window.openClaimModalSafe = function () {
   const modal = document.getElementById("claim-package-modal");
   const form = document.getElementById("claim-package-form");
@@ -634,6 +700,9 @@ window.openClaimModalSafe = function () {
   setTimeout(() => document.getElementById("claim-tracking")?.focus(), 100);
 };
 
+/**
+ * 處理認領表單提交
+ */
 async function handleClaimSubmit(e) {
   e.preventDefault();
   const btn = e.target.querySelector("button[type='submit']");
@@ -671,7 +740,9 @@ async function handleClaimSubmit(e) {
   }
 }
 
-// --- Excel 批量操作 ---
+/**
+ * Excel 批量預報讀取 (優化：新增報關欄位解析)
+ */
 function handleExcelUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -682,20 +753,31 @@ function handleExcelUpload(e) {
     const jsonData = XLSX.utils.sheet_to_json(
       workbook.Sheets[workbook.SheetNames[0]],
       {
-        header: ["trackingNumber", "productName", "quantity", "note"],
+        // 新增型號與規格的標頭對應
+        header: [
+          "trackingNumber",
+          "productName",
+          "modelNumber",
+          "spec",
+          "quantity",
+          "note",
+        ],
         range: 1,
       }
     );
     window.bulkData = jsonData.filter((r) => r.trackingNumber && r.productName);
     document.getElementById(
       "bulk-preview-area"
-    ).innerHTML = `<p>已讀取 ${window.bulkData.length} 筆資料</p>`;
+    ).innerHTML = `<p>✅ 已成功讀取 ${window.bulkData.length} 筆資料 (含報關型號與規格)</p>`;
     document.getElementById("btn-confirm-bulk").disabled =
       window.bulkData.length === 0;
   };
   reader.readAsArrayBuffer(file);
 }
 
+/**
+ * 提交批量預報
+ */
 async function submitBulkForecast() {
   const btn = document.getElementById("btn-confirm-bulk");
   btn.disabled = true;
@@ -709,23 +791,25 @@ async function submitBulkForecast() {
       body: JSON.stringify({ packages: window.bulkData }),
     });
     if (res.ok) {
-      alert("批量匯入成功");
+      window.showMessage("批量匯入成功", "success");
       document.getElementById("bulk-forecast-modal").style.display = "none";
       window.loadMyPackages();
     }
   } catch (err) {
-    alert("匯入失敗");
+    window.showMessage("匯入失敗，請檢查資料格式", "error");
   } finally {
     btn.disabled = false;
   }
 }
 
-// --- 異常處理與編輯 ---
+/**
+ * 異常包裹處理
+ */
 window.resolveException = function (pkgId) {
   const action = prompt("處理方式：1. 棄置, 2. 退回, 3. 發貨 (請輸入 1, 2, 3)");
   const map = { 1: "DISCARD", 2: "RETURN", 3: "SHIP_ANYWAY" };
   if (!map[action]) return;
-  const note = prompt("備註：");
+  const note = prompt("備註說明：");
   fetch(`${API_BASE_URL}/api/packages/${pkgId}/exception`, {
     method: "PUT",
     headers: {
@@ -736,6 +820,9 @@ window.resolveException = function (pkgId) {
   }).then(() => window.loadMyPackages());
 };
 
+/**
+ * 開啟包裹編輯彈窗 (優化：載入新報關欄位)
+ */
 window.openEditPackageModal = function (pkg) {
   document.getElementById("edit-package-id").value = pkg.id;
   document.getElementById("edit-trackingNumber").value = pkg.trackingNumber;
@@ -743,52 +830,104 @@ window.openEditPackageModal = function (pkg) {
   document.getElementById("edit-quantity").value = pkg.quantity;
   document.getElementById("edit-note").value = pkg.note || "";
   document.getElementById("edit-productUrl").value = pkg.productUrl || "";
+
+  // [優化新增]：編輯時帶入型號與規格
+  const modelInput = document.getElementById("edit-modelNumber");
+  const specInput = document.getElementById("edit-spec");
+  if (modelInput) modelInput.value = pkg.modelNumber || "";
+  if (specInput) specInput.value = pkg.spec || "";
+
   currentEditPackageImages = pkg.productImages || [];
   renderEditImages();
   document.getElementById("edit-package-modal").style.display = "flex";
 };
 
+/**
+ * 渲染編輯中的圖片列表
+ */
 function renderEditImages() {
   const container = document.getElementById("edit-package-images-container");
   if (!container) return;
   container.innerHTML = currentEditPackageImages
     .map((url, idx) => {
       const src = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
-      return `<div style="position:relative; display:inline-block; margin:5px;"><img src="${src}" style="width:60px;height:60px;object-fit:cover;"><span onclick="removeEditImg(${idx})" style="position:absolute;top:-5px;right:-5px;background:red;color:white;border-radius:50%;width:20px;text-align:center;cursor:pointer;">&times;</span></div>`;
+      return `<div style="position:relative; display:inline-block; margin:5px;"><img src="${src}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;"><span onclick="window.removeEditImg(${idx})" style="position:absolute;top:-5px;right:-5px;background:red;color:white;border-radius:50%;width:20px;height:20px;line-height:18px;text-align:center;cursor:pointer;font-weight:bold;">&times;</span></div>`;
     })
     .join("");
 }
 
+/**
+ * 移除編輯中的單張圖片
+ */
 window.removeEditImg = function (idx) {
   currentEditPackageImages.splice(idx, 1);
   renderEditImages();
 };
 
+/**
+ * 處理編輯表單提交 (優化：發送新報關欄位)
+ */
 window.handleEditPackageSubmit = async function (e) {
   e.preventDefault();
+  const btn = e.target.querySelector("button[type='submit']");
+  const productName = document.getElementById("edit-productName").value.trim();
+  const productUrl = document.getElementById("edit-productUrl").value.trim();
+
+  // [優化新增]：編輯時亦進行電器類驗證
+  if (isElectricalAppliance(productName) && !productUrl) {
+    alert("⚠️ 電器類商品因報關與稽核需求，必須提供「購買網址/連結」！");
+    document.getElementById("edit-productUrl").focus();
+    return;
+  }
+
+  btn.disabled = true;
   const fd = new FormData();
   fd.append(
     "trackingNumber",
-    document.getElementById("edit-trackingNumber").value
+    document.getElementById("edit-trackingNumber").value.trim()
   );
-  fd.append("productName", document.getElementById("edit-productName").value);
+  fd.append("productName", productName);
   fd.append("quantity", document.getElementById("edit-quantity").value);
   fd.append("note", document.getElementById("edit-note").value);
-  fd.append("productUrl", document.getElementById("edit-productUrl").value);
-  fd.append("existingImages", JSON.stringify(currentEditPackageImages));
-  for (let f of document.getElementById("edit-package-new-images").files)
-    fd.append("images", f);
+  fd.append("productUrl", productUrl);
 
-  await fetch(
-    `${API_BASE_URL}/api/packages/${
-      document.getElementById("edit-package-id").value
-    }`,
-    {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${window.dashboardToken}` },
-      body: fd,
-    }
+  // 報關新欄位
+  fd.append(
+    "modelNumber",
+    document.getElementById("edit-modelNumber")?.value.trim() || ""
   );
-  document.getElementById("edit-package-modal").style.display = "none";
-  window.loadMyPackages();
+  fd.append("spec", document.getElementById("edit-spec")?.value.trim() || "");
+
+  fd.append("existingImages", JSON.stringify(currentEditPackageImages));
+  const newImages = document.getElementById("edit-package-new-images").files;
+  for (let f of newImages) fd.append("images", f);
+
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/packages/${
+        document.getElementById("edit-package-id").value
+      }`,
+      {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${window.dashboardToken}` },
+        body: fd,
+      }
+    );
+    if (res.ok) {
+      window.showMessage("包裹資料已更新", "success");
+      document.getElementById("edit-package-modal").style.display = "none";
+      window.loadMyPackages();
+    } else {
+      const data = await res.json();
+      alert(data.message || "更新失敗");
+    }
+  } catch (e) {
+    alert("操作失敗，請檢查網路連線");
+  } finally {
+    btn.disabled = false;
+  }
 };
+
+// 確保其他組件可以調用
+window.initPackageStaticUI = initPackageStaticUI;
+window.renderPackagesTable = renderPackagesTable;

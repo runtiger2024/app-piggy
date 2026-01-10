@@ -1,8 +1,16 @@
 // frontend/js/dashboard-recipient.js
 // 負責常用收件人管理與選擇邏輯
-// V2026.Final.Pro - 最新完整旗艦版
-// [保留] Cache-First & SWR, 樂觀更新, 敏感資訊遮罩
-// [新增] 自動運費重算連動, 動態事件重新綁定機制, 強化校驗
+// V2026.Final.Pro.Enhanced - 最新完整旗艦優化版
+// [校驗優化] 嚴格執行身分證字號格式：首字大寫英文 + 1或2開頭之9位數字
+
+// --- 0. 輔助校驗工具 ---
+/**
+ * 驗證身分證格式：首字大寫英文 + 9位數字 (第一位必為 1 或 2)
+ */
+function validateIdNumberFormat(id) {
+  const idRegex = /^[A-Z][12]\d{8}$/;
+  return idRegex.test(id);
+}
 
 // --- 1. 載入與渲染 (核心優化) ---
 window.loadRecipients = async function (forceRefresh = false) {
@@ -190,6 +198,14 @@ async function handleRecipientSubmit(e) {
   if (name.length < 2) return alert("請輸入真實姓名");
   if (phone.length < 8) return alert("請輸入有效的電話號碼");
 
+  // [優化新增] 身分證字號格式校驗 (首字母大寫+1或2開頭的9位數字)
+  if (!validateIdNumberFormat(idNum)) {
+    alert(
+      "身分證字號格式錯誤！\n請輸入 1 位大寫英文字母 + 9 位數字，且第一個數字必須是 1 或 2。"
+    );
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = "正在處理...";
 
@@ -332,7 +348,7 @@ window.openRecipientSelector = async function () {
         modal.style.display = "none";
         window.showMessage("已自動帶入收件資訊", "success");
 
-        // [新增功能] 如果有運費試算邏輯，自動觸發重算
+        // 如果有運費試算邏輯，自動觸發重算
         if (typeof window.recalculateShipmentTotal === "function") {
           window.recalculateShipmentTotal();
         }
@@ -357,8 +373,7 @@ window.openRecipientSelector = async function () {
 };
 
 /**
- * [新增] 動態綁定觸發器
- * 用於在集運彈窗彈出後，強制將「常用地址」按鈕與選擇器連結
+ * 動態綁定觸發器
  */
 window.bindRecipientSelectorTrigger = function () {
   const btnSelect = document.getElementById("btn-select-recipient");

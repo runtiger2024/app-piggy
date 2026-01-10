@@ -1,8 +1,17 @@
 // backend/controllers/recipientController.js
-// V2026.1.1 - 整合操作日誌紀錄與系統審計
+// V2026.1.2 - 強化身分證字號校驗與系統審計版
 
 const prisma = require("../config/db.js");
-const createLog = require("../utils/createLog.js"); // [新增] 引入日誌工具，確保後台日誌能同步顯示
+const createLog = require("../utils/createLog.js"); // 引入日誌工具
+
+/**
+ * @description 輔助函式：驗證台灣身分證字號格式
+ * 規則：第一個字母為大寫英文 + 9位數字，且數字第一位必須是 1 或 2
+ */
+const validateIdNumber = (id) => {
+  const idRegex = /^[A-Z][12]\d{8}$/;
+  return idRegex.test(id);
+};
 
 /**
  * @description 取得我的所有常用收件人
@@ -35,13 +44,22 @@ const createRecipient = async (req, res) => {
     const userId = req.user.id;
     const { name, phone, address, idNumber, isDefault } = req.body;
 
+    // 1. 基礎完整性檢查
     if (!name || !phone || !address || !idNumber) {
       return res
         .status(400)
         .json({ success: false, message: "請填寫完整資訊" });
     }
 
-    // 如果設為預設，需先將其他收件人取消預設
+    // 2. [優化新增] 身分證字號格式嚴格校驗
+    if (!validateIdNumber(idNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "身分證字號格式錯誤 (需大寫英文開頭，且第一位數字為1或2)",
+      });
+    }
+
+    // 3. 如果設為預設，需先將其他收件人取消預設
     if (isDefault) {
       await prisma.recipient.updateMany({
         where: { userId: userId },
@@ -60,7 +78,7 @@ const createRecipient = async (req, res) => {
       },
     });
 
-    // [新增] 紀錄操作日誌：讓管理員在「操作日誌」選單能看到新動態
+    // 紀錄操作日誌
     await createLog(
       userId,
       "CREATE_RECIPIENT",
@@ -99,7 +117,15 @@ const updateRecipient = async (req, res) => {
         .json({ success: false, message: "找不到此收件人" });
     }
 
-    // 如果設為預設，需先將其他收件人取消預設
+    // 1. [優化新增] 若有修改身分證字號，執行格式校驗
+    if (idNumber && !validateIdNumber(idNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "身分證字號格式錯誤 (需大寫英文開頭，且第一位數字為1或2)",
+      });
+    }
+
+    // 2. 如果設為預設，需先將其他收件人取消預設
     if (isDefault) {
       await prisma.recipient.updateMany({
         where: { userId: userId, id: { not: id } }, // 排除自己
@@ -118,7 +144,7 @@ const updateRecipient = async (req, res) => {
       },
     });
 
-    // [新增] 紀錄操作日誌
+    // 紀錄操作日誌
     await createLog(
       userId,
       "UPDATE_RECIPIENT",
@@ -159,7 +185,7 @@ const deleteRecipient = async (req, res) => {
     const recipientName = recipient.name; // 刪除前先保留姓名用於日誌
     await prisma.recipient.delete({ where: { id } });
 
-    // [新增] 紀錄操作日誌
+    // 紀錄操作日誌
     await createLog(
       userId,
       "DELETE_RECIPIENT",
