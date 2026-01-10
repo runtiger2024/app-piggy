@@ -1,8 +1,15 @@
 // backend/middleware/authMiddleware.js
-// V16 - 旗艦極限穩定版：極致快取優化與 App 即時狀態檢查
+// V16.1 - 旗艦極限穩定版：極致快取優化與 App 即時狀態檢查
+// [Update] 引入 node-cache 解決重複請求導致的 Prisma 冗餘查詢 (N+1 認證問題)
 
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/db.js");
+const NodeCache = require("node-cache");
+
+// 建立快取實例：
+// stdTTL: 60 (資料暫存 60 秒，期間內重複請求不再查資料庫)
+// checkperiod: 120 (每 120 秒自動清理一次過期快取)
+const userStatusCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
 
 /**
  * 登入驗證中介軟體 (保全系統)
@@ -22,20 +29,30 @@ const protect = async (req, res, next) => {
 
       // 2. 解碼 Token (驗證簽章與效期)
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
 
-      // 3. [大師級優化]：即時狀態檢查
-      // 在手機 App 環境中，使用者可能長達一個月不登入。
-      // 如果你在後台停用了他的帳號，我們必須在每一筆請求都確認他還是「活躍」狀態。
-      const userStatus = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          isActive: true,
-          permissions: true, // 作為資料庫端的權限備援
-        },
-      });
+      // 3. [大師級優化]：記憶體快取與即時狀態檢查
+      // 解決 N+1 認證問題：當前台同時發出多個 API 請求時，優先從記憶體讀取使用者狀態
+      let userStatus = userStatusCache.get(userId);
+
+      if (!userStatus) {
+        // 若快取過期或不存在，才執行資料庫查詢
+        userStatus = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            isActive: true,
+            permissions: true, // 作為資料庫端的權限備援
+          },
+        });
+
+        // 查詢成功後存入快取，供後續 60 秒內的請求直接使用
+        if (userStatus) {
+          userStatusCache.set(userId, userStatus);
+        }
+      }
 
       // 4. 查無此人 (可能帳號已被物理刪除)
       if (!userStatus) {
@@ -46,12 +63,10 @@ const protect = async (req, res, next) => {
 
       // 5. 帳號被停用 (上架 App 必備：管理員禁令必須即時生效)
       if (userStatus.isActive === false) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            message: "此帳號已被停用或註銷，請聯繫管理員",
-          });
+        return res.status(403).json({
+          success: false,
+          message: "此帳號已被停用或註銷，請聯繫管理員",
+        });
       }
 
       // 6. 處理權限快取 (優先相信 Token，減少 DB 解析開銷)
