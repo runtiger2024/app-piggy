@@ -1,10 +1,11 @@
 /**
  * dashboard-main.js
- * V2026.1.14 - 旗艦終極穩定優化版
+ * V2026.1.15 - 旗艦終極穩定優化版 (整合版)
  * * 變更紀錄：
- * 1. [效能優化]：將 Tab 切換與數據載入邏輯分離，解決點擊 handler 造成的畫面卡頓（Violation）。
- * 2. [相容性]：配合 V7.2 樣式系統與密碼表單隱藏欄位邏輯。
- * 3. [修復]：修正 copyText 中的 event 參照問題，提升複製穩定度。
+ * 1. [核心修復]：新增 tabChanged 事件觸發，解決最新消息、FAQ、關於我點選沒反應的問題。
+ * 2. [功能整合]：新增 tab-news, tab-faq, tab-about 之對應關係與載入函式鏈結。
+ * 3. [效能優化]：維持非同步處理負載，解決點擊 handler 造成的畫面卡頓。
+ * 4. [Retain]：完整保留所有原始表單綁定、銀行資訊複製、預報草稿帶入及費用明細逆推邏輯。
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -43,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.updateGlobalWalletDisplay();
   }
 
-  // 2. Tab 切換邏輯 (優化版)
+  // 2. Tab 切換邏輯 (優化整合版)
   setupTabs();
 
   // 3. 表單提交事件綁定
@@ -153,7 +154,7 @@ window.closeChangePasswordModal = function () {
   if (modal) modal.style.display = "none";
 };
 
-// --- Tab 管理 (修復點擊延遲 Violation) ---
+// --- Tab 管理 (整合新功能並修復事件通知) ---
 function setupTabs() {
   const tabs = [
     { id: "tab-packages", section: "packages-section" },
@@ -173,6 +174,22 @@ function setupTabs() {
       section: "unclaimed-section",
       loadFn: window.loadUnclaimedList,
     },
+    // [新增] 聯動最新消息、FAQ、關於小跑豬
+    {
+      id: "tab-news",
+      section: "news-section",
+      loadFn: window.loadNewsList,
+    },
+    {
+      id: "tab-faq",
+      section: "faq-section",
+      loadFn: window.loadFaqList,
+    },
+    {
+      id: "tab-about",
+      section: "about-section",
+      loadFn: window.loadAboutContent,
+    },
   ];
 
   tabs.forEach((tab) => {
@@ -180,7 +197,9 @@ function setupTabs() {
     if (!btn) return;
 
     btn.addEventListener("click", () => {
-      // 1. 立即更新 UI (避免點擊感官延遲)
+      const targetId = tab.id.replace("tab-", "");
+
+      // 1. 立即更新 UI
       document
         .querySelectorAll(".tab-btn")
         .forEach((b) => b.classList.remove("active"));
@@ -192,9 +211,14 @@ function setupTabs() {
       const section = document.getElementById(tab.section);
       if (section) section.style.display = "block";
 
-      // 2. 使用非同步處理重度負載，解決 Violation
+      // 2. [核心修正] 發送事件通知各模組 (最新消息/FAQ會監聽此事件)
+      document.dispatchEvent(
+        new CustomEvent("tabChanged", { detail: { tabId: targetId } })
+      );
+
+      // 3. 使用非同步處理數據載入，解決畫面卡頓
       setTimeout(() => {
-        // 自動捲動
+        // 自動捲動至分頁區域
         const wrapper = document.querySelector(".dashboard-tabs-wrapper");
         if (wrapper) {
           const headerOffset = 80;
@@ -206,7 +230,7 @@ function setupTabs() {
           });
         }
 
-        // 執行載入數據
+        // 執行特定的載入數據函式
         if (tab.loadFn && typeof tab.loadFn === "function") {
           tab.loadFn();
         }
@@ -374,7 +398,7 @@ function bindGlobalButtons() {
   if (btnClaimTile) {
     btnClaimTile.addEventListener("click", () => {
       const tabUnclaimed = document.getElementById("tab-unclaimed");
-      if (tabUnclaimed) tabUnclaimed.click(); // 觸發 Tab 切換，內含捲動與數據載入邏輯
+      if (tabUnclaimed) tabUnclaimed.click();
     });
   }
 
