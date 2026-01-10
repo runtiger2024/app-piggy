@@ -1,8 +1,110 @@
 /**
  * js/admin-content.js
- * V2026.01.Final - 旗艦內容管理系統 (CMS) 整合修正版
+ * V2026.01.Final.Fixed - 旗艦內容管理系統 (CMS) 整合優化版
+ * 解決問題：修復新增按鈕無反應、加強資料讀取安全性、確保全域函式優先掛載
  * 負責處理：最新消息、常見問題、關於我們 的增刪改查邏輯
  */
+
+// --- [ 核心優化：優先掛載全域函式，確保 HTML onclick 永遠有效 ] ---
+
+/**
+ * 開啟最新消息彈窗
+ * @param {string} id - 公告 ID，若為空則視為新增
+ */
+window.openNewsModal = function (id = "") {
+  const modal = document.getElementById("modal-news");
+  const form = document.getElementById("form-news-item");
+  if (!modal || !form) return;
+
+  form.reset();
+  const idField = document.getElementById("news-id");
+  if (idField) idField.value = id;
+
+  const titleElem = document.getElementById("news-modal-title");
+  if (titleElem) titleElem.innerText = id ? "編輯公告內容" : "發布新公告";
+
+  // 若為編輯模式，則從 API 獲取詳細資料
+  if (id && id !== "new") {
+    fetch(`${API_BASE_URL}/api/admin/news/${id}`, { headers: getAuthHeader() })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          const n = data.news || data.item || {};
+          if (document.getElementById("news-title-input"))
+            document.getElementById("news-title-input").value = n.title || "";
+          if (document.getElementById("news-category"))
+            document.getElementById("news-category").value =
+              n.category || "GENERAL";
+          if (document.getElementById("news-content-input"))
+            document.getElementById("news-content-input").value =
+              n.content || "";
+          if (document.getElementById("news-important"))
+            document.getElementById("news-important").checked = !!n.isImportant;
+          if (document.getElementById("news-published"))
+            document.getElementById("news-published").checked = !!n.isPublished;
+        }
+      })
+      .catch((err) => console.error("獲取公告詳情失敗", err));
+  }
+  modal.style.display = "flex";
+};
+
+/**
+ * 開啟常見問題彈窗
+ */
+window.openFaqModal = function (id = "") {
+  const modal = document.getElementById("modal-faq");
+  const form = document.getElementById("form-faq-item");
+  if (!modal || !form) return;
+
+  form.reset();
+  const idField = document.getElementById("faq-id");
+  if (idField) idField.value = id;
+
+  const titleElem = document.getElementById("faq-modal-title");
+  if (titleElem) titleElem.innerText = id ? "編輯常見問題" : "新增 Q&A 項目";
+
+  // 實作：從 API 載入資料供編輯
+  if (id && id !== "new") {
+    fetch(`${API_BASE_URL}/api/admin/faq/${id}`, { headers: getAuthHeader() })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          const f = data.faq || data.item || {};
+          if (document.getElementById("faq-question-input"))
+            document.getElementById("faq-question-input").value =
+              f.question || "";
+          if (document.getElementById("faq-answer-input"))
+            document.getElementById("faq-answer-input").value = f.answer || "";
+          if (document.getElementById("faq-category"))
+            document.getElementById("faq-category").value =
+              f.category || "LOGISTICS";
+          if (document.getElementById("faq-order"))
+            document.getElementById("faq-order").value = f.order || 0;
+          if (document.getElementById("faq-active"))
+            document.getElementById("faq-active").checked = !!f.isActive;
+        }
+      })
+      .catch((err) => console.error("獲取 FAQ 詳情失敗", err));
+  }
+  modal.style.display = "flex";
+};
+
+// 設置別名以相容 HTML 原始調用
+window.editNews = (id) => window.openNewsModal(id);
+window.editFaq = (id) => window.openFaqModal(id);
+
+window.closeNewsModal = () => {
+  const modal = document.getElementById("modal-news");
+  if (modal) modal.style.display = "none";
+};
+
+window.closeFaqModal = () => {
+  const modal = document.getElementById("modal-faq");
+  if (modal) modal.style.display = "none";
+};
+
+// --- [ 初始化與事件監聽 ] ---
 
 document.addEventListener("DOMContentLoaded", () => {
   // 若位於系統設定頁面，預設載入第一分頁資料
@@ -32,13 +134,13 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("submit", handleAboutSubmit);
 });
 
-// --- [全域變數與輔助工具] ---
+// --- [ 全域變數與輔助工具 ] ---
 const getAuthHeader = () => ({
   "Content-Type": "application/json",
   Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
 });
 
-// --- [1. 最新消息管理 (News)] ---
+// --- [ 1. 最新消息管理 (News) ] ---
 
 async function loadAdminNews() {
   const container = document.getElementById("admin-news-container");
@@ -49,7 +151,13 @@ async function loadAdminNews() {
       headers: getAuthHeader(),
     });
     const data = await res.json();
-    if (!data.success) return;
+
+    // 安全檢查：確保 data.news 存在且為陣列，防止腳本崩潰
+    if (!data.success || !Array.isArray(data.news)) {
+      container.innerHTML =
+        '<tr><td colspan="6" class="text-center">暫無公告資料</td></tr>';
+      return;
+    }
 
     container.innerHTML = data.news
       .map(
@@ -86,45 +194,6 @@ async function loadAdminNews() {
     console.error("載入消息失敗", e);
   }
 }
-
-// 別名映射，確保與 HTML onclick="editNews(...)" 相容
-window.editNews = (id) => window.openNewsModal(id);
-
-window.openNewsModal = function (id = "") {
-  const modal = document.getElementById("modal-news");
-  const form = document.getElementById("form-news-item");
-  if (!modal || !form) return;
-
-  form.reset();
-  document.getElementById("news-id").value = id;
-  document.getElementById("news-modal-title").innerText = id
-    ? "編輯公告內容"
-    : "發布新公告";
-
-  // 若為編輯模式，則從 API 獲取詳細資料
-  if (id && id !== "new") {
-    fetch(`${API_BASE_URL}/api/admin/news/${id}`, { headers: getAuthHeader() })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          const n = data.news || data.item;
-          document.getElementById("news-title-input").value = n.title || "";
-          document.getElementById("news-category").value =
-            n.category || "GENERAL";
-          document.getElementById("news-content-input").value = n.content || "";
-          document.getElementById("news-important").checked = !!n.isImportant;
-          document.getElementById("news-published").checked = !!n.isPublished;
-        }
-      })
-      .catch((err) => console.error("獲取公告詳情失敗", err));
-  }
-  modal.style.display = "flex";
-};
-
-window.closeNewsModal = () => {
-  const modal = document.getElementById("modal-news");
-  if (modal) modal.style.display = "none";
-};
 
 async function handleNewsSubmit(e) {
   e.preventDefault();
@@ -178,7 +247,7 @@ window.deleteNews = async (id) => {
   }
 };
 
-// --- [2. 常見問題管理 (FAQ)] ---
+// --- [ 2. 常見問題管理 (FAQ) ] ---
 
 async function loadAdminFaq() {
   const container = document.getElementById("admin-faq-container");
@@ -189,7 +258,13 @@ async function loadAdminFaq() {
       headers: getAuthHeader(),
     });
     const data = await res.json();
-    if (!data.success) return;
+
+    // 安全檢查：確保 data.faqs 為陣列
+    if (!data.success || !Array.isArray(data.faqs)) {
+      container.innerHTML =
+        '<tr><td colspan="5" class="text-center">暫無問答資料</td></tr>';
+      return;
+    }
 
     container.innerHTML = data.faqs
       .map(
@@ -224,48 +299,6 @@ async function loadAdminFaq() {
     console.error("載入 FAQ 失敗", e);
   }
 }
-
-// 別名映射，確保與 HTML onclick="editFaq(...)" 相容
-window.editFaq = (id) => window.openFaqModal(id);
-
-window.openFaqModal = function (id = "") {
-  const modal = document.getElementById("modal-faq");
-  const form = document.getElementById("form-faq-item");
-
-  // 修正點：加入 Null 檢查防止 TypeError
-  if (!modal || !form) return;
-
-  form.reset();
-  document.getElementById("faq-id").value = id;
-  document.getElementById("faq-modal-title").innerText = id
-    ? "編輯常見問題"
-    : "新增 Q&A 項目";
-
-  // 實作：從 API 載入資料供編輯
-  if (id && id !== "new") {
-    fetch(`${API_BASE_URL}/api/admin/faq/${id}`, { headers: getAuthHeader() })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          const f = data.faq || data.item;
-          document.getElementById("faq-question-input").value =
-            f.question || "";
-          document.getElementById("faq-answer-input").value = f.answer || "";
-          document.getElementById("faq-category").value =
-            f.category || "LOGISTICS";
-          document.getElementById("faq-order").value = f.order || 0;
-          document.getElementById("faq-active").checked = !!f.isActive;
-        }
-      })
-      .catch((err) => console.error("獲取 FAQ 詳情失敗", err));
-  }
-  modal.style.display = "flex";
-};
-
-window.closeFaqModal = () => {
-  const modal = document.getElementById("modal-faq");
-  if (modal) modal.style.display = "none";
-};
 
 async function handleFaqSubmit(e) {
   e.preventDefault();
@@ -319,7 +352,7 @@ window.deleteFaq = async (id) => {
   }
 };
 
-// --- [3. 關於我們管理 (About)] ---
+// --- [ 3. 關於我們管理 (About) ] ---
 
 async function loadAdminAbout() {
   try {
@@ -328,9 +361,10 @@ async function loadAdminAbout() {
     });
     const data = await res.json();
     if (data.success && data.content) {
-      document.getElementById("about-title").value = data.content.title || "";
-      document.getElementById("about-content").value =
-        data.content.content || "";
+      const titleInput = document.getElementById("about-title");
+      const contentInput = document.getElementById("about-content");
+      if (titleInput) titleInput.value = data.content.title || "";
+      if (contentInput) contentInput.value = data.content.content || "";
     }
   } catch (e) {
     console.error("載入關於我們失敗", e);
@@ -361,7 +395,8 @@ async function handleAboutSubmit(e) {
   }
 }
 
-// --- [相容性支援：原本的 switchCMSTab 函式] ---
+// --- [ 相容性支援：原本的 switchCMSTab 函式 ] ---
+
 window.switchCMSTab = function (tab) {
   // 移除所有按鈕與面板的 active 狀態
   document
@@ -382,7 +417,6 @@ window.switchCMSTab = function (tab) {
     document.getElementById(`tab-${tab}`) ||
     document.getElementById(`cms-${tab}`);
   if (panel) {
-    // 隱藏所有兄弟節點 (如果有需要)
     const siblings = panel.parentElement.querySelectorAll(
       ".tab-content, .cms-panel"
     );
