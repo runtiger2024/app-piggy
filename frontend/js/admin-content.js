@@ -1,11 +1,11 @@
 /**
  * js/admin-content.js
- * V2026.01.Final.Fixed.Robust - 旗艦內容管理系統 (CMS) 整合優化終極版
+ * V2026.01.Final.Fixed.Robust.UI - 旗艦內容管理系統 (CMS) 整合優化美編版
  * 解決問題：
  * 1. 修復新增按鈕無反應 (函式掛載順序優化)
  * 2. 徹底防止 Cannot read properties of null 錯誤 (DOM 安全檢查)
  * 3. 強化資料讀取安全性 (Array.isArray 檢查與 Response 狀態驗證)
- * 4. 保留：最新消息、常見問題、關於我們 完整 CRUD 邏輯
+ * 4. 【美編優化】優化表格排版整齊度、標籤配色辨識度
  */
 
 // --- [ 核心修正：優先掛載全域函式，確保 HTML onclick 在腳本載入即生效 ] ---
@@ -30,13 +30,15 @@ window.openNewsModal = function (id = "") {
 
   const titleElem = document.getElementById("news-modal-title");
   if (titleElem)
-    titleElem.innerText = id && id !== "new" ? "編輯公告內容" : "發布新公告";
+    titleElem.innerHTML =
+      id && id !== "new"
+        ? '<i class="fas fa-edit mr-2"></i>編輯公告內容'
+        : '<i class="fas fa-plus mr-2"></i>發布新公告';
 
   // 若為編輯模式，則從 API 獲取詳細資料
   if (id && id !== "new") {
     fetch(`${API_BASE_URL}/api/admin/news/${id}`, { headers: getAuthHeader() })
       .then((res) => {
-        // [新增優化]：檢查回應狀態，防止 404 HTML 導致解析失敗
         if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
         return res.json();
       })
@@ -81,12 +83,14 @@ window.openFaqModal = function (id = "") {
 
   const titleElem = document.getElementById("faq-modal-title");
   if (titleElem)
-    titleElem.innerText = id && id !== "new" ? "編輯常見問題" : "新增 Q&A 項目";
+    titleElem.innerHTML =
+      id && id !== "new"
+        ? '<i class="fas fa-question-circle mr-2"></i>編輯常見問題'
+        : '<i class="fas fa-plus mr-2"></i>新增 Q&A 項目';
 
   if (id && id !== "new") {
     fetch(`${API_BASE_URL}/api/admin/faq/${id}`, { headers: getAuthHeader() })
       .then((res) => {
-        // [新增優化]：檢查回應狀態，防止 404 HTML 導致解析失敗
         if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
         return res.json();
       })
@@ -182,35 +186,56 @@ async function loadAdminNews() {
       return;
     }
 
+    // 分類顏色映射
+    const categoryMap = {
+      SYSTEM: "tag-system",
+      PROMOTION: "tag-promotion",
+      HOLIDAY: "tag-holiday",
+      GENERAL: "tag-general",
+    };
+
     container.innerHTML = data.news
-      .map(
-        (n) => `
+      .map((n) => {
+        const catClass = categoryMap[n.category] || "tag-general";
+        return `
       <tr>
         <td>
-          <span class="badge ${
+          <span class="badge-status ${
             n.isPublished ? "badge-success" : "badge-secondary"
           }">
             ${n.isPublished ? "已發布" : "草稿"}
           </span>
         </td>
-        <td>${n.category}</td>
-        <td>${n.isImportant ? "🚩 " : ""}${n.title}</td>
-        <td>${
-          n.isImportant ? '<span class="badge-important">重要</span>' : "一般"
+        <td><span class="badge-status ${catClass}">${n.category}</span></td>
+        <td class="font-weight-bold" style="color: #2d3748;">${
+          n.isImportant
+            ? '<i class="fas fa-thumbtack text-danger mr-1"></i>'
+            : ""
+        }${n.title}</td>
+        <td class="text-center">${
+          n.isImportant
+            ? '<span class="badge-status badge-important">重要</span>'
+            : '<span class="text-muted" style="font-size:12px;">一般</span>'
         }</td>
-        <td>${new Date(n.createdAt).toLocaleDateString()}</td>
+        <td class="text-muted" style="font-size:13px;">${new Date(
+          n.createdAt
+        ).toLocaleDateString()}</td>
         <td>
           <div class="btn-action-group">
-            <button class="btn btn-sm btn-outline-primary" onclick="editNews('${
+            <button class="btn btn-sm btn-outline-primary" title="編輯" onclick="editNews('${
               n.id
-            }')">編輯</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteNews('${
+            }')">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" title="刪除" onclick="deleteNews('${
               n.id
-            }')">刪除</button>
+            }')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
           </div>
         </td>
-      </tr>`
-      )
+      </tr>`;
+      })
       .join("");
   } catch (e) {
     console.error("載入消息失敗", e);
@@ -293,25 +318,35 @@ async function loadAdminFaq() {
       .map(
         (f) => `
       <tr>
-        <td>${f.order}</td>
-        <td>${f.category}</td>
-        <td>${f.question}</td>
-        <td>
-          <span class="badge ${
+        <td class="text-center font-weight-bold" style="color: #4a5568;">#${
+          f.order
+        }</td>
+        <td><span class="badge-status tag-general">${f.category}</span></td>
+        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #2d3748;">
+            ${f.question}
+        </td>
+        <td class="text-center">
+          <span class="badge-status ${
             f.isActive ? "badge-success" : "badge-secondary"
           }">
             ${f.isActive ? "顯示中" : "隱藏"}
           </span>
         </td>
-        <td>${new Date(f.updatedAt).toLocaleDateString()}</td>
+        <td class="text-muted" style="font-size:13px;">${new Date(
+          f.updatedAt
+        ).toLocaleDateString()}</td>
         <td>
           <div class="btn-action-group">
-            <button class="btn btn-sm btn-outline-primary" onclick="editFaq('${
+            <button class="btn btn-sm btn-outline-primary" title="編輯" onclick="editFaq('${
               f.id
-            }')">編輯</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteFaq('${
+            }')">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" title="刪除" onclick="deleteFaq('${
               f.id
-            }')">刪除</button>
+            }')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
           </div>
         </td>
       </tr>`

@@ -760,3 +760,88 @@ body {
   font-size: 1.5rem;
   margin-bottom: 5px;
 }
+/* 強化表格整齊度 */
+.table th,
+.table td {
+  vertical-align: middle !important;
+}
+
+/* 固定操作欄寬度，防止按鈕跳動 */
+.btn-action-group {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 120px; /* 確保編輯/刪除按鈕排版整齊 */
+}
+
+/* 強化 Badge 視覺效果 */
+.badge-status {
+  font-weight: 700;
+  padding: 0.35em 0.8em;
+  border-radius: 50px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tag-system {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.tag-promotion {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.tag-holiday {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.badge-important {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+/* 強化彈窗 Label 字體配色 */
+.modal-body label {
+  font-weight: 700;
+  color: #334155 !important; /* 深 slate 色，確保在白色背景下對比度極高 */
+  margin-bottom: 0.6rem;
+  display: inline-block;
+}
+
+/* 讓表格操作按鈕組固定寬度，防止排版跳動 */
+.btn-action-group {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+  min-width: 90px;
+}
+
+/* 狀態標籤美化 */
+.badge-status {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 分類標籤具體配色 */
+.tag-system {
+  background: #eff6ff;
+  color: #1d4ed8;
+} /* 藍色 */
+.tag-promotion {
+  background: #f0fdf4;
+  color: #15803d;
+} /* 綠色 */
+.tag-holiday {
+  background: #fffbeb;
+  color: #b45309;
+} /* 橘色 */
+.badge-important {
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 800;
+  border: 1px solid #fee2e2;
+} /* 紅色 */

@@ -355,3 +355,39 @@
   color: #858796;
   margin-left: 30px;
 }
+/* 彈窗標題美化 */
+.modal-header h3 {
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: 0.5px;
+}
+
+/* 強化標籤字體配色 */
+.modal-body label {
+  font-weight: 700;
+  color: #475569; /* 深灰色確保清晰 */
+  margin-bottom: 0.5rem;
+  display: block;
+  font-size: 0.9rem;
+}
+
+/* 輸入框美化 */
+.modal-body .form-control {
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 15px;
+  transition: all 0.2s ease;
+  color: #1e293b;
+}
+
+.modal-body .form-control:focus {
+  border-color: #4e73df;
+  box-shadow: 0 0 0 4px rgba(78, 115, 223, 0.1);
+  background-color: #fff;
+}
+
+/* 佔位符配色 */
+.modal-body .form-control::placeholder {
+  color: #94a3b8;
+  opacity: 0.8;
+}
