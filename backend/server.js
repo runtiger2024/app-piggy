@@ -39,9 +39,10 @@ const allowedOrigins = [
   "http://localhost:5500",
   "http://127.0.0.1:5500",
   "https://runpiggy-app-backend.onrender.com",
-  "https://runpiggy.shop", // [待替換] 您的正式前端網址
-  "capacitor://localhost", // iOS App 專用
-  "http://localhost", // Android App 專用
+  "https://runpiggy-app-frontend.onrender.com", // [核心修正] 新增 Render 預設前端網址
+  "https://runpiggy.shop", // 正式域名預留
+  "capacitor://localhost", // iOS App
+  "http://localhost", // Android App
 ];
 
 app.use(
