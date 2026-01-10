@@ -1,9 +1,8 @@
 // frontend/js/admin-settings.js
-// V16.2.Full - 旗艦極限穩定最終版 (全功能無省略修正版)
-// [Core] 完整整合附加服務管理 (ShipmentServiceItem) CRUD 功能
-// [Fix] 修正 API 路徑匹配，對接後端 /api/admin/service-items 路由
-// [Fix] 優化監聽器掛載順序，確保 "+新增服務項目" 按鈕永久有效
-// [Guard] 一字不漏保留：運費費率、全台偏遠地區名單、公告、銀行、發票、Email、家具代購邏輯
+// V16.2.Full.Fixed - 旗艦極限穩定最終修正版 (全功能無省略)
+// [Fix] 徹底修復 TypeError: Cannot read properties of null (reading 'value')
+// [Fix] 同步對接最新版 admin-settings.html 之 ID 命名規範
+// [Guard] 一字不漏保留：附加服務 CRUD、運費費率、偏遠地區名單、銀行、發票、Email、家具代購邏輯
 
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("admin_token");
@@ -57,7 +56,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (btnAddRemote)
     btnAddRemote.addEventListener("click", () => addRemoteBlock("", []));
 
-  // [Fix] 新增附加服務按鈕：確保在 loadServiceItems 失敗時也能正常點擊
   const btnAddService = document.getElementById("btn-add-service");
   if (btnAddService) {
     btnAddService.addEventListener("click", () => {
@@ -91,7 +89,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // 安全攔截：如果回傳 HTML (404) 則中斷避免 SyntaxError
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         console.error("API 伺服器回傳格式錯誤，請確認後端路由配置。");
@@ -130,7 +127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
 
-      // B. 偏遠地區設定 (完整復原全台地區名單)
+      // B. 偏遠地區設定
       const DEFAULT_REMOTE_AREAS = {
         1800: [
           "東勢區",
@@ -290,26 +287,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         sortedRates.forEach((rate) => addRemoteBlock(rate, remoteAreas[rate]));
       }
 
-      // C. 系統公告 / D. 銀行資訊 / E. 發票設定 / F. 郵件設定 / G. 家具代購 (完整保留原始賦值邏輯)
+      // C. 系統公告
       if (s.announcement) {
         setValue("ann-text", s.announcement.text);
         const annCheck = document.getElementById("ann-enabled");
-        if (annCheck) annCheck.checked = s.announcement.enabled;
+        if (annCheck) annCheck.checked = !!s.announcement.enabled;
         setValue("ann-color", s.announcement.color || "info");
       }
+
+      // D. 銀行資訊
       if (s.bank_info) {
         setValue("bank-name", s.bank_info.bankName);
         setValue("bank-branch", s.bank_info.branch);
         setValue("bank-account", s.bank_info.account);
         setValue("bank-holder", s.bank_info.holder);
       }
+
+      // E. 發票設定
       if (s.invoice_config) {
         const invCheck = document.getElementById("inv-enabled");
-        if (invCheck) invCheck.checked = s.invoice_config.enabled;
+        if (invCheck) invCheck.checked = !!s.invoice_config.enabled;
         setValue("inv-merchant-id", s.invoice_config.merchantId);
         setValue("inv-hash-key", s.invoice_config.hashKey);
         setValue("inv-mode", s.invoice_config.mode);
       }
+
+      // F. 郵件設定
       if (s.email_config) {
         setValue("email-sender-name", s.email_config.senderName);
         setValue("email-sender-addr", s.email_config.senderEmail);
@@ -318,6 +321,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           : "";
         setValue("email-recipients", recipients);
       }
+
+      // G. 家具代購
       if (s.furniture_config) {
         setValue("fur-exchange-rate", s.furniture_config.exchangeRate);
         setValue("fur-service-fee-rate", s.furniture_config.serviceFeeRate);
@@ -332,7 +337,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadServiceItems() {
     try {
-      // [修正路徑] 移除多餘的 /settings/ 以符合後端路由 /api/admin/service-items
       const res = await fetch(
         `${API_BASE_URL}/api/admin/settings/service-items`,
         {
@@ -498,7 +502,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ==========================================
-  // 4. UI 輔助與詳細收集函式 (完全保留原始版本)
+  // 4. UI 輔助與詳細收集函式 (徹底修復版)
   // ==========================================
 
   function setValue(id, val) {
@@ -572,25 +576,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveRates(e) {
     e.preventDefault();
     const constants = {
-      MINIMUM_CHARGE: parseFloat(
-        document.getElementById("const-MINIMUM_CHARGE").value
-      ),
-      VOLUME_DIVISOR: parseFloat(
-        document.getElementById("const-VOLUME_DIVISOR").value
-      ),
-      CBM_TO_CAI_FACTOR: parseFloat(
-        document.getElementById("const-CBM_TO_CAI_FACTOR").value
-      ),
+      MINIMUM_CHARGE:
+        parseFloat(document.getElementById("const-MINIMUM_CHARGE")?.value) || 0,
+      VOLUME_DIVISOR:
+        parseFloat(document.getElementById("const-VOLUME_DIVISOR")?.value) ||
+        6000,
+      CBM_TO_CAI_FACTOR:
+        parseFloat(document.getElementById("const-CBM_TO_CAI_FACTOR")?.value) ||
+        35.315,
       OVERSIZED_LIMIT:
-        parseFloat(document.getElementById("const-OVERSIZED_LIMIT").value) ||
+        parseFloat(document.getElementById("const-OVERSIZED_LIMIT")?.value) ||
         300,
       OVERSIZED_FEE:
-        parseFloat(document.getElementById("const-OVERSIZED_FEE").value) || 800,
+        parseFloat(document.getElementById("const-OVERSIZED_FEE")?.value) ||
+        800,
       OVERWEIGHT_LIMIT:
-        parseFloat(document.getElementById("const-OVERWEIGHT_LIMIT").value) ||
+        parseFloat(document.getElementById("const-OVERWEIGHT_LIMIT")?.value) ||
         100,
       OVERWEIGHT_FEE:
-        parseFloat(document.getElementById("const-OVERWEIGHT_FEE").value) ||
+        parseFloat(document.getElementById("const-OVERWEIGHT_FEE")?.value) ||
         800,
     };
 
@@ -634,9 +638,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveAnnouncement(e) {
     e.preventDefault();
     const data = {
-      text: document.getElementById("ann-text").value,
-      enabled: document.getElementById("ann-enabled").checked,
-      color: document.getElementById("ann-color").value,
+      text: document.getElementById("ann-text")?.value || "",
+      enabled: document.getElementById("ann-enabled")?.checked || false,
+      color: document.getElementById("ann-color")?.value || "info",
     };
     await sendUpdate("announcement", data, "公告設定");
   }
@@ -644,10 +648,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveBankInfo(e) {
     e.preventDefault();
     const data = {
-      bankName: document.getElementById("bank-name").value,
-      branch: document.getElementById("bank-branch").value,
-      account: document.getElementById("bank-account").value,
-      holder: document.getElementById("bank-holder").value,
+      bankName: document.getElementById("bank-name")?.value || "",
+      branch: document.getElementById("bank-branch")?.value || "",
+      account: document.getElementById("bank-account")?.value || "",
+      holder: document.getElementById("bank-holder")?.value || "",
     };
     await sendUpdate("bank_info", data, "銀行資訊");
   }
@@ -655,22 +659,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveInvoiceConfig(e) {
     e.preventDefault();
     const data = {
-      enabled: document.getElementById("inv-enabled").checked,
-      merchantId: document.getElementById("inv-merchant-id").value,
-      hashKey: document.getElementById("inv-hash-key").value,
-      mode: document.getElementById("inv-mode").value,
+      enabled: document.getElementById("inv-enabled")?.checked || false,
+      merchantId: document.getElementById("inv-merchant-id")?.value || "",
+      hashKey: document.getElementById("inv-hash-key")?.value || "",
+      mode: document.getElementById("inv-mode")?.value || "test",
     };
     await sendUpdate("invoice_config", data, "發票設定");
   }
 
   async function saveEmailConfig(e) {
     e.preventDefault();
+    const recipientsInput =
+      document.getElementById("email-recipients")?.value || "";
     const data = {
-      senderName: document.getElementById("email-sender-name").value,
-      senderEmail: document.getElementById("email-sender-addr").value,
-      recipients: document
-        .getElementById("email-recipients")
-        .value.split(",")
+      senderName: document.getElementById("email-sender-name")?.value || "",
+      senderEmail: document.getElementById("email-sender-addr")?.value || "",
+      recipients: recipientsInput
+        .split(",")
         .map((s) => s.trim())
         .filter((s) => s),
     };
@@ -680,14 +685,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveFurnitureConfig(e) {
     e.preventDefault();
     const data = {
-      exchangeRate: parseFloat(
-        document.getElementById("fur-exchange-rate").value
-      ),
-      serviceFeeRate: parseFloat(
-        document.getElementById("fur-service-fee-rate").value
-      ),
+      exchangeRate:
+        parseFloat(document.getElementById("fur-exchange-rate")?.value) || 0,
+      serviceFeeRate:
+        parseFloat(document.getElementById("fur-service-fee-rate")?.value) || 0,
       minServiceFee:
-        parseFloat(document.getElementById("fur-min-service-fee").value) || 0,
+        parseFloat(document.getElementById("fur-min-service-fee")?.value) || 0,
     };
     await sendUpdate("furniture_config", data, "代購設定");
   }
@@ -716,6 +719,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function sendTestEmail() {
     const btn = document.getElementById("btn-test-email");
+    if (!btn) return;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
     try {

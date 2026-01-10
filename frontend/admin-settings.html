@@ -200,8 +200,8 @@
               "
             >
               <div>
-                <label>海運低消 (NT$)</label
-                ><input
+                <label>海運低消 (NT$)</label>
+                <input
                   type="number"
                   id="const-MINIMUM_CHARGE"
                   class="form-control"
@@ -209,8 +209,8 @@
                 />
               </div>
               <div>
-                <label>材積換算係數 (Divisor)</label
-                ><input
+                <label>材積換算係數 (Divisor)</label>
+                <input
                   type="number"
                   id="const-VOLUME_DIVISOR"
                   class="form-control"
@@ -218,8 +218,8 @@
                 />
               </div>
               <div>
-                <label>CBM 轉材積係數</label
-                ><input
+                <label>CBM 轉材積係數</label>
+                <input
                   type="number"
                   step="0.1"
                   id="const-CBM_TO_CAI_FACTOR"
@@ -227,32 +227,32 @@
                 />
               </div>
               <div>
-                <label>超長限制 (cm)</label
-                ><input
+                <label>超長限制 (cm)</label>
+                <input
                   type="number"
                   id="const-OVERSIZED_LIMIT"
                   class="form-control"
                 />
               </div>
               <div>
-                <label>超長附加費 ($)</label
-                ><input
+                <label>超長附加費 ($)</label>
+                <input
                   type="number"
                   id="const-OVERSIZED_FEE"
                   class="form-control"
                 />
               </div>
               <div>
-                <label>超重限制 (kg)</label
-                ><input
+                <label>超重限制 (kg)</label>
+                <input
                   type="number"
                   id="const-OVERWEIGHT_LIMIT"
                   class="form-control"
                 />
               </div>
               <div>
-                <label>超重附加費 ($)</label
-                ><input
+                <label>超重附加費 ($)</label>
+                <input
                   type="number"
                   id="const-OVERWEIGHT_FEE"
                   class="form-control"
@@ -495,6 +495,15 @@
               <label class="font-weight-bold">前台頂部捲軸公告 (跑馬燈)</label>
               <textarea id="ann-text" class="form-control" rows="3"></textarea>
             </div>
+            <div class="form-group mb-3">
+              <label>公告顏色樣式</label>
+              <select id="ann-color" class="form-control">
+                <option value="info">藍色 (資訊)</option>
+                <option value="warning">橘色 (警告)</option>
+                <option value="danger">紅色 (緊急)</option>
+                <option value="success">綠色 (正常)</option>
+              </select>
+            </div>
             <div class="form-check mb-4">
               <input type="checkbox" id="ann-enabled" />
               <label for="ann-enabled" class="ml-2">啟用公告顯示</label>
@@ -508,16 +517,16 @@
         <div id="tab-bank" class="tab-content">
           <form id="form-bank">
             <div class="form-group mb-3">
-              <label>銀行名稱 (含代碼)</label
-              ><input type="text" id="bank-name" class="form-control" />
+              <label>銀行名稱 (含代碼)</label>
+              <input type="text" id="bank-name" class="form-control" />
             </div>
             <div class="form-group mb-3">
-              <label>分行名稱</label
-              ><input type="text" id="bank-branch" class="form-control" />
+              <label>分行名稱</label>
+              <input type="text" id="bank-branch" class="form-control" />
             </div>
             <div class="form-group mb-3">
-              <label>銀行帳號</label
-              ><input
+              <label>銀行帳號</label>
+              <input
                 type="text"
                 id="bank-account"
                 class="form-control"
@@ -525,8 +534,8 @@
               />
             </div>
             <div class="form-group mb-4">
-              <label>戶名</label
-              ><input type="text" id="bank-holder" class="form-control" />
+              <label>戶名</label>
+              <input type="text" id="bank-holder" class="form-control" />
             </div>
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-university"></i> 更新匯款資料
@@ -537,15 +546,28 @@
         <div id="tab-invoice" class="tab-content">
           <form id="form-invoice">
             <div class="form-check mb-3">
-              <input type="checkbox" id="inv-enabled" /><label
-                for="inv-enabled"
-                class="ml-2"
-                >啟用電子發票</label
-              >
+              <input type="checkbox" id="inv-enabled" />
+              <label for="inv-enabled" class="ml-2">啟用電子發票</label>
             </div>
             <div class="form-group mb-3">
-              <label>Merchant ID</label
-              ><input type="text" id="inv-merchant-id" class="form-control" />
+              <label>Merchant ID (商店編號)</label>
+              <input type="text" id="inv-merchant-id" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>Hash Key / API Key</label>
+              <input
+                type="password"
+                id="inv-hash-key"
+                class="form-control"
+                placeholder="請輸入金流或發票介接密鑰"
+              />
+            </div>
+            <div class="form-group mb-3">
+              <label>營運模式</label>
+              <select id="inv-mode" class="form-control">
+                <option value="test">測試環境 (SandBox)</option>
+                <option value="prod">正式營運 (Production)</option>
+              </select>
             </div>
             <button type="submit" class="btn btn-primary">儲存發票設定</button>
           </form>
@@ -554,16 +576,21 @@
         <div id="tab-email" class="tab-content">
           <form id="form-email">
             <div class="form-group mb-3">
-              <label>寄件者名稱</label
-              ><input type="text" id="email-sender-name" class="form-control" />
+              <label>寄件者名稱</label>
+              <input type="text" id="email-sender-name" class="form-control" />
             </div>
             <div class="form-group mb-3">
-              <label>寄件者 Email</label
-              ><input
-                type="email"
-                id="email-sender-addr"
+              <label>寄件者 Email</label>
+              <input type="email" id="email-sender-addr" class="form-control" />
+            </div>
+            <div class="form-group mb-3">
+              <label>系統通知收件者 (多個 Email 請用逗號隔開)</label>
+              <textarea
+                id="email-recipients"
                 class="form-control"
-              />
+                rows="2"
+                placeholder="admin@example.com, manager@example.com"
+              ></textarea>
             </div>
             <button type="submit" class="btn btn-primary">更新郵件設定</button>
           </form>
@@ -677,8 +704,8 @@
               </div>
               <div class="col-md-4">
                 <div class="form-group mb-3">
-                  <label>排序權重</label
-                  ><input
+                  <label>排序權重</label>
+                  <input
                     type="number"
                     id="faq-order"
                     class="form-control"
@@ -704,15 +731,15 @@
     <div id="modal-service" class="modal-overlay">
       <div class="modal-container" style="max-width: 500px">
         <div class="modal-header">
-          <h3 id="service-modal-title">新增附加服務</h3>
+          <h3 id="service-modal-title">附加服務詳情</h3>
           <span class="modal-close" id="btn-close-service-modal">&times;</span>
         </div>
         <div class="modal-body">
           <form id="form-service-item">
             <input type="hidden" id="service-id" />
             <div class="form-group mb-3">
-              <label>服務名稱 *</label
-              ><input
+              <label>服務名稱 *</label>
+              <input
                 type="text"
                 id="service-name"
                 class="form-control"
@@ -720,16 +747,16 @@
               />
             </div>
             <div class="form-group mb-3">
-              <label>描述</label
-              ><textarea
+              <label>描述</label>
+              <textarea
                 id="service-desc"
                 class="form-control"
                 rows="2"
               ></textarea>
             </div>
             <div class="form-group mb-3">
-              <label>單價 (TWD) *</label
-              ><input
+              <label>單價 (TWD) *</label>
+              <input
                 type="number"
                 id="service-price"
                 class="form-control"
@@ -746,11 +773,8 @@
               </select>
             </div>
             <div class="form-check mb-4">
-              <input type="checkbox" id="service-active" checked /><label
-                for="service-active"
-                class="ml-2"
-                >啟用</label
-              >
+              <input type="checkbox" id="service-active" checked />
+              <label for="service-active" class="ml-2">啟用服務</label>
             </div>
             <button type="submit" class="btn btn-primary btn-block">
               儲存服務項目
