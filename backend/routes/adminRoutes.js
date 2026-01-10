@@ -1,9 +1,9 @@
 // backend/routes/adminRoutes.js
-// V17.4.Final - 旗艦整合終極穩定版 (CMS 全功能對接版)
+// V17.5.Final - 旗艦整合終極穩定版 (CMS 全功能對接優化版)
 // [Fix] 徹底修復 TypeError: argument handler must be a function，解決控制器名稱不匹配問題
 // [Fix] 修正 Middleware 引用，確保 protect 與 checkPermission 體系運作正常
 // [Retain] 一字不漏保留：儀表板報表、系統設定、包裹管理、集運單審核、發票系統、會員模擬、財務稽核、家具代採購
-// [Add] 整合最新消息 (News)、常見問題 (FAQ)、關於我們 (About) 之 CMS 管理路由
+// [Add] 整合最新消息 (News)、常見問題 (FAQ)、關於我們 (About) 之 CMS 管理路由，並補齊單筆詳情獲取 API
 
 const express = require("express");
 const router = express.Router();
@@ -459,13 +459,21 @@ router
 // 8. 內容管理系統 (CMS) - 最新消息、FAQ、關於我
 // ==========================================
 
-// [修正重點]：將 POST 處理器對接為 adminUpdateNews 以支持 Upsert 邏輯
+// 最新消息管理
 router.get(
   "/news",
   protect,
   checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminGetNews
 );
+// [新增修正]：獲取單筆公告詳情，供後台編輯器讀取
+router.get(
+  "/news/:id",
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
+  contentAdmin.adminGetNewsById
+);
+// [修正重點]：將 POST 處理器對接為 adminUpdateNews 以支持 Upsert 邏輯
 router.post(
   "/news",
   protect,
@@ -491,6 +499,13 @@ router.get(
   protect,
   checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminGetFaqs
+);
+// [新增修正]：獲取單筆 FAQ 詳情
+router.get(
+  "/faq/:id",
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
+  contentAdmin.adminGetFaqById
 );
 router.post(
   "/faq",

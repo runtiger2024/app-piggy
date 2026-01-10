@@ -1,10 +1,10 @@
 /**
  * js/admin-content.js
- * V2026.01.Final.Fixed - 旗艦內容管理系統 (CMS) 整合優化終極版
+ * V2026.01.Final.Fixed.Robust - 旗艦內容管理系統 (CMS) 整合優化終極版
  * 解決問題：
  * 1. 修復新增按鈕無反應 (函式掛載順序優化)
  * 2. 徹底防止 Cannot read properties of null 錯誤 (DOM 安全檢查)
- * 3. 強化資料讀取安全性 (Array.isArray 檢查)
+ * 3. 強化資料讀取安全性 (Array.isArray 檢查與 Response 狀態驗證)
  * 4. 保留：最新消息、常見問題、關於我們 完整 CRUD 邏輯
  */
 
@@ -35,7 +35,11 @@ window.openNewsModal = function (id = "") {
   // 若為編輯模式，則從 API 獲取詳細資料
   if (id && id !== "new") {
     fetch(`${API_BASE_URL}/api/admin/news/${id}`, { headers: getAuthHeader() })
-      .then((res) => res.json())
+      .then((res) => {
+        // [新增優化]：檢查回應狀態，防止 404 HTML 導致解析失敗
+        if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (data.success) {
           const n = data.news || data.item || {};
@@ -81,7 +85,11 @@ window.openFaqModal = function (id = "") {
 
   if (id && id !== "new") {
     fetch(`${API_BASE_URL}/api/admin/faq/${id}`, { headers: getAuthHeader() })
-      .then((res) => res.json())
+      .then((res) => {
+        // [新增優化]：檢查回應狀態，防止 404 HTML 導致解析失敗
+        if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (data.success) {
           const f = data.faq || data.item || {};
