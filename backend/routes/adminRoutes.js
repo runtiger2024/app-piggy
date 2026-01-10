@@ -1,8 +1,8 @@
 // backend/routes/adminRoutes.js
-// V2026.01.Final - 旗艦終極整合穩定版
-// [Fix] 修正 Middleware 引用，解決 Render 部署報錯 ReferenceError
-// [Add] 整合最新消息、常見問題、關於我們之 CMS 管理路由
-// [Retain] 完整保留：報表統計、費率設定、包裹/集運單審核、發票系統、財務管理、傢俱代採購
+// V17.2.Final - 旗艦整合終極修復版
+// [Fix] 徹底修復 TypeError，統一使用 protect 與 checkPermission 驗證體系
+// [Add] 整合最新消息、常見問題、關於我們 CMS 路由，並掛載正確權限
+// [Retain] 一字不漏保留：費率設定、包裹/集運單審核、發票系統、財務管理、傢俱代採購
 
 const express = require("express");
 const router = express.Router();
@@ -16,18 +16,11 @@ const userController = require("../controllers/admin/userController");
 const reportController = require("../controllers/admin/reportController");
 const walletController = require("../controllers/admin/walletController");
 const furnitureAdminController = require("../controllers/admin/furnitureAdminController");
-
-// --- [2. 引入內容管理控制器 (CMS)] ---
 const contentAdmin = require("../controllers/admin/contentAdminController");
 
-// --- [3. 關鍵修正：引入權限驗證 Middleware] ---
-// 這裡同時解構所有可能用到的權限檢查函式，確保全檔案相容
-const {
-  protect,
-  checkPermission,
-  authMiddleware,
-  adminMiddleware,
-} = require("../middleware/authMiddleware");
+// --- [2. 關鍵修正：引入權限驗證 Middleware] ---
+// 使用你系統中確認存在的 protect 與 checkPermission
+const { protect, checkPermission } = require("../middleware/authMiddleware");
 
 // ==========================================
 // 1. 儀表板與報表統計
@@ -457,59 +450,69 @@ router
 // 8. 內容管理系統 (CMS) - 最新消息、FAQ、關於我
 // ==========================================
 
-// 最新消息 (News) 管理
-router.get("/news", authMiddleware, adminMiddleware, contentAdmin.adminGetNews);
+// 最新消息管理
+router.get(
+  "/news",
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
+  contentAdmin.adminGetNews
+);
 router.post(
   "/news",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminCreateNews
 );
 router.put(
   "/news/:id",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminUpdateNews
 );
 router.delete(
   "/news/:id",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminDeleteNews
 );
 
-// 常見問題 (FAQ) 管理
-router.get("/faq", authMiddleware, adminMiddleware, contentAdmin.adminGetFaqs);
+// FAQ 管理
+router.get(
+  "/faq",
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
+  contentAdmin.adminGetFaqs
+);
 router.post(
   "/faq",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminUpdateFaq
-); // 支援新增與更新 (Upsert)
+);
 router.put(
   "/faq/:id",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminUpdateFaq
 );
 router.delete(
   "/faq/:id",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminDeleteFaq
 );
 
-// 關於我們 (Static Content) 管理
+// 關於我們管理
 router.get(
   "/static/about",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminGetStatic
 );
 router.put(
   "/static/about",
-  authMiddleware,
-  adminMiddleware,
+  protect,
+  checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminUpdateStatic
 );
 
