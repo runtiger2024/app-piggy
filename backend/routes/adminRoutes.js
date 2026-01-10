@@ -1,13 +1,14 @@
 // backend/routes/adminRoutes.js
-// V16.2.Stable - 旗艦極限穩定修正版
-// [Fix] 修正附加服務路由路徑，解決 API 404 導致前端載入失敗 (SyntaxError) 的問題
-// [Retain] 完整保留：儀表板報表、系統設定、包裹管理、集運單審核、發票系統、會員模擬、財務稽核、家具代採購
+// V2026.01.Final - 旗艦終極整合穩定版
+// [Fix] 修正 Middleware 引用，解決 Render 部署報錯 ReferenceError
+// [Add] 整合最新消息、常見問題、關於我們之 CMS 管理路由
+// [Retain] 完整保留：報表統計、費率設定、包裹/集運單審核、發票系統、財務管理、傢俱代採購
 
 const express = require("express");
 const router = express.Router();
 const upload = require("../utils/upload.js");
 
-// 引入控制器
+// --- [1. 引入所有業務控制器] ---
 const settingsController = require("../controllers/admin/settingsController");
 const packageController = require("../controllers/admin/packageController");
 const shipmentController = require("../controllers/admin/shipmentController");
@@ -15,18 +16,21 @@ const userController = require("../controllers/admin/userController");
 const reportController = require("../controllers/admin/reportController");
 const walletController = require("../controllers/admin/walletController");
 const furnitureAdminController = require("../controllers/admin/furnitureAdminController");
+
+// --- [2. 引入內容管理控制器 (CMS)] ---
 const contentAdmin = require("../controllers/admin/contentAdminController");
-const { protect, checkPermission } = require("../middleware/authMiddleware.js");
 
 // --- [3. 關鍵修正：引入權限驗證 Middleware] ---
-// 確保路徑與你的檔案結構一致：backend/middleware/authMiddleware.js
+// 這裡同時解構所有可能用到的權限檢查函式，確保全檔案相容
 const {
+  protect,
+  checkPermission,
   authMiddleware,
   adminMiddleware,
 } = require("../middleware/authMiddleware");
 
 // ==========================================
-// 1. 儀表板與報表
+// 1. 儀表板與報表統計
 // ==========================================
 router
   .route("/stats")
@@ -35,11 +39,9 @@ router
     checkPermission("DASHBOARD_VIEW"),
     reportController.getDashboardStats
   );
-
 router
   .route("/logs")
   .get(protect, checkPermission("LOGS_VIEW"), reportController.getActivityLogs);
-
 router
   .route("/reports")
   .get(
@@ -49,7 +51,7 @@ router
   );
 
 // ==========================================
-// 2. 系統全域設定與附加服務 (核心修正區)
+// 2. 系統全域設定與附加服務
 // ==========================================
 router
   .route("/settings")
@@ -58,7 +60,6 @@ router
     checkPermission("SYSTEM_CONFIG"),
     settingsController.getSystemSettings
   );
-
 router
   .route("/settings/:key")
   .put(
@@ -67,7 +68,7 @@ router
     settingsController.updateSystemSetting
   );
 
-// [修正] 附加服務項目管理 (將路徑掛載於 /settings 下以匹配前台請求)
+// 附加服務項目管理 (CRUD)
 router
   .route("/settings/service-items")
   .get(
@@ -94,7 +95,7 @@ router
     settingsController.deleteServiceItem
   );
 
-// 測試 Email
+// 郵件測試 API
 router
   .route("/settings/test/email")
   .post(
@@ -104,38 +105,28 @@ router
   );
 
 // ==========================================
-// 3. 包裹管理
+// 3. 包裹管理 (預報、入庫、異常、無主)
 // ==========================================
-router
-  .route("/packages/export")
-  .get(
-    protect,
-    checkPermission("PACKAGE_VIEW"),
-    packageController.exportPackages
-  );
-
-router
-  .route("/packages/bulk-status")
-  .put(
-    protect,
-    checkPermission("PACKAGE_EDIT"),
-    packageController.bulkUpdatePackageStatus
-  );
-
-router
-  .route("/packages/bulk-delete")
-  .delete(
-    protect,
-    checkPermission("PACKAGE_DELETE"),
-    packageController.bulkDeletePackages
-  );
-
 router
   .route("/packages/all")
   .get(
     protect,
     checkPermission("PACKAGE_VIEW"),
     packageController.getAllPackages
+  );
+router
+  .route("/packages/unclaimed")
+  .get(
+    protect,
+    checkPermission("PACKAGE_VIEW"),
+    packageController.getUnclaimedParcels
+  );
+router
+  .route("/packages/export")
+  .get(
+    protect,
+    checkPermission("PACKAGE_VIEW"),
+    packageController.exportPackages
   );
 
 router
@@ -146,7 +137,6 @@ router
     upload.array("images", 5),
     packageController.adminCreatePackage
   );
-
 router
   .route("/packages/:id/status")
   .put(
@@ -154,7 +144,6 @@ router
     checkPermission("PACKAGE_EDIT"),
     packageController.updatePackageStatus
   );
-
 router
   .route("/packages/:id/details")
   .put(
@@ -163,7 +152,6 @@ router
     upload.array("warehouseImages", 5),
     packageController.updatePackageDetails
   );
-
 router
   .route("/packages/:id")
   .delete(
@@ -172,9 +160,39 @@ router
     packageController.adminDeletePackage
   );
 
+// 批量操作
+router
+  .route("/packages/bulk-status")
+  .put(
+    protect,
+    checkPermission("PACKAGE_EDIT"),
+    packageController.bulkUpdatePackageStatus
+  );
+router
+  .route("/packages/bulk-delete")
+  .delete(
+    protect,
+    checkPermission("PACKAGE_DELETE"),
+    packageController.bulkDeletePackages
+  );
+
 // ==========================================
-// 4. 集運單管理
+// 4. 集運單管理 (審核、改價、發票)
 // ==========================================
+router
+  .route("/shipments/all")
+  .get(
+    protect,
+    checkPermission("SHIPMENT_VIEW"),
+    shipmentController.getAllShipments
+  );
+router
+  .route("/shipments/:id/detail")
+  .get(
+    protect,
+    checkPermission("SHIPMENT_VIEW"),
+    shipmentController.getShipmentDetail
+  );
 router
   .route("/shipments/export")
   .get(
@@ -183,40 +201,7 @@ router
     shipmentController.exportShipments
   );
 
-router
-  .route("/shipments/bulk-status")
-  .put(
-    protect,
-    checkPermission("SHIPMENT_PROCESS"),
-    shipmentController.bulkUpdateShipmentStatus
-  );
-
-router
-  .route("/shipments/bulk-delete")
-  .delete(
-    protect,
-    checkPermission("SHIPMENT_PROCESS"),
-    shipmentController.bulkDeleteShipments
-  );
-
-router
-  .route("/shipments/all")
-  .get(
-    protect,
-    checkPermission("SHIPMENT_VIEW"),
-    shipmentController.getAllShipments
-  );
-
-// 集運單詳細資訊 API (含包裹物流單、照片、連結、計費參數、及已勾選附加服務)
-router
-  .route("/shipments/:id/detail")
-  .get(
-    protect,
-    checkPermission("SHIPMENT_VIEW"),
-    shipmentController.getShipmentDetail
-  );
-
-// 集運單審核通過 API (支持手動調整最終金額)
+// 審核與改價
 router
   .route("/shipments/:id/approve")
   .put(
@@ -224,7 +209,29 @@ router
     checkPermission("SHIPMENT_PROCESS"),
     shipmentController.approveShipment
   );
+router
+  .route("/shipments/:id/reject")
+  .put(
+    protect,
+    checkPermission("SHIPMENT_PROCESS"),
+    shipmentController.rejectShipment
+  );
+router
+  .route("/shipments/:id/price")
+  .put(
+    protect,
+    checkPermission("SHIPMENT_PROCESS"),
+    shipmentController.adjustShipmentPrice
+  );
 
+// 狀態與發票
+router
+  .route("/shipments/:id/status")
+  .put(
+    protect,
+    checkPermission("SHIPMENT_PROCESS"),
+    shipmentController.updateShipmentStatus
+  );
 router
   .route("/shipments/:id/invoice/issue")
   .post(
@@ -232,22 +239,12 @@ router
     checkPermission("SHIPMENT_PROCESS"),
     shipmentController.manualIssueInvoice
   );
-
 router
   .route("/shipments/:id/invoice/void")
   .post(
     protect,
     checkPermission("SHIPMENT_PROCESS"),
     shipmentController.manualVoidInvoice
-  );
-
-// 人工改價 API
-router
-  .route("/shipments/:id/price")
-  .put(
-    protect,
-    checkPermission("SHIPMENT_PROCESS"),
-    shipmentController.adjustShipmentPrice
   );
 
 router
@@ -263,25 +260,31 @@ router
     shipmentController.adminDeleteShipment
   );
 
+// 批量操作
 router
-  .route("/shipments/:id/reject")
+  .route("/shipments/bulk-status")
   .put(
     protect,
     checkPermission("SHIPMENT_PROCESS"),
-    shipmentController.rejectShipment
+    shipmentController.bulkUpdateShipmentStatus
+  );
+router
+  .route("/shipments/bulk-delete")
+  .delete(
+    protect,
+    checkPermission("SHIPMENT_PROCESS"),
+    shipmentController.bulkDeleteShipments
   );
 
 // ==========================================
-// 5. 會員管理
+// 5. 會員管理 (身分模擬、密碼重設)
 // ==========================================
 router
   .route("/users")
   .get(protect, checkPermission("USER_VIEW"), userController.getUsers);
-
 router
   .route("/users/list")
   .get(protect, checkPermission("PACKAGE_VIEW"), userController.getUsersList);
-
 router
   .route("/users/create")
   .post(
@@ -297,7 +300,6 @@ router
     checkPermission("USER_MANAGE"),
     userController.toggleUserStatus
   );
-
 router
   .route("/users/:id/profile")
   .put(
@@ -305,7 +307,6 @@ router
     checkPermission("USER_MANAGE"),
     userController.adminUpdateUserProfile
   );
-
 router
   .route("/users/:id/permissions")
   .put(
@@ -313,7 +314,6 @@ router
     checkPermission("USER_MANAGE"),
     userController.updateUserPermissions
   );
-
 router
   .route("/users/:id/reset-password")
   .put(
@@ -321,11 +321,6 @@ router
     checkPermission("USER_MANAGE"),
     userController.resetUserPassword
   );
-
-router
-  .route("/users/:id")
-  .delete(protect, checkPermission("USER_MANAGE"), userController.deleteUser);
-
 router
   .route("/users/:id/impersonate")
   .post(
@@ -333,9 +328,12 @@ router
     checkPermission("USER_IMPERSONATE"),
     userController.impersonateUser
   );
+router
+  .route("/users/:id")
+  .delete(protect, checkPermission("USER_MANAGE"), userController.deleteUser);
 
 // ==========================================
-// 6. 財務管理
+// 6. 財務管理 (交易審核、錢包調整)
 // ==========================================
 router
   .route("/finance/stats")
@@ -344,7 +342,6 @@ router
     checkPermission("FINANCE_AUDIT"),
     walletController.getFinanceStats
   );
-
 router
   .route("/finance/wallets")
   .get(
@@ -352,7 +349,6 @@ router
     checkPermission("FINANCE_AUDIT"),
     walletController.getWalletsOverview
   );
-
 router
   .route("/finance/wallets/:userId")
   .get(
@@ -360,7 +356,6 @@ router
     checkPermission("FINANCE_AUDIT"),
     walletController.getWalletDetail
   );
-
 router
   .route("/finance/transactions")
   .get(
@@ -370,6 +365,20 @@ router
   );
 
 router
+  .route("/finance/transactions/:id/review")
+  .put(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.reviewTransaction
+  );
+router
+  .route("/finance/transactions/:id/invoice")
+  .post(
+    protect,
+    checkPermission("FINANCE_AUDIT"),
+    walletController.manualIssueDepositInvoice
+  );
+router
   .route("/finance/transactions/bulk-review")
   .post(
     protect,
@@ -378,19 +387,11 @@ router
   );
 
 router
-  .route("/finance/transactions/:id/review")
-  .put(
-    protect,
-    checkPermission("FINANCE_AUDIT"),
-    walletController.reviewTransaction
-  );
-
-router
-  .route("/finance/transactions/:id/invoice")
+  .route("/finance/adjust")
   .post(
     protect,
     checkPermission("FINANCE_AUDIT"),
-    walletController.manualIssueDepositInvoice
+    walletController.manualAdjust
   );
 
 router
@@ -404,14 +405,6 @@ router
     protect,
     checkPermission("FINANCE_AUDIT"),
     walletController.deleteTransaction
-  );
-
-router
-  .route("/finance/adjust")
-  .post(
-    protect,
-    checkPermission("FINANCE_AUDIT"),
-    walletController.manualAdjust
   );
 
 // ==========================================
@@ -460,7 +453,11 @@ router
     furnitureAdminController.deleteFurnitureOrder
   );
 
-// 公告管理
+// ==========================================
+// 8. 內容管理系統 (CMS) - 最新消息、FAQ、關於我
+// ==========================================
+
+// 最新消息 (News) 管理
 router.get("/news", authMiddleware, adminMiddleware, contentAdmin.adminGetNews);
 router.post(
   "/news",
@@ -481,20 +478,20 @@ router.delete(
   contentAdmin.adminDeleteNews
 );
 
-// FAQ 管理
+// 常見問題 (FAQ) 管理
 router.get("/faq", authMiddleware, adminMiddleware, contentAdmin.adminGetFaqs);
+router.post(
+  "/faq",
+  authMiddleware,
+  adminMiddleware,
+  contentAdmin.adminUpdateFaq
+); // 支援新增與更新 (Upsert)
 router.put(
   "/faq/:id",
   authMiddleware,
   adminMiddleware,
   contentAdmin.adminUpdateFaq
 );
-router.post(
-  "/faq",
-  authMiddleware,
-  adminMiddleware,
-  contentAdmin.adminUpdateFaq
-); // 共用 upsert
 router.delete(
   "/faq/:id",
   authMiddleware,
@@ -502,7 +499,7 @@ router.delete(
   contentAdmin.adminDeleteFaq
 );
 
-// 關於我們
+// 關於我們 (Static Content) 管理
 router.get(
   "/static/about",
   authMiddleware,
@@ -515,4 +512,5 @@ router.put(
   adminMiddleware,
   contentAdmin.adminUpdateStatic
 );
+
 module.exports = router;
