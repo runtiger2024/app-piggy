@@ -595,191 +595,194 @@
             <button type="submit" class="btn btn-primary">更新郵件設定</button>
           </form>
         </div>
-      </div>
-    </div>
-
-    <div id="modal-news" class="modal-overlay" style="display: none">
-      <div class="modal-container" style="max-width: 700px">
-        <div class="modal-header">
-          <h3 id="news-modal-title">發布新公告</h3>
-          <span class="modal-close" onclick="closeNewsModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-          <form id="form-news-item">
-            <input type="hidden" id="news-id" />
-            <div class="form-group mb-3">
-              <label>公告標題 *</label>
-              <input
-                type="text"
-                id="news-title-input"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="row">
-              <div class="col-md-6">
-                <div class="form-group mb-3">
-                  <label>分類</label>
-                  <select id="news-category" class="form-control">
-                    <option value="GENERAL">一般公告</option>
-                    <option value="SYSTEM">系統通知</option>
-                    <option value="PROMOTION">優惠活動</option>
-                    <option value="HOLIDAY">節假日安排</option>
-                  </select>
-                </div>
-              </div>
-              <div
-                class="col-md-6"
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 20px;
-                  padding-top: 15px;
-                "
+        <div id="modal-news" class="modal-overlay" style="display: none">
+          <div class="modal-container" style="max-width: 700px">
+            <div class="modal-header">
+              <h3 id="news-modal-title">發布新公告</h3>
+              <span class="modal-close" onclick="closeNewsModal()"
+                >&times;</span
               >
-                <div class="form-check">
-                  <input type="checkbox" id="news-important" />
-                  <label for="news-important">標記為重要</label>
-                </div>
-                <div class="form-check">
-                  <input type="checkbox" id="news-published" checked />
-                  <label for="news-published">立即發布</label>
-                </div>
-              </div>
             </div>
-            <div class="form-group mb-3">
-              <label>內容詳情</label>
-              <textarea
-                id="news-content-input"
-                class="form-control"
-                rows="8"
-              ></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">
-              儲存並更新公告
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div id="modal-faq" class="modal-overlay" style="display: none">
-      <div class="modal-container" style="max-width: 600px">
-        <div class="modal-header">
-          <h3 id="faq-modal-title">編輯常見問題</h3>
-          <span class="modal-close" onclick="closeFaqModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-          <form id="form-faq-item">
-            <input type="hidden" id="faq-id" />
-            <div class="form-group mb-3">
-              <label>問題 (Question) *</label>
-              <input
-                type="text"
-                id="faq-question-input"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group mb-3">
-              <label>回答 (Answer) *</label>
-              <textarea
-                id="faq-answer-input"
-                class="form-control"
-                rows="5"
-                required
-              ></textarea>
-            </div>
-            <div class="row">
-              <div class="col-md-4">
+            <div class="modal-body">
+              <form id="form-news-item">
+                <input type="hidden" id="news-id" />
                 <div class="form-group mb-3">
-                  <label>顯示分類</label>
-                  <select id="faq-category" class="form-control">
-                    <option value="LOGISTICS">物流轉運</option>
-                    <option value="PAYMENT">費用帳務</option>
-                    <option value="CUSTOMS">報關查驗</option>
-                    <option value="ACCOUNT">帳號功能</option>
-                  </select>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="form-group mb-3">
-                  <label>排序權重</label>
+                  <label>公告標題 *</label>
                   <input
-                    type="number"
-                    id="faq-order"
+                    type="text"
+                    id="news-title-input"
                     class="form-control"
-                    value="0"
+                    required
                   />
                 </div>
-              </div>
-              <div class="col-md-4" style="padding-top: 35px">
-                <div class="form-check">
-                  <input type="checkbox" id="faq-active" checked />
-                  <label for="faq-active">啟用</label>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group mb-3">
+                      <label>分類</label>
+                      <select id="news-category" class="form-control">
+                        <option value="GENERAL">一般公告</option>
+                        <option value="SYSTEM">系統通知</option>
+                        <option value="PROMOTION">優惠活動</option>
+                        <option value="HOLIDAY">節假日安排</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div
+                    class="col-md-6"
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 20px;
+                      padding-top: 15px;
+                    "
+                  >
+                    <div class="form-check">
+                      <input type="checkbox" id="news-important" />
+                      <label for="news-important">標記為重要</label>
+                    </div>
+                    <div class="form-check">
+                      <input type="checkbox" id="news-published" checked />
+                      <label for="news-published">立即發布</label>
+                    </div>
+                  </div>
                 </div>
-              </div>
+                <div class="form-group mb-3">
+                  <label>內容詳情</label>
+                  <textarea
+                    id="news-content-input"
+                    class="form-control"
+                    rows="8"
+                  ></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  儲存並更新公告
+                </button>
+              </form>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">
-              儲存問答項目
-            </button>
-          </form>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div id="modal-service" class="modal-overlay" style="display: none">
-      <div class="modal-container" style="max-width: 500px">
-        <div class="modal-header">
-          <h3 id="service-modal-title">附加服務詳情</h3>
-          <span class="modal-close" id="btn-close-service-modal">&times;</span>
+        <div id="modal-faq" class="modal-overlay" style="display: none">
+          <div class="modal-container" style="max-width: 600px">
+            <div class="modal-header">
+              <h3 id="faq-modal-title">編輯常見問題</h3>
+              <span class="modal-close" onclick="closeFaqModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="form-faq-item">
+                <input type="hidden" id="faq-id" />
+                <div class="form-group mb-3">
+                  <label>問題 (Question) *</label>
+                  <input
+                    type="text"
+                    id="faq-question-input"
+                    class="form-control"
+                    required
+                  />
+                </div>
+                <div class="form-group mb-3">
+                  <label>回答 (Answer) *</label>
+                  <textarea
+                    id="faq-answer-input"
+                    class="form-control"
+                    rows="5"
+                    required
+                  ></textarea>
+                </div>
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="form-group mb-3">
+                      <label>顯示分類</label>
+                      <select id="faq-category" class="form-control">
+                        <option value="LOGISTICS">物流轉運</option>
+                        <option value="PAYMENT">費用帳務</option>
+                        <option value="CUSTOMS">報關查驗</option>
+                        <option value="ACCOUNT">帳號功能</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-group mb-3">
+                      <label>排序權重</label>
+                      <input
+                        type="number"
+                        id="faq-order"
+                        class="form-control"
+                        value="0"
+                      />
+                    </div>
+                  </div>
+                  <div class="col-md-4" style="padding-top: 35px">
+                    <div class="form-check">
+                      <input type="checkbox" id="faq-active" checked />
+                      <label for="faq-active">啟用</label>
+                    </div>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  儲存問答項目
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
-        <div class="modal-body">
-          <form id="form-service-item">
-            <input type="hidden" id="service-id" />
-            <div class="form-group mb-3">
-              <label>服務名稱 *</label>
-              <input
-                type="text"
-                id="service-name"
-                class="form-control"
-                required
-              />
+
+        <div id="modal-service" class="modal-overlay" style="display: none">
+          <div class="modal-container" style="max-width: 500px">
+            <div class="modal-header">
+              <h3 id="service-modal-title">附加服務詳情</h3>
+              <span class="modal-close" id="btn-close-service-modal"
+                >&times;</span
+              >
             </div>
-            <div class="form-group mb-3">
-              <label>描述</label>
-              <textarea
-                id="service-desc"
-                class="form-control"
-                rows="2"
-              ></textarea>
+            <div class="modal-body">
+              <form id="form-service-item">
+                <input type="hidden" id="service-id" />
+                <div class="form-group mb-3">
+                  <label>服務名稱 *</label>
+                  <input
+                    type="text"
+                    id="service-name"
+                    class="form-control"
+                    required
+                  />
+                </div>
+                <div class="form-group mb-3">
+                  <label>描述</label>
+                  <textarea
+                    id="service-desc"
+                    class="form-control"
+                    rows="2"
+                  ></textarea>
+                </div>
+                <div class="form-group mb-3">
+                  <label>單價 (TWD) *</label>
+                  <input
+                    type="number"
+                    id="service-price"
+                    class="form-control"
+                    value="0"
+                    required
+                  />
+                </div>
+                <div class="form-group mb-3">
+                  <label>計費單位</label>
+                  <select id="service-unit" class="form-control">
+                    <option value="PIECE">按件計費 (PIECE)</option>
+                    <option value="WEIGHT">按重量計費 (WEIGHT)</option>
+                    <option value="SHIPMENT">按單計費 (SHIPMENT)</option>
+                  </select>
+                </div>
+                <div class="form-check mb-4">
+                  <input type="checkbox" id="service-active" checked />
+                  <label for="service-active" class="ml-2">啟用服務</label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  儲存服務項目
+                </button>
+              </form>
             </div>
-            <div class="form-group mb-3">
-              <label>單價 (TWD) *</label>
-              <input
-                type="number"
-                id="service-price"
-                class="form-control"
-                value="0"
-                required
-              />
-            </div>
-            <div class="form-group mb-3">
-              <label>計費單位</label>
-              <select id="service-unit" class="form-control">
-                <option value="PIECE">按件計費 (PIECE)</option>
-                <option value="WEIGHT">按重量計費 (WEIGHT)</option>
-                <option value="SHIPMENT">按單計費 (SHIPMENT)</option>
-              </select>
-            </div>
-            <div class="form-check mb-4">
-              <input type="checkbox" id="service-active" checked />
-              <label for="service-active" class="ml-2">啟用服務</label>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">
-              儲存服務項目
-            </button>
-          </form>
+          </div>
         </div>
       </div>
     </div>
