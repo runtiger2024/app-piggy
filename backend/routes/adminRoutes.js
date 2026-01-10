@@ -1,6 +1,7 @@
 // backend/routes/adminRoutes.js
-// V17.3.Final - 旗艦整合終極穩定版 (CMS 全功能版)
-// [Fix] 徹底修復 TypeError 與 Middleware 引用衝突，確保伺服器穩定啟動
+// V17.4.Final - 旗艦整合終極穩定版 (CMS 全功能對接版)
+// [Fix] 徹底修復 TypeError: argument handler must be a function，解決控制器名稱不匹配問題
+// [Fix] 修正 Middleware 引用，確保 protect 與 checkPermission 體系運作正常
 // [Retain] 一字不漏保留：儀表板報表、系統設定、包裹管理、集運單審核、發票系統、會員模擬、財務稽核、家具代採購
 // [Add] 整合最新消息 (News)、常見問題 (FAQ)、關於我們 (About) 之 CMS 管理路由
 
@@ -18,8 +19,8 @@ const walletController = require("../controllers/admin/walletController");
 const furnitureAdminController = require("../controllers/admin/furnitureAdminController");
 const contentAdmin = require("../controllers/admin/contentAdminController");
 
-// --- [2. 核心權限驗證中介軟體] ---
-// 根據系統規範，protect 負責驗證 Token，checkPermission 負責驗證具體功能權限
+// --- [2. 權限驗證中介軟體] ---
+// 根據系統 V17.0 規範，使用 protect 驗證 Token，checkPermission 驗證功能權限
 const { protect, checkPermission } = require("../middleware/authMiddleware.js");
 
 // ==========================================
@@ -46,7 +47,7 @@ router
   );
 
 // ==========================================
-// 2. 系統全域設定與附加服務 (核心修正區)
+// 2. 系統全域設定與附加服務
 // ==========================================
 router
   .route("/settings")
@@ -64,7 +65,7 @@ router
     settingsController.updateSystemSetting
   );
 
-// 附加服務項目管理 (將路徑掛載於 /settings 下以匹配前台請求)
+// 附加服務項目管理 (對應 schema 中的 ShipmentServiceItem)
 router
   .route("/settings/service-items")
   .get(
@@ -204,7 +205,6 @@ router
     shipmentController.getAllShipments
   );
 
-// 集運單詳細資訊 API (含包裹物流單、照片、連結、計費參數、及已勾選附加服務)
 router
   .route("/shipments/:id/detail")
   .get(
@@ -213,7 +213,6 @@ router
     shipmentController.getShipmentDetail
   );
 
-// 集運單審核通過 API (支持手動調整最終金額)
 router
   .route("/shipments/:id/approve")
   .put(
@@ -238,7 +237,6 @@ router
     shipmentController.manualVoidInvoice
   );
 
-// 人工改價 API
 router
   .route("/shipments/:id/price")
   .put(
@@ -461,8 +459,7 @@ router
 // 8. 內容管理系統 (CMS) - 最新消息、FAQ、關於我
 // ==========================================
 
-// [注意] 使用 SYSTEM_CONFIG 權限作為 CMS 的管理門檻
-// 公告管理
+// [修正重點]：將 POST 處理器對接為 adminUpdateNews 以支持 Upsert 邏輯
 router.get(
   "/news",
   protect,
@@ -473,7 +470,7 @@ router.post(
   "/news",
   protect,
   checkPermission("SYSTEM_CONFIG"),
-  contentAdmin.adminCreateNews
+  contentAdmin.adminUpdateNews
 );
 router.put(
   "/news/:id",
@@ -488,7 +485,7 @@ router.delete(
   contentAdmin.adminDeleteNews
 );
 
-// FAQ 管理
+// FAQ 管理 (對應 schema 中的 FAQ 模型)
 router.get(
   "/faq",
   protect,
@@ -500,7 +497,7 @@ router.post(
   protect,
   checkPermission("SYSTEM_CONFIG"),
   contentAdmin.adminUpdateFaq
-); // 支援 Upsert
+);
 router.put(
   "/faq/:id",
   protect,
@@ -514,7 +511,7 @@ router.delete(
   contentAdmin.adminDeleteFaq
 );
 
-// 關於我們管理
+// 關於我們管理 (對應 schema 中的 StaticContent)
 router.get(
   "/static/about",
   protect,
