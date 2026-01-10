@@ -165,10 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   doc.getElementById("admin-header-container")?.remove();
 
-  const pageContent =
-    doc.querySelector(".container-fluid") ||
-    doc.querySelector(".container") ||
-    doc.body;
+  const pageContent = doc.body;
 
   mainContainer.innerHTML = pageContent.innerHTML;
 

@@ -1,8 +1,9 @@
 // frontend/js/admin-settings.js
 // V16.2.Full.Fixed - 旗艦極限穩定最終修正版 (全功能無省略)
 // [Fix] 徹底修復 TypeError: Cannot read properties of null (reading 'value')
-// [Fix] 同步對接最新版 admin-settings.html 之 ID 命名規範
-// [Guard] 一字不漏保留：附加服務 CRUD、運費費率、偏遠地區名單、銀行、發票、Email、家具代購邏輯
+// [Fix] 同步對接最新版 admin-settings.html 之 ID 命名規範，解決數據更新報錯
+// [Fix] 優化初始化掛載順序，確保所有按鈕 (包括附加服務、測試郵件) 永久有效
+// [Guard] 一字不漏保留：附加服務 CRUD、運費費率、全台偏遠地區名單、公告、銀行、發票、Email、家具代購邏輯
 
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("admin_token");
@@ -12,10 +13,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ==========================================
-  // 1. 事件監聽器掛載 (優先執行，確保按鈕不失效)
+  // 1. 事件監聽器掛載 (優先執行，確保 UI 互動不失效)
   // ==========================================
 
-  // Tab 切換邏輯
+  // Tab 切換邏輯：負責控制分頁顯示
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       document
@@ -24,6 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document
         .querySelectorAll(".tab-content")
         .forEach((c) => c.classList.remove("active"));
+
       btn.classList.add("active");
       const targetId = btn.getAttribute("data-tab");
       const targetContent = document.getElementById(targetId);
@@ -31,7 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // 綁定表單提交 (完整保留所有原始 ID)
+  // 綁定各分頁表單提交事件
   const forms = {
     "form-rates": saveRates,
     "form-remote": saveRemoteAreas,
@@ -56,6 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (btnAddRemote)
     btnAddRemote.addEventListener("click", () => addRemoteBlock("", []));
 
+  // [Fix] 新增附加服務按鈕：確保在數據加載成功/失敗時都能正常開啟 Modal
   const btnAddService = document.getElementById("btn-add-service");
   if (btnAddService) {
     btnAddService.addEventListener("click", () => {
@@ -80,7 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadServiceItems();
 
   // ==========================================
-  // 3. 核心功能函式 (完整邏輯無省略)
+  // 3. 核心功能函式
   // ==========================================
 
   async function loadSettings() {
@@ -89,9 +92,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // 安全攔截：避免因 404 或 API 錯誤導致 JSON 解析失敗
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        console.error("API 伺服器回傳格式錯誤，請確認後端路由配置。");
+        console.error("API 伺服器回傳格式錯誤，請確認後端配置。");
         return;
       }
 
@@ -127,7 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
 
-      // B. 偏遠地區設定
+      // B. 偏遠地區設定 (完整復原全台地區名單)
       const DEFAULT_REMOTE_AREAS = {
         1800: [
           "東勢區",
@@ -502,12 +506,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ==========================================
-  // 4. UI 輔助與詳細收集函式 (徹底修復版)
+  // 4. UI 輔助與詳細數據收集 (安全檢查版)
   // ==========================================
 
   function setValue(id, val) {
     const el = document.getElementById(id);
-    if (el && val !== undefined) el.value = val;
+    if (el && val !== undefined && val !== null) el.value = val;
   }
 
   function addCategoryBlock(key, data, isNew) {
@@ -610,8 +614,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       categories[key] = {
         name: block.querySelector(".cat-name").value,
         description: block.querySelector(".cat-desc").value,
-        weightRate: parseFloat(block.querySelector(".cat-weight").value),
-        volumeRate: parseFloat(block.querySelector(".cat-volume").value),
+        weightRate: parseFloat(block.querySelector(".cat-weight").value) || 0,
+        volumeRate: parseFloat(block.querySelector(".cat-volume").value) || 0,
       };
     });
 
@@ -710,10 +714,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         await loadSettings();
       } else {
         const d = await res.json();
-        alert(`更新失敗: ${d.message}`);
+        alert(`更新失敗: ${d.message || "未知錯誤"}`);
       }
     } catch (err) {
-      alert("連線錯誤");
+      alert("連線到 API 伺服器時發生錯誤，請檢查網路狀態。");
     }
   }
 
@@ -721,6 +725,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const btn = document.getElementById("btn-test-email");
     if (!btn) return;
     btn.disabled = true;
+    const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/settings/test/email`, {
@@ -728,12 +733,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      alert(res.ok ? data.message : "發送失敗");
+      alert(
+        res.ok
+          ? data.message || "測試信已發出，請查收收件箱"
+          : "發送失敗: " + (data.message || "未知錯誤")
+      );
     } catch (e) {
-      alert("網路錯誤");
+      alert("發送測試信時發生網路錯誤。");
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-vial"></i> 發送測試信';
+      btn.innerHTML = originalText;
     }
   }
 });
