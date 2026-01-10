@@ -18,6 +18,13 @@ const furnitureAdminController = require("../controllers/admin/furnitureAdminCon
 const contentAdmin = require("../controllers/admin/contentAdminController");
 const { protect, checkPermission } = require("../middleware/authMiddleware.js");
 
+// --- [3. 關鍵修正：引入權限驗證 Middleware] ---
+// 確保路徑與你的檔案結構一致：backend/middleware/authMiddleware.js
+const {
+  authMiddleware,
+  adminMiddleware,
+} = require("../middleware/authMiddleware");
+
 // ==========================================
 // 1. 儀表板與報表
 // ==========================================
