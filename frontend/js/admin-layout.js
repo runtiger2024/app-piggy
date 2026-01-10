@@ -1,5 +1,8 @@
 // frontend/js/admin-layout.js
-// V2026.1.8 - 品牌視覺優化版：導入實體 LOGO、整合全域通知標籤與高韌性注入
+// V2026.1.10 - 高韌性佈局引擎：修復內容注入遮擋問題、強化 Modal 相容性與全域通知標籤
+// [Fix] 解決注入原始內容時，Modal 預設顯示導致遮蔽畫面的問題
+// [Fix] 優化內容抓取邏輯，確保支援所有層級的 HTML 結構
+// [Guard] 一字不漏保留：Sidebar 選單生成、權限檢查、通知標籤同步 (Badges)、登出功能
 
 document.addEventListener("DOMContentLoaded", () => {
   // 1. 讀取管理員基本資訊與權限
@@ -120,7 +123,6 @@ document.addEventListener("DOMContentLoaded", () => {
     .join("");
 
   // 6. 重構頁面結構 (注入 Sidebar 與 Topbar)
-  // [優化重點] 將原本的圖示替換為 assets/logo.png 並調整樣式
   const originalContent = document.body.innerHTML;
   document.body.innerHTML = "";
 
@@ -158,16 +160,31 @@ document.addEventListener("DOMContentLoaded", () => {
   overlay.className = "sidebar-overlay";
   document.body.appendChild(overlay);
 
-  // 7. 注入原頁面內容
+  // 7. 注入原頁面內容 (核心修復：高韌性注入與防遮擋處理)
   const mainContainer = document.getElementById("main-content-container");
   const parser = new DOMParser();
   const doc = parser.parseFromString(originalContent, "text/html");
 
+  // 移除重複的舊 Header 避免干擾
   doc.getElementById("admin-header-container")?.remove();
 
-  const pageContent = doc.body;
+  /**
+   * 優化注入邏輯：
+   * 1. 優先嘗試獲取 .container-fluid 內容。
+   * 2. 若頁面結構較特殊，則使用 doc.body 作為備援，確保內容不丟失。
+   * 3. [關鍵] 強制隱藏所有 modal-overlay 類別，防止注入後直接遮蔽螢幕。
+   */
+  const pageContentContainer =
+    doc.querySelector(".container-fluid") ||
+    doc.querySelector(".container") ||
+    doc.body;
 
-  mainContainer.innerHTML = pageContent.innerHTML;
+  // 遍歷並隱藏所有彈窗，防止初始遮蔽
+  pageContentContainer.querySelectorAll(".modal-overlay").forEach((modal) => {
+    modal.style.display = "none";
+  });
+
+  mainContainer.innerHTML = pageContentContainer.innerHTML;
 
   // 8. 全域通知標籤同步功能
   window.refreshAdminBadges = async function () {
